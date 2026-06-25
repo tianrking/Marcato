@@ -516,6 +516,34 @@ textarea {
   color: var(--danger);
 }
 
+.diagram-viewer.is-fallback .diagram-status {
+  color: var(--accent);
+}
+
+.diagram-fallback {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+}
+
+.diagram-fallback-note {
+  display: grid;
+  gap: 3px;
+  color: var(--muted);
+}
+
+.diagram-fallback-note strong {
+  color: var(--text);
+}
+
+.diagram-fallback pre {
+  margin: 0;
+  max-height: 320px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
 .mini-button {
   min-height: 28px;
   padding: 0 8px;

@@ -9,6 +9,15 @@ import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
 
 let mermaidReady = false;
 const previewCleanups = new Map<HTMLElement, () => void>();
+const REMOTE_DIAGRAM_ENGINES = [
+  "plantuml",
+  "d2",
+  "graphviz",
+  "vegalite",
+  "vega-lite",
+  "wavedrom",
+  "markmap",
+];
 
 export async function postProcessPreview(root: HTMLElement, theme: "light" | "dark", offlineFirst: boolean) {
   renderMath(root);
@@ -16,7 +25,8 @@ export async function postProcessPreview(root: HTMLElement, theme: "light" | "da
   await renderAbc(root);
   await renderLeafletMaps(root, theme);
   renderStl(root, theme);
-  if (!offlineFirst) await renderRemoteDiagrams(root);
+  if (offlineFirst) renderRemoteDiagramFallbacks(root, "Offline-first is on. Remote rendering was skipped.");
+  else await renderRemoteDiagrams(root);
   setupPreviewLinks(root);
 }
 
@@ -240,18 +250,7 @@ function renderStl(root: HTMLElement, theme: "light" | "dark") {
 }
 
 async function renderRemoteDiagrams(root: HTMLElement) {
-  const selector = [
-    "plantuml",
-    "d2",
-    "graphviz",
-    "vegalite",
-    "vega-lite",
-    "wavedrom",
-    "markmap",
-  ]
-    .map((engine) => `.diagram-viewer[data-diagram-engine="${engine}"] .diagram-surface`)
-    .join(",");
-  const nodes = [...root.querySelectorAll<HTMLElement>(selector)];
+  const nodes = [...root.querySelectorAll<HTMLElement>(remoteDiagramSelector())];
   for (const node of nodes) {
     if (node.dataset.rendered === "1") continue;
     const viewer = node.closest<HTMLElement>(".diagram-viewer");
@@ -263,9 +262,23 @@ async function renderRemoteDiagrams(root: HTMLElement) {
       node.dataset.rendered = "1";
       markReady(viewer);
     } catch (error) {
-      markError(viewer, error);
+      markDiagramFallback(viewer, node, engine, error instanceof Error ? error.message : "Remote render failed");
     }
   }
+}
+
+function renderRemoteDiagramFallbacks(root: HTMLElement, reason: string) {
+  const nodes = [...root.querySelectorAll<HTMLElement>(remoteDiagramSelector())];
+  nodes.forEach((node) => {
+    if (node.dataset.rendered === "1") return;
+    const viewer = node.closest<HTMLElement>(".diagram-viewer");
+    const engine = viewer?.dataset.diagramEngine || "diagram";
+    markDiagramFallback(viewer, node, engine, reason);
+  });
+}
+
+function remoteDiagramSelector() {
+  return REMOTE_DIAGRAM_ENGINES.map((engine) => `.diagram-viewer[data-diagram-engine="${engine}"] .diagram-surface`).join(",");
 }
 
 function setupPreviewLinks(root: HTMLElement) {
@@ -327,6 +340,34 @@ function markError(viewer: HTMLElement | null, error: unknown) {
   viewer.classList.add("is-error");
   const status = viewer.querySelector<HTMLElement>(".diagram-status");
   if (status) status.textContent = error instanceof Error ? error.message : "Render failed";
+}
+
+function markDiagramFallback(viewer: HTMLElement | null, surface: HTMLElement, engine: string, reason: string) {
+  if (!viewer) return;
+  const code = decodeURIComponent(surface.dataset.originalCode || "");
+  viewer.classList.remove("is-loading");
+  viewer.classList.remove("is-error");
+  viewer.classList.add("is-fallback");
+  surface.classList.add("diagram-fallback");
+  surface.innerHTML =
+    `<div class="diagram-fallback-note"><strong>${escapeHtml(diagramLabel(engine))} source preview</strong><span>${escapeHtml(reason)}</span></div>` +
+    `<pre><code>${escapeHtml(code)}</code></pre>`;
+  surface.dataset.rendered = "1";
+  const status = viewer.querySelector<HTMLElement>(".diagram-status");
+  if (status) status.textContent = "Source preview";
+}
+
+function diagramLabel(engine: string) {
+  const labels: Record<string, string> = {
+    plantuml: "PlantUML",
+    d2: "D2",
+    graphviz: "Graphviz",
+    vegalite: "Vega-Lite",
+    "vega-lite": "Vega-Lite",
+    wavedrom: "WaveDrom",
+    markmap: "Markmap",
+  };
+  return labels[engine] || engine || "Diagram";
 }
 
 async function copyDiagram(surface: HTMLElement) {
