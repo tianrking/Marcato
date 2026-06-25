@@ -115,6 +115,36 @@ export function insertText(value: string, at: number, text: string): CommandResu
   };
 }
 
+export type TableAlignment = "default" | "left" | "center" | "right";
+
+export function buildMarkdownTable(columns: number, rows: number, alignment: TableAlignment) {
+  const safeColumns = Math.min(20, Math.max(1, Math.floor(columns)));
+  const safeRows = Math.min(50, Math.max(1, Math.floor(rows)));
+  const headers = Array.from({ length: safeColumns }, (_item, index) => `Column ${index + 1}`);
+  const divider = Array.from({ length: safeColumns }, () => tableDivider(alignment));
+  const body = Array.from({ length: safeRows }, (_row, rowIndex) =>
+    Array.from({ length: safeColumns }, (_cell, columnIndex) => `Cell ${rowIndex + 1}.${columnIndex + 1}`),
+  );
+  return [
+    "",
+    markdownTableRow(headers),
+    markdownTableRow(divider),
+    ...body.map(markdownTableRow),
+    "",
+  ].join("\n");
+}
+
+function tableDivider(alignment: TableAlignment) {
+  if (alignment === "left") return ":---";
+  if (alignment === "center") return ":---:";
+  if (alignment === "right") return "---:";
+  return "---";
+}
+
+function markdownTableRow(cells: string[]) {
+  return `| ${cells.join(" | ")} |`;
+}
+
 function wrap(value: string, start: number, end: number, before: string, after: string, placeholder: string) {
   const selected = value.slice(start, end) || placeholder;
   const replacement = `${before}${selected}${after}`;

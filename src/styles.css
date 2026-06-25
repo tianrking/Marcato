@@ -845,6 +845,79 @@ textarea {
   margin-top: 10px;
 }
 
+.table-insert {
+  display: grid;
+  gap: 12px;
+}
+
+.table-insert label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.table-insert input {
+  min-height: 38px;
+}
+
+.table-insert fieldset {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.table-insert legend {
+  margin-bottom: 2px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.table-align-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.table-align-grid button {
+  min-height: 42px;
+  justify-content: center;
+}
+
+.table-align-grid button.active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.table-preview {
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel-2);
+}
+
+.table-preview table {
+  width: 100%;
+  min-width: 360px;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.table-preview th,
+.table-preview td {
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  text-align: left;
+}
+
+.table-preview th {
+  color: var(--text);
+  background: var(--panel);
+}
+
 .github-import {
   display: grid;
   gap: 10px;

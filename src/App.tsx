@@ -34,10 +34,11 @@ import { FindReplacePanel } from "./components/FindReplacePanel";
 import { IconButton, Modal } from "./components/Common";
 import { GitHubImportModal } from "./components/GitHubImportModal";
 import { PreviewPane } from "./components/PreviewPane";
+import { TableInsertModal } from "./components/TableInsertModal";
 import { WorkspaceToolbar } from "./components/WorkspaceToolbar";
 import { useGlobalShortcuts } from "./hooks/useGlobalShortcuts";
 import { MAX_IMPORT_BYTES, MAX_TABS, SHARE_URL_SOFT_LIMIT } from "./lib/constants";
-import { applyCommand, handleSmartEnter, type MarkdownCommand } from "./lib/editorCommands";
+import { applyCommand, buildMarkdownTable, handleSmartEnter, insertText, type MarkdownCommand, type TableAlignment } from "./lib/editorCommands";
 import { copyImage, exportHtml, exportMarkdown, exportPdf, exportPng, getExportName } from "./lib/exporters";
 import { analyzeDocumentHealth } from "./lib/documentHealth";
 import { buildDiffPreview, findMatches, replaceAll, replaceOne } from "./lib/findReplace";
@@ -91,6 +92,7 @@ function App() {
   const [githubUrl, setGithubUrl] = useState("");
   const [githubFiles, setGithubFiles] = useState<GitHubMarkdownFile[]>([]);
   const [selectedGithubPaths, setSelectedGithubPaths] = useState<Set<string>>(new Set());
+  const [tableOpen, setTableOpen] = useState(false);
   const [toast, setToast] = useState("");
   const [dragging, setDragging] = useState(false);
 
@@ -346,6 +348,18 @@ function App() {
     }
   };
 
+  const insertConfiguredTable = (options: { alignment: TableAlignment; columns: number; rows: number }) => {
+    const editor = editorRef.current;
+    if (!editor || !activeTab) return;
+    const table = buildMarkdownTable(options.columns, options.rows, options.alignment);
+    const result = insertText(activeTab.content, editor.selectionStart, table);
+    commitContent(result.value);
+    requestAnimationFrame(() => {
+      editor.focus();
+      editor.setSelectionRange(result.start, result.end);
+    });
+  };
+
   const onScrollEditor = () => {
     if (!globalState.syncScroll || syncingRef.current || !editorRef.current || !previewPaneRef.current) return;
     syncingRef.current = true;
@@ -454,7 +468,7 @@ function App() {
         <IconButton title="Image" onClick={() => runCommand("image")}><Image size={16} /></IconButton>
         <IconButton title="Inline code" onClick={() => runCommand("inlineCode")}><Code2 size={16} /></IconButton>
         <IconButton title="Code block" onClick={() => runCommand("codeBlock")}><Braces size={16} /></IconButton>
-        <IconButton title="Table" onClick={() => runCommand("table")}><Table2 size={16} /></IconButton>
+        <IconButton title="Table" onClick={() => setTableOpen(true)}><Table2 size={16} /></IconButton>
         <IconButton title="Math" onClick={() => runCommand("math")}><Sigma size={16} /></IconButton>
         <IconButton title="Mermaid" onClick={() => runCommand("mermaid")}><Play size={16} /></IconButton>
         <IconButton title="Find and replace" onClick={() => setFindOpen(true)}><Search size={16} /></IconButton>
@@ -565,6 +579,13 @@ function App() {
           onSelectedPathsChange={setSelectedGithubPaths}
           onImport={() => void importGithubSelection()}
           onClose={() => setGithubOpen(false)}
+        />
+      )}
+
+      {tableOpen && (
+        <TableInsertModal
+          onClose={() => setTableOpen(false)}
+          onInsert={insertConfiguredTable}
         />
       )}
 
