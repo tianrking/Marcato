@@ -18,7 +18,6 @@ const remoteSvgRequests = new Map<string, Promise<string>>();
 const REMOTE_DIAGRAM_ENGINES = [
   "plantuml",
   "d2",
-  "wavedrom",
 ];
 
 export async function postProcessPreview(root: HTMLElement, theme: "light" | "dark", offlineFirst: boolean, signal?: AbortSignal) {
@@ -36,6 +35,8 @@ export async function postProcessPreview(root: HTMLElement, theme: "light" | "da
   await renderGraphviz(root, theme, signal);
   if (isAborted(signal, root)) return;
   await renderVegaLite(root, theme, signal);
+  if (isAborted(signal, root)) return;
+  await renderWaveDrom(root, signal);
   if (isAborted(signal, root)) return;
   await renderMarkmap(root, theme, signal);
   if (isAborted(signal, root)) return;
@@ -477,6 +478,63 @@ async function renderMarkmap(root: HTMLElement, theme: "light" | "dark", signal?
       markDiagramFallback(viewer, node, "markmap", error instanceof Error ? error.message : "Local Markmap render failed");
     }
   }
+}
+
+async function renderWaveDrom(root: HTMLElement, signal?: AbortSignal) {
+  const nodes = [...root.querySelectorAll<HTMLElement>('.diagram-viewer[data-diagram-engine="wavedrom"] .diagram-surface')];
+  if (nodes.length === 0) return;
+  const [{ default: JSON5 }, renderAnyModule, waveSkinModule, stringifyModule] = await Promise.all([
+    import("json5"),
+    import("wavedrom-render-any"),
+    import("wavedrom/skins/default.js"),
+    import("onml/stringify.js"),
+  ]);
+  if (isAborted(signal, root)) return;
+
+  const renderAny = renderAnyModule.default;
+  const waveSkin = normalizeWaveDromSkin(waveSkinModule.default);
+  const stringify = stringifyModule.default;
+
+  for (const node of nodes) {
+    if (isAborted(signal, root)) return;
+    if (node.dataset.rendered === "1") continue;
+    const viewer = node.closest<HTMLElement>(".diagram-viewer");
+    const code = decodeURIComponent(node.dataset.originalCode || "");
+    try {
+      const source = JSON5.parse(code) as unknown;
+      if (!isWaveDromSource(source)) throw new Error("WaveDrom source must include signal, assign, or reg data.");
+      const tree = renderAny(0, source, waveSkin);
+      const svg = sanitizeRemoteDiagramSvg(stringify(tree));
+      if (isAborted(signal, root) || !node.isConnected) return;
+      node.innerHTML = svg;
+      const svgElement = node.querySelector<SVGSVGElement>("svg");
+      if (!svgElement) throw new Error("WaveDrom renderer did not create an SVG.");
+      svgElement.classList.add("wavedrom-svg");
+      svgElement.setAttribute("role", "img");
+      svgElement.setAttribute("aria-label", "WaveDrom timing diagram");
+      svgElement.style.maxWidth = "100%";
+      svgElement.style.height = "auto";
+      registerPreviewCleanup(node, () => {
+        delete node.dataset.rendered;
+        node.innerHTML = "";
+      });
+      node.dataset.rendered = "1";
+      markReady(viewer);
+    } catch (error) {
+      markDiagramFallback(viewer, node, "wavedrom", error instanceof Error ? error.message : "Local WaveDrom render failed");
+    }
+  }
+}
+
+function isWaveDromSource(source: unknown): source is Record<string, unknown> {
+  if (!isRecord(source)) return false;
+  return Array.isArray(source.signal) || Array.isArray(source.assign) || Array.isArray(source.reg);
+}
+
+function normalizeWaveDromSkin(value: { default?: unknown }) {
+  const maybeWrapped = isRecord(value.default) ? value.default : value;
+  if (!Array.isArray(maybeWrapped.default)) throw new Error("WaveDrom default skin is unavailable.");
+  return maybeWrapped;
 }
 
 async function renderRemoteDiagrams(root: HTMLElement, signal?: AbortSignal) {

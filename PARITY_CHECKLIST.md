@@ -52,9 +52,9 @@ must remain smooth and predictable after initial access.
 | STL viewer | Partial | `script.js`, `index.html`, `styles.css` | `src/lib/diagramRenderers.ts` | Missing modal, solid/angle/wireframe modes, fit/reset/copy parity. |
 | Graphviz | Partial | `script.js`, `preview-worker.js` | `src/lib/diagramRenderers.ts` | Local render exists; needs dark-mode, export, natural sizing, error parity proof. |
 | Vega-Lite | Partial | `script.js`, `preview-worker.js` | `src/lib/diagramRenderers.ts` | Local render exists; needs sizing/theme/export proof. |
-| PlantUML | Partial | `script.js`, `preview-worker.js` | `src/lib/diagramRenderers.ts`, `tests/e2e/diagram-remote.spec.mjs` | Source normalization, retry, and remote SVG sanitization have browser proof; PNG/export details still need parity. |
-| D2 | Partial | `script.js`, `preview-worker.js` | `src/lib/diagramRenderers.ts`, `tests/e2e/diagram-remote.spec.mjs` | Fenced-source normalization, retry, and remote SVG sanitization have browser proof; PNG/export details still need parity. |
-| WaveDrom | Partial | `script.js`, `preview-worker.js` | `src/lib/diagramRenderers.ts` | Remote/fallback only; local rendering missing. |
+| PlantUML | Partial | `script.js`, `preview-worker.js` | `src/lib/diagramRenderers.ts`, `tests/e2e/diagrams.spec.mjs` | Source normalization, retry, and remote SVG sanitization have browser proof; PNG/export details still need parity. |
+| D2 | Partial | `script.js`, `preview-worker.js` | `src/lib/diagramRenderers.ts`, `tests/e2e/diagrams.spec.mjs` | Fenced-source normalization, retry, and remote SVG sanitization have browser proof; PNG/export details still need parity. |
+| WaveDrom | Partial | `script.js`, `preview-worker.js` | `src/lib/diagramRenderers.ts`, `tests/e2e/diagrams.spec.mjs` | Local SVG render works offline-first with browser proof; export/theme details still need parity. |
 | Markmap | Partial | `script.js`, `preview-worker.js` | `src/lib/diagramRenderers.ts`, `tests/e2e/diagrams.spec.mjs` | Local SVG render works offline-first with browser proof; export and interaction parity still need polish. |
 | Diagram toolbar | Partial | `index.html`, `script.js`, `styles.css` | `src/lib/diagramActions.ts` | Basic copy/SVG/PNG/zoom exists; missing original modal and remote-image PNG details. |
 | Diagram templates modal | Missing | `index.html`, `script.js` | none | Need searchable categorized templates and insert flow. |

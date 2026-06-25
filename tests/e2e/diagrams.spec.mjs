@@ -28,7 +28,7 @@ author -> preview: render
 \`\`\`
 `;
 
-const markmapFixture = `# Local Markmap Fixture
+const localDiagramFixture = `# Local Diagram Fixture
 
 \`\`\`markmap
 # Product Plan
@@ -38,6 +38,14 @@ const markmapFixture = `# Local Markmap Fixture
 ## Diagrams
 - Local Markmap
 - Remote SVG safety
+\`\`\`
+
+\`\`\`wavedrom
+{ signal: [
+  { name: 'clk', wave: 'p.....' },
+  { name: 'data', wave: 'x.345x', data: ['A', 'B', 'C'] },
+  { name: 'ready', wave: '0.1.0.' }
+] }
 \`\`\`
 `;
 
@@ -78,9 +86,10 @@ await withApp(async ({ consoleMessages, page, server }) => {
     });
   });
 
-  await setMarkdown(page, markmapFixture);
-  await waitForPreviewText(page, "Local Markmap Fixture");
+  await setMarkdown(page, localDiagramFixture);
+  await waitForPreviewText(page, "Local Diagram Fixture");
   await page.locator('.diagram-viewer[data-diagram-engine="markmap"] svg.markmap-svg').waitFor({ state: "visible", timeout: 20_000 });
+  await page.locator('.diagram-viewer[data-diagram-engine="wavedrom"] svg.wavedrom-svg').waitFor({ state: "visible", timeout: 20_000 });
   const markmapChecks = await page.evaluate(() => {
     const viewer = document.querySelector('.diagram-viewer[data-diagram-engine="markmap"]');
     const svg = viewer?.querySelector("svg.markmap-svg");
@@ -91,10 +100,26 @@ await withApp(async ({ consoleMessages, page, server }) => {
       text: svg?.textContent?.replace(/\s+/g, " ").trim() || "",
     };
   });
+  const wavedromChecks = await page.evaluate(() => {
+    const viewer = document.querySelector('.diagram-viewer[data-diagram-engine="wavedrom"]');
+    const svg = viewer?.querySelector("svg.wavedrom-svg");
+    return {
+      fallback: viewer?.classList.contains("is-fallback") || false,
+      ready: !viewer?.classList.contains("is-loading") && !viewer?.classList.contains("is-error"),
+      rendered: viewer?.querySelector(".diagram-surface")?.getAttribute("data-rendered"),
+      hasWaveDromClass: svg?.classList.contains("WaveDrom") || false,
+      text: svg?.textContent?.replace(/\s+/g, " ").trim() || "",
+    };
+  });
   expect(markmapChecks.ready, `Local Markmap should be ready. Checks: ${JSON.stringify(markmapChecks)}`);
   expect(!markmapChecks.fallback, `Local Markmap should not use remote fallback. Checks: ${JSON.stringify(markmapChecks)}`);
   expect(markmapChecks.rendered === "1", `Local Markmap surface should be marked rendered. Checks: ${JSON.stringify(markmapChecks)}`);
   expect(markmapChecks.text.includes("Product Plan") && markmapChecks.text.includes("Local Markmap"), `Local Markmap text missing. Checks: ${JSON.stringify(markmapChecks)}`);
+  expect(wavedromChecks.ready, `Local WaveDrom should be ready. Checks: ${JSON.stringify(wavedromChecks)}`);
+  expect(!wavedromChecks.fallback, `Local WaveDrom should not use remote fallback. Checks: ${JSON.stringify(wavedromChecks)}`);
+  expect(wavedromChecks.rendered === "1", `Local WaveDrom surface should be marked rendered. Checks: ${JSON.stringify(wavedromChecks)}`);
+  expect(wavedromChecks.hasWaveDromClass, `Local WaveDrom SVG class missing. Checks: ${JSON.stringify(wavedromChecks)}`);
+  expect(wavedromChecks.text.includes("clk") && wavedromChecks.text.includes("data") && wavedromChecks.text.includes("ready"), `Local WaveDrom text missing. Checks: ${JSON.stringify(wavedromChecks)}`);
 
   await page.getByLabel("Offline first").uncheck();
   await setMarkdown(page, fixture);
@@ -136,6 +161,7 @@ await withApp(async ({ consoleMessages, page, server }) => {
     d2Requests,
     markmapChecks,
     plantumlRequests,
+    wavedromChecks,
     checks,
     consoleMessages,
   });
