@@ -53,6 +53,7 @@ import { InsertModalHost } from "./components/InsertModalHost";
 import { MobileMenu } from "./components/MobileMenu";
 import { PreviewPane } from "./components/PreviewPane";
 import { ShareModal } from "./components/ShareModal";
+import { TabStrip } from "./components/TabStrip";
 import { WorkspaceToolbar } from "./components/WorkspaceToolbar";
 import { useFindReplace } from "./hooks/useFindReplace";
 import { useGitHubImport } from "./hooks/useGitHubImport";
@@ -107,6 +108,7 @@ function App() {
   const closeStoreTab = useAppStore((state) => state.closeTab);
   const renameStoreTab = useAppStore((state) => state.renameTab);
   const duplicateStoreTab = useAppStore((state) => state.duplicateTab);
+  const reorderStoreTab = useAppStore((state) => state.reorderTab);
   const undo = useAppStore((state) => state.undo);
   const redo = useAppStore((state) => state.redo);
   const [selectedPreviewBlockId, setSelectedPreviewBlockId] = useState("");
@@ -444,16 +446,16 @@ function App() {
         onShare={() => share.open("view")}
       />
 
-      <nav className="tab-strip" aria-label={t("status.document")}>
-        {tabs.map((tab) => (
-          <button key={tab.id} className={tab.id === activeTabId ? "tab active" : "tab"} onClick={() => setActiveTabId(tab.id)} onDoubleClick={() => renameTab(tab.id)}>
-            <span>{tab.title}</span>
-            <small>{tab.content.length.toLocaleString()}</small>
-            <i onClick={(event) => { event.stopPropagation(); duplicateTab(tab.id); }}>+</i>
-            <i onClick={(event) => { event.stopPropagation(); closeTab(tab.id); }}>x</i>
-          </button>
-        ))}
-      </nav>
+      <TabStrip
+        activeTabId={activeTabId}
+        tabs={tabs}
+        onCloseTab={closeTab}
+        onDuplicateTab={duplicateTab}
+        onNewTab={() => newTab("", undefined)}
+        onRenameTab={renameTab}
+        onReorderTab={reorderStoreTab}
+        onSelectTab={setActiveTabId}
+      />
 
       <div className="format-toolbar">
         <IconButton title="Undo" onClick={undo}><Undo2 size={16} /></IconButton>

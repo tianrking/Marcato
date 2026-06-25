@@ -47,6 +47,13 @@ await withApp(async ({ consoleMessages, context, page, server }) => {
   await page.locator(".find-panel").getByRole("button", { name: "x", exact: true }).click();
   await page.locator(".find-panel").waitFor({ state: "hidden" });
 
+  await page.getByRole("button", { name: "New tab" }).click();
+  await page.getByRole("tab", { name: /Untitled/ }).waitFor({ state: "visible" });
+  await page.getByRole("button", { name: /Actions for Untitled/ }).click();
+  await page.getByRole("menuitem", { name: "Duplicate" }).click();
+  expect((await page.getByRole("tab").count()) >= 3, "Tab action menu should duplicate the active tab.");
+  await page.getByRole("tab", { name: /Welcome|Smoke|Shared|Untitled/ }).first().click();
+
   await page.getByRole("button", { name: "Link" }).click();
   const linkDialog = page.getByRole("dialog", { name: "Insert link" });
   await linkDialog.waitFor({ state: "visible" });

@@ -30,6 +30,7 @@ interface AppStoreState {
   closeTab: (id: string, fallbackTitle: string) => void;
   renameTab: (id: string, title: string) => void;
   duplicateTab: (id: string) => MarkdownTab | null;
+  reorderTab: (draggedId: string, targetId: string) => void;
   undo: () => void;
   redo: () => void;
 }
@@ -150,6 +151,19 @@ export const useAppStore = create<AppStoreState>((set, get) => ({
     const tab = get().tabs.find((item) => item.id === id);
     if (!tab) return null;
     return get().addTab(tab.content, `${tab.title.replace(/\.md$/i, "")} copy.md`);
+  },
+
+  reorderTab(draggedId, targetId) {
+    if (draggedId === targetId) return;
+    const state = get();
+    const from = state.tabs.findIndex((tab) => tab.id === draggedId);
+    const to = state.tabs.findIndex((tab) => tab.id === targetId);
+    if (from < 0 || to < 0) return;
+    const tabs = [...state.tabs];
+    const [dragged] = tabs.splice(from, 1);
+    tabs.splice(to, 0, dragged);
+    set({ tabs });
+    persistTabs(tabs, state.activeTabId, state.untitledCounter);
   },
 
   undo() {

@@ -287,29 +287,46 @@ button:focus-visible {
   display: none;
 }
 
-.tab-strip {
-  display: flex;
+.tab-strip-shell {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) 34px 34px;
   align-items: stretch;
   gap: 6px;
   padding: 7px 10px;
-  overflow-x: auto;
   border-bottom: 1px solid var(--line);
   background:
     linear-gradient(90deg, color-mix(in srgb, var(--accent) 5%, transparent), transparent 34%),
     var(--panel-2);
 }
 
-.tab {
-  min-width: 150px;
-  max-width: 240px;
-  justify-content: flex-start;
-  gap: 8px;
-  background: color-mix(in srgb, var(--panel) 88%, var(--panel-2));
-  position: relative;
-  overflow: hidden;
+.tab-strip {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 2px;
+  scroll-padding-inline: 12px;
 }
 
-.tab.active {
+.tab-scroll-button,
+.tab-new-button {
+  align-self: center;
+  width: 34px;
+  padding: 0;
+}
+
+.tab-frame {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 28px 28px;
+  flex: 0 0 clamp(170px, 18vw, 260px);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--panel) 88%, var(--panel-2));
+  overflow: visible;
+}
+
+.tab-frame.active {
   border-color: var(--accent);
   background:
     linear-gradient(135deg, color-mix(in srgb, var(--accent) 11%, transparent), color-mix(in srgb, var(--accent-2) 9%, transparent)),
@@ -317,12 +334,24 @@ button:focus-visible {
   box-shadow: inset 0 -2px 0 var(--accent), var(--shadow-soft);
 }
 
-.tab.active::before {
+.tab-frame.active::before {
   content: "";
   position: absolute;
   inset: 0 auto 0 0;
   width: 3px;
+  border-radius: 8px 0 0 8px;
   background: linear-gradient(var(--accent), var(--accent-2));
+}
+
+.tab {
+  justify-content: flex-start;
+  gap: 8px;
+  min-width: 0;
+  min-height: 38px;
+  border: 0;
+  border-radius: 8px 0 0 8px;
+  background: transparent;
+  overflow: hidden;
 }
 
 .tab span {
@@ -338,10 +367,46 @@ button:focus-visible {
   color: var(--muted);
 }
 
-.tab i {
-  font-style: normal;
+.tab-action,
+.tab-close {
+  width: 28px;
+  min-height: 38px;
+  padding: 0;
+  border: 0;
+  border-left: 1px solid color-mix(in srgb, var(--line) 62%, transparent);
+  border-radius: 0;
+  background: transparent;
   color: var(--muted);
-  padding: 0 2px;
+}
+
+.tab-action {
+  border-radius: 0;
+}
+
+.tab-close {
+  border-radius: 0 8px 8px 0;
+}
+
+.tab-menu {
+  position: absolute;
+  z-index: 50;
+  top: calc(100% + 6px);
+  right: 4px;
+  display: grid;
+  gap: 4px;
+  min-width: 142px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.tab-menu button {
+  justify-content: flex-start;
+  min-height: 32px;
+  border: 0;
+  background: transparent;
 }
 
 .format-toolbar {
@@ -2121,7 +2186,7 @@ button:focus-visible {
     justify-content: space-between;
   }
 
-  .tab {
+  .tab-frame {
     min-width: 132px;
   }
 
@@ -2139,7 +2204,7 @@ button:focus-visible {
     display: none;
   }
 
-  .tab-strip {
+  .tab-strip-shell {
     display: none;
   }
 
