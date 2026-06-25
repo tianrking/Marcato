@@ -7,6 +7,7 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
 import { setupDiagramActions } from "./diagramActions";
 import { loadGitHubEmojis } from "./githubEmojis";
+import { sanitizeRemoteDiagramSvg } from "./sanitizer";
 import type { TopLevelSpec } from "vega-lite";
 
 let mermaidReady = false;
@@ -532,19 +533,21 @@ function normalizeAnchorText(value: string) {
 }
 
 async function fetchRemoteSvgCached(engine: string, code: string) {
-  const key = `${engine}\n${code}`;
+  const normalizedCode = normalizeRemoteDiagramCode(engine, code);
+  const key = `${engine}\n${normalizedCode}`;
   const cached = remoteSvgCache.get(key);
   if (cached) return cached;
   const existing = remoteSvgRequests.get(key);
   if (existing) return await existing;
-  const request = fetchRemoteSvg(engine, code)
-    .then((svg) => {
-      remoteSvgCache.set(key, svg);
+  const request = fetchRemoteSvg(engine, normalizedCode)
+    .then((svg) => sanitizeRemoteDiagramSvg(svg))
+    .then((safeSvg) => {
+      remoteSvgCache.set(key, safeSvg);
       if (remoteSvgCache.size > 80) {
         const oldestKey = remoteSvgCache.keys().next().value;
         if (oldestKey) remoteSvgCache.delete(oldestKey);
       }
-      return svg;
+      return safeSvg;
     })
     .finally(() => remoteSvgRequests.delete(key));
   remoteSvgRequests.set(key, request);
@@ -555,14 +558,57 @@ async function fetchRemoteSvg(engine: string, code: string) {
   const normalized = engine === "graphviz" ? "graphviz" : engine === "vega-lite" ? "vegalite" : engine;
   if (normalized === "plantuml") {
     const payload = encodePlantUml(code);
-    const response = await fetch(`https://www.plantuml.com/plantuml/svg/${payload}`);
-    if (!response.ok) throw new Error("PlantUML server rejected the diagram.");
-    return await response.text();
+    return await fetchTextWithRetry([
+      `https://www.plantuml.com/plantuml/svg/${payload}`,
+      `https://plantuml.com/plantuml/svg/${payload}`,
+    ], "PlantUML server rejected the diagram.");
   }
   const payload = bytesToBase64Url(deflate(new TextEncoder().encode(code), { level: 9 }));
-  const response = await fetch(`https://kroki.io/${normalized}/svg/${payload}`);
-  if (!response.ok) throw new Error("Kroki server rejected the diagram.");
-  return await response.text();
+  return await fetchTextWithRetry([`https://kroki.io/${normalized}/svg/${payload}`], "Kroki server rejected the diagram.");
+}
+
+export function normalizeRemoteDiagramCode(engine: string, code: string) {
+  const trimmed = code.replace(/\r\n/g, "\n").trim();
+  if (!trimmed) throw new Error("Diagram source is empty.");
+  if (engine === "plantuml") {
+    const hasStart = /^@start\w*/im.test(trimmed);
+    const hasEnd = /^@end\w*/im.test(trimmed);
+    if (hasStart && hasEnd) return trimmed;
+    if (hasStart) return `${trimmed}\n@enduml`;
+    if (hasEnd) return `@startuml\n${trimmed}`;
+    return `@startuml\n${trimmed}\n@enduml`;
+  }
+  if (engine === "d2") {
+    const normalized = trimmed
+      .replace(/^```(?:d2)?\s*/i, "")
+      .replace(/\s*```$/i, "")
+      .trim();
+    if (!normalized) throw new Error("Diagram source is empty.");
+    return normalized;
+  }
+  return trimmed;
+}
+
+async function fetchTextWithRetry(urls: string[], message: string) {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    for (const url of urls) {
+      try {
+        const response = await fetch(url);
+        if (response.ok) return await response.text();
+        lastError = new Error(`HTTP ${response.status}`);
+      } catch (error) {
+        lastError = error;
+      }
+    }
+    if (attempt === 0) await delay(300);
+  }
+  const suffix = lastError instanceof Error ? ` ${lastError.message}` : "";
+  throw new Error(`${message}${suffix}`);
+}
+
+function delay(ms: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
 function markReady(viewer: HTMLElement | null) {

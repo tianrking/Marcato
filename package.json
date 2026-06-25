@@ -8,10 +8,11 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "test": "npm run test:smoke && npm run test:pdf && npm run test:perf",
+    "test": "npm run test:smoke && npm run test:pdf && npm run test:perf && npm run test:diagrams",
     "test:smoke": "node tests/e2e/smoke.spec.mjs",
     "test:pdf": "node tests/e2e/pdf-pagination.spec.mjs",
-    "test:perf": "node tests/e2e/performance.spec.mjs"
+    "test:perf": "node tests/e2e/performance.spec.mjs",
+    "test:diagrams": "node tests/e2e/diagram-remote.spec.mjs"
   },
   "dependencies": {
     "@types/file-saver": "^2.0.7",

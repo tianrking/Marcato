@@ -24,7 +24,7 @@ must remain smooth and predictable after initial access.
 | Preview post-process cancellation | Partial | original preview pipeline | `src/components/PreviewPane.tsx`, `src/lib/diagramRenderers.ts` | Async diagram rendering must stop writing after unmount or document change. |
 | Preview resource scope | Partial | original cleanup helpers | `src/lib/diagramRenderers.ts` | Clean only current preview instance resources; no cross-preview global sweep surprises. |
 | Main preview HTML sanitization | Done | `script.js sanitizePreviewHtml` | `src/lib/previewDocument.ts`, `src/lib/sanitizer.ts` | DOMPurify protects main Markdown HTML before `dangerouslySetInnerHTML`. |
-| Post-process HTML sanitization | Partial | `script.js` diagram/link sanitizing | `src/lib/diagramRenderers.ts` | Sanitize or construct DOM nodes for Leaflet popups, remote SVG, fallbacks, toolbar HTML. |
+| Post-process HTML sanitization | Partial | `script.js` diagram/link sanitizing | `src/lib/diagramRenderers.ts`, `src/lib/sanitizer.ts`, `tests/e2e/diagram-remote.spec.mjs` | Remote SVG sanitize has browser proof; still audit Leaflet popups, fallbacks, and toolbar HTML. |
 | Safe links and anchor fallback | Done | `script.js` preview link interception | `src/lib/diagramRenderers.ts` | Preview links are single-bound, unsafe protocols are blocked, and hash anchors fall back through id/name/title lookup. |
 | PWA/runtime cache rules | Partial | `index.html`, `sw.js`, `script.js` | `vite.config.ts` | Avoid catch-all caching overriding GitHub/diagram/map rules; verify update behavior. |
 
@@ -52,8 +52,8 @@ must remain smooth and predictable after initial access.
 | STL viewer | Partial | `script.js`, `index.html`, `styles.css` | `src/lib/diagramRenderers.ts` | Missing modal, solid/angle/wireframe modes, fit/reset/copy parity. |
 | Graphviz | Partial | `script.js`, `preview-worker.js` | `src/lib/diagramRenderers.ts` | Local render exists; needs dark-mode, export, natural sizing, error parity proof. |
 | Vega-Lite | Partial | `script.js`, `preview-worker.js` | `src/lib/diagramRenderers.ts` | Local render exists; needs sizing/theme/export proof. |
-| PlantUML | Partial | `script.js`, `preview-worker.js` | `src/lib/diagramRenderers.ts` | Needs original normalization, retry, PNG/SVG/export details. |
-| D2 | Partial | `script.js`, `preview-worker.js` | `src/lib/diagramRenderers.ts` | Needs original normalization, retry, PNG/SVG/export details. |
+| PlantUML | Partial | `script.js`, `preview-worker.js` | `src/lib/diagramRenderers.ts`, `tests/e2e/diagram-remote.spec.mjs` | Source normalization, retry, and remote SVG sanitization have browser proof; PNG/export details still need parity. |
+| D2 | Partial | `script.js`, `preview-worker.js` | `src/lib/diagramRenderers.ts`, `tests/e2e/diagram-remote.spec.mjs` | Fenced-source normalization, retry, and remote SVG sanitization have browser proof; PNG/export details still need parity. |
 | WaveDrom | Partial | `script.js`, `preview-worker.js` | `src/lib/diagramRenderers.ts` | Remote/fallback only; local rendering missing. |
 | Markmap | Partial | `script.js`, `preview-worker.js` | `src/lib/diagramRenderers.ts` | Remote/fallback only; local SVG render missing. |
 | Diagram toolbar | Partial | `index.html`, `script.js`, `styles.css` | `src/lib/diagramActions.ts` | Basic copy/SVG/PNG/zoom exists; missing original modal and remote-image PNG details. |
@@ -127,6 +127,7 @@ Each completed feature batch must include:
 - `npm.cmd run test:smoke`
 - `npm.cmd run test:pdf` for export/PDF/layout changes
 - `npm.cmd run test:perf` for renderer/editor/performance changes
+- `npm.cmd run test:diagrams` for remote diagram or SVG sanitizer changes
 - Browser smoke test for the touched workflow
 - A focused commit message
 
