@@ -552,6 +552,45 @@ textarea {
   box-shadow: var(--shadow);
 }
 
+.zoom-panel {
+  width: min(1120px, calc(100vw - 28px));
+  height: min(820px, calc(100vh - 28px));
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+
+.zoom-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-bottom: 10px;
+}
+
+.zoom-body {
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel-2);
+  cursor: grab;
+  touch-action: none;
+}
+
+.zoom-body.is-dragging {
+  cursor: grabbing;
+}
+
+.zoom-content {
+  width: max-content;
+  min-width: 100%;
+  padding: 24px;
+  transform-origin: 0 0;
+}
+
+.zoom-content .diagram-surface {
+  max-width: none;
+}
+
 .modal-head {
   display: flex;
   align-items: center;

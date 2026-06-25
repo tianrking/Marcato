@@ -282,7 +282,7 @@ function setupPreviewLinks(root: HTMLElement) {
     if (!toolbar || !surface || toolbar.dataset.ready === "1") return;
     toolbar.dataset.ready = "1";
     toolbar.append(
-      makeToolButton("Copy", () => copyDiagram(surface)),
+      makeToolButton("Copy PNG", () => copyDiagram(surface)),
       makeToolButton("SVG", () => downloadSvg(surface)),
       makeToolButton("PNG", () => downloadPng(surface)),
       makeToolButton("Zoom", () => openZoom(surface)),
@@ -330,6 +330,15 @@ function markError(viewer: HTMLElement | null, error: unknown) {
 }
 
 async function copyDiagram(surface: HTMLElement) {
+  try {
+    const blob = await renderSurfacePng(surface);
+    if (blob && navigator.clipboard && "write" in navigator.clipboard) {
+      await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
+      return;
+    }
+  } catch {
+    // Fall back to textual copy for browsers or diagrams that cannot be rasterized.
+  }
   const svg = surface.querySelector("svg");
   const text = svg ? new XMLSerializer().serializeToString(svg) : surface.textContent || "";
   await navigator.clipboard.writeText(text);
@@ -342,11 +351,14 @@ function downloadSvg(surface: HTMLElement) {
 }
 
 async function downloadPng(surface: HTMLElement) {
+  const blob = await renderSurfacePng(surface);
+  if (blob) saveAs(blob, `diagram-${Date.now()}.png`);
+}
+
+async function renderSurfacePng(surface: HTMLElement) {
   const html2canvas = (await import("html2canvas")).default;
   const canvas = await html2canvas(surface, { backgroundColor: null, scale: 2, useCORS: true });
-  canvas.toBlob((blob) => {
-    if (blob) saveAs(blob, `diagram-${Date.now()}.png`);
-  }, "image/png");
+  return await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
 }
 
 function openZoom(surface: HTMLElement) {
@@ -354,15 +366,75 @@ function openZoom(surface: HTMLElement) {
   overlay.className = "zoom-overlay";
   const panel = document.createElement("div");
   panel.className = "zoom-panel";
-  const close = makeToolButton("Close", () => overlay.remove());
+  const header = document.createElement("div");
+  header.className = "zoom-toolbar";
+  const close = makeToolButton("Close", () => cleanup());
+  const zoomOut = makeToolButton("-", () => setScale(scale / 1.2));
+  const zoomIn = makeToolButton("+", () => setScale(scale * 1.2));
+  const reset = makeToolButton("Reset", () => {
+    scale = 1;
+    offsetX = 0;
+    offsetY = 0;
+    applyTransform();
+  });
   const body = document.createElement("div");
   body.className = "zoom-body";
-  body.innerHTML = surface.innerHTML;
-  panel.append(close, body);
+  const content = document.createElement("div");
+  content.className = "zoom-content";
+  content.append(surface.cloneNode(true));
+  body.append(content);
+  header.append(zoomOut, zoomIn, reset, close);
+  panel.append(header, body);
   overlay.append(panel);
+  let scale = 1;
+  let offsetX = 0;
+  let offsetY = 0;
+  let dragging = false;
+  let lastX = 0;
+  let lastY = 0;
+  const applyTransform = () => {
+    content.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`;
+  };
+  const setScale = (nextScale: number) => {
+    scale = Math.min(8, Math.max(0.25, nextScale));
+    applyTransform();
+  };
+  const onWheel = (event: WheelEvent) => {
+    event.preventDefault();
+    setScale(scale * (event.deltaY > 0 ? 0.9 : 1.1));
+  };
+  const onPointerMove = (event: PointerEvent) => {
+    if (!dragging) return;
+    offsetX += event.clientX - lastX;
+    offsetY += event.clientY - lastY;
+    lastX = event.clientX;
+    lastY = event.clientY;
+    applyTransform();
+  };
+  const onPointerUp = () => {
+    dragging = false;
+    body.classList.remove("is-dragging");
+  };
+  const cleanup = () => {
+    body.removeEventListener("wheel", onWheel);
+    window.removeEventListener("pointermove", onPointerMove);
+    window.removeEventListener("pointerup", onPointerUp);
+    overlay.remove();
+  };
   overlay.addEventListener("click", (event) => {
-    if (event.target === overlay) overlay.remove();
+    if (event.target === overlay) cleanup();
   });
+  body.addEventListener("wheel", onWheel, { passive: false });
+  body.addEventListener("pointerdown", (event) => {
+    dragging = true;
+    lastX = event.clientX;
+    lastY = event.clientY;
+    body.classList.add("is-dragging");
+    body.setPointerCapture(event.pointerId);
+  });
+  window.addEventListener("pointermove", onPointerMove);
+  window.addEventListener("pointerup", onPointerUp);
+  applyTransform();
   document.body.appendChild(overlay);
 }
 
