@@ -47,6 +47,7 @@ import {
 import { AppHeader } from "./components/AppHeader";
 import { ConfirmModal } from "./components/ConfirmModal";
 import { DocumentHealthModal } from "./components/DocumentHealthModal";
+import { EasterEggLayer } from "./components/EasterEggLayer";
 import { FindReplacePanel } from "./components/FindReplacePanel";
 import { IconButton } from "./components/Common";
 import { GitHubImportModal } from "./components/GitHubImportModal";
@@ -153,6 +154,7 @@ function App() {
   useEffect(() => {
     document.documentElement.dataset.theme = globalState.theme;
     document.documentElement.dataset.accent = globalState.accent;
+    document.documentElement.dataset.easterEggs = globalState.easterEggs ? "on" : "off";
     document.documentElement.lang = globalState.language === "zh" ? "zh-Hans" : globalState.language === "tw" ? "zh-Hant" : globalState.language;
     document.body.dir = globalState.direction;
     void i18n.changeLanguage(globalState.language);
@@ -431,12 +433,15 @@ function App() {
         void handleFiles(event.dataTransfer.files);
       }}
     >
+      <EasterEggLayer enabled={globalState.easterEggs} />
       <AppHeader
         accent={globalState.accent}
+        easterEggs={globalState.easterEggs}
         stats={stats}
         theme={globalState.theme}
         viewMode={globalState.viewMode}
         onAccentChange={(accent) => updateGlobal({ accent })}
+        onEasterEggsChange={(easterEggs) => updateGlobal({ easterEggs })}
         onOpenMobileMenu={() => setMobileMenuOpen(true)}
         onThemeChange={(theme) => updateGlobal({ theme })}
         onViewModeChange={(viewMode) => updateGlobal({ viewMode })}

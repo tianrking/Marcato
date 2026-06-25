@@ -51,6 +51,7 @@ const en = {
     sync: "Sync",
     offlineFirst: "Offline first",
     language: "Language",
+    easterEggs: "Cyber effects",
   },
   find: {
     title: "Find / Replace",
@@ -168,7 +169,7 @@ const resources = {
         importSelected: "导入选中项",
       },
       view: { editor: "编辑", split: "分屏", preview: "预览", outline: "目录" },
-      setting: { sync: "同步", offlineFirst: "离线优先", language: "语言" },
+      setting: { sync: "同步", offlineFirst: "离线优先", language: "语言", easterEggs: "赛博彩蛋" },
       find: {
         title: "查找 / 替换",
         find: "查找",
@@ -250,7 +251,7 @@ const resources = {
         importSelected: "匯入選取項",
       },
       view: { editor: "編輯", split: "分割", preview: "預覽", outline: "大綱" },
-      setting: { sync: "同步", offlineFirst: "離線優先", language: "語言" },
+      setting: { sync: "同步", offlineFirst: "離線優先", language: "語言", easterEggs: "賽博彩蛋" },
       find: {
         title: "尋找 / 取代",
         find: "尋找",

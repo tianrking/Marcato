@@ -30,6 +30,7 @@ export function loadGlobalState(): GlobalState {
     ...DEFAULT_GLOBAL_STATE,
     ...state,
     accent: normalizeAccent(state.accent),
+    easterEggs: typeof state.easterEggs === "boolean" ? state.easterEggs : DEFAULT_GLOBAL_STATE.easterEggs,
     language,
     findDocked: findDocked ? findDocked === "1" : Boolean(state.findDocked),
   };

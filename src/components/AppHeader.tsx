@@ -1,4 +1,4 @@
-import { Menu, Moon, Palette, PanelLeft, PanelRight, SplitSquareHorizontal, Sun } from "lucide-react";
+import { Menu, Moon, Palette, PanelLeft, PanelRight, Sparkles, SplitSquareHorizontal, Sun } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { AccentPalette, ThemeMode, ViewMode } from "../types";
 import { IconButton, Segmented } from "./Common";
@@ -10,9 +10,11 @@ interface AppHeaderProps {
     chars: number;
   };
   accent: AccentPalette;
+  easterEggs: boolean;
   theme: ThemeMode;
   viewMode: ViewMode;
   onAccentChange: (accent: AccentPalette) => void;
+  onEasterEggsChange: (enabled: boolean) => void;
   onOpenMobileMenu: () => void;
   onThemeChange: (theme: ThemeMode) => void;
   onViewModeChange: (viewMode: ViewMode) => void;
@@ -26,7 +28,7 @@ const ACCENT_OPTIONS: Array<{ id: AccentPalette; label: string }> = [
   { id: "amber", label: "Amber" },
 ];
 
-export function AppHeader({ accent, stats, theme, viewMode, onAccentChange, onOpenMobileMenu, onThemeChange, onViewModeChange }: AppHeaderProps) {
+export function AppHeader({ accent, easterEggs, stats, theme, viewMode, onAccentChange, onEasterEggsChange, onOpenMobileMenu, onThemeChange, onViewModeChange }: AppHeaderProps) {
   const { t } = useTranslation();
 
   return (
@@ -69,6 +71,16 @@ export function AppHeader({ accent, stats, theme, viewMode, onAccentChange, onOp
         <IconButton title="Toggle theme" onClick={() => onThemeChange(theme === "dark" ? "light" : "dark")}>
           {theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}
         </IconButton>
+        <button
+          type="button"
+          className={easterEggs ? "icon-button cyber-toggle active" : "icon-button cyber-toggle"}
+          title="Toggle cyber effects"
+          aria-label="Toggle cyber effects"
+          aria-pressed={easterEggs}
+          onClick={() => onEasterEggsChange(!easterEggs)}
+        >
+          <Sparkles size={17} />
+        </button>
         <a className="repo-link" href="https://github.com/tianrking/Marcato" target="_blank" rel="noreferrer" title="Marcato on GitHub" aria-label="Marcato on GitHub">
           <GitHubMark />
         </a>

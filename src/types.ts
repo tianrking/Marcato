@@ -16,6 +16,7 @@ export interface MarkdownTab {
 export interface GlobalState {
   theme: ThemeMode;
   accent: AccentPalette;
+  easterEggs: boolean;
   viewMode: ViewMode;
   syncScroll: boolean;
   splitPercent: number;

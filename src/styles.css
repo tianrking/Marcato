@@ -221,6 +221,314 @@ a:focus-visible {
   opacity: 0.72;
 }
 
+.easter-egg-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 6;
+  overflow: hidden;
+  pointer-events: none;
+  color: var(--accent);
+}
+
+.cyber-grid {
+  position: absolute;
+  inset: 0;
+  opacity: 0.28;
+  background:
+    linear-gradient(90deg, transparent 0, transparent calc(100% - 1px), color-mix(in srgb, var(--accent) 38%, transparent) calc(100% - 1px)),
+    linear-gradient(180deg, transparent 0, transparent calc(100% - 1px), color-mix(in srgb, var(--accent-2) 32%, transparent) calc(100% - 1px));
+  background-size: 76px 76px;
+  mask-image: linear-gradient(180deg, transparent, #000 18%, #000 82%, transparent);
+}
+
+.matrix-rain span {
+  position: absolute;
+  top: -42vh;
+  left: var(--left);
+  width: 16px;
+  white-space: pre-line;
+  font: 700 12px/1.24 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: color-mix(in srgb, var(--accent-2) 76%, #fff);
+  text-shadow: 0 0 10px var(--accent-2);
+  opacity: 0.24;
+  animation: matrix-fall var(--speed) linear infinite;
+  animation-delay: var(--delay);
+}
+
+.cyber-weather i {
+  position: absolute;
+  top: -8vh;
+  left: var(--left);
+  width: var(--size);
+  height: var(--size);
+  border-radius: 999px;
+  background: color-mix(in srgb, #fff 64%, var(--accent));
+  box-shadow: 0 0 12px color-mix(in srgb, #fff 50%, var(--accent));
+  opacity: 0.78;
+  animation: cyber-snow var(--speed) linear infinite;
+  animation-delay: var(--delay);
+}
+
+.lightning-field {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background:
+    linear-gradient(115deg, transparent 0 46%, rgba(255, 255, 255, 0.74) 47%, transparent 49%),
+    radial-gradient(circle at 76% 18%, color-mix(in srgb, var(--accent) 28%, transparent), transparent 32%);
+  animation: lightning-pulse 9s infinite;
+}
+
+.lightning-field span {
+  position: absolute;
+  top: 0;
+  width: 2px;
+  height: 38vh;
+  background: linear-gradient(#fff, var(--accent), transparent);
+  filter: drop-shadow(0 0 14px var(--accent));
+  transform: skewX(-18deg);
+}
+
+.lightning-field span:first-child {
+  left: 72%;
+}
+
+.lightning-field span:last-child {
+  left: 18%;
+  height: 24vh;
+  animation-delay: 3s;
+}
+
+.scan-beam {
+  position: absolute;
+  inset-inline: -12%;
+  top: -16%;
+  height: 18%;
+  background:
+    linear-gradient(180deg, transparent, color-mix(in srgb, var(--accent) 24%, transparent), transparent),
+    linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent-2) 28%, transparent), transparent);
+  filter: blur(1px);
+  opacity: 0.64;
+  animation: scan-beam 6.5s ease-in-out infinite;
+}
+
+.cyber-pet {
+  position: absolute;
+  left: -96px;
+  bottom: clamp(18px, 5vh, 48px);
+  width: 54px;
+  height: 34px;
+  filter: drop-shadow(0 0 12px color-mix(in srgb, var(--accent) 72%, transparent));
+  animation: pet-walk 18s linear infinite;
+  animation-delay: -5.5s;
+  opacity: 0.9;
+}
+
+.cyber-cursor {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 54px;
+  height: 54px;
+  border: 1px solid color-mix(in srgb, var(--accent) 72%, transparent);
+  border-radius: 999px;
+  opacity: 0;
+  transform: translate3d(calc(var(--cursor-x, -100px) - 27px), calc(var(--cursor-y, -100px) - 27px), 0);
+  transition: transform 90ms linear, opacity 160ms ease;
+  box-shadow:
+    0 0 22px color-mix(in srgb, var(--accent) 28%, transparent),
+    inset 0 0 16px color-mix(in srgb, var(--accent-2) 18%, transparent);
+}
+
+.cyber-cursor::before,
+.cyber-cursor::after {
+  content: "";
+  position: absolute;
+  inset: 50% auto auto 50%;
+  width: 72px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  transform: translate(-50%, -50%);
+}
+
+.cyber-cursor::after {
+  width: 1px;
+  height: 72px;
+  background: linear-gradient(180deg, transparent, var(--accent-2), transparent);
+}
+
+.cyber-cursor[data-ready="true"] {
+  opacity: 0.72;
+}
+
+.pet-body {
+  position: absolute;
+  left: 5px;
+  right: 0;
+  bottom: 6px;
+  height: 24px;
+  border: 1px solid color-mix(in srgb, var(--accent) 72%, #fff);
+  border-radius: 9px 11px 8px 10px;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--accent) 44%, #111827), color-mix(in srgb, var(--accent-2) 46%, #0f172a));
+}
+
+.pet-ear {
+  position: absolute;
+  top: 0;
+  width: 12px;
+  height: 14px;
+  border: 1px solid color-mix(in srgb, var(--accent) 72%, #fff);
+  background: color-mix(in srgb, var(--accent) 54%, #111827);
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+
+.pet-ear.left {
+  left: 13px;
+}
+
+.pet-ear.right {
+  left: 35px;
+}
+
+.pet-eye {
+  position: absolute;
+  top: 8px;
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 0 8px #fff;
+  animation: pet-blink 4.2s steps(1, end) infinite;
+}
+
+.pet-eye.left {
+  left: 15px;
+}
+
+.pet-eye.right {
+  left: 29px;
+}
+
+.pet-tail {
+  position: absolute;
+  right: -9px;
+  top: 5px;
+  width: 14px;
+  height: 16px;
+  border: 2px solid color-mix(in srgb, var(--accent-2) 76%, #fff);
+  border-left: 0;
+  border-bottom: 0;
+  border-radius: 0 12px 0 0;
+  transform-origin: left bottom;
+  animation: tail-signal 0.9s ease-in-out infinite;
+}
+
+.pet-shadow {
+  position: absolute;
+  left: 8px;
+  right: 0;
+  bottom: 0;
+  height: 4px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 34%, transparent);
+  filter: blur(2px);
+}
+
+.cyber-toggle.active {
+  border-color: var(--accent);
+  color: #fff;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--accent) 84%, #fff), color-mix(in srgb, var(--accent-2) 78%, #111827));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 18%, transparent), 0 0 24px color-mix(in srgb, var(--accent) 24%, transparent);
+}
+
+@keyframes matrix-fall {
+  from {
+    transform: translateY(-18vh);
+  }
+
+  to {
+    transform: translateY(128vh);
+  }
+}
+
+@keyframes cyber-snow {
+  from {
+    transform: translate3d(0, -8vh, 0);
+  }
+
+  to {
+    transform: translate3d(var(--drift), 112vh, 0);
+  }
+}
+
+@keyframes lightning-pulse {
+  0%, 72%, 75%, 100% {
+    opacity: 0;
+  }
+
+  73% {
+    opacity: 0.78;
+  }
+
+  74% {
+    opacity: 0.2;
+  }
+}
+
+@keyframes scan-beam {
+  0% {
+    transform: translateY(-24vh);
+  }
+
+  45%, 100% {
+    transform: translateY(122vh);
+  }
+}
+
+@keyframes pet-walk {
+  from {
+    transform: translateX(-8vw) translateY(0) scaleX(1);
+  }
+
+  48% {
+    transform: translateX(110vw) translateY(-4px) scaleX(1);
+  }
+
+  50% {
+    transform: translateX(110vw) translateY(-4px) scaleX(-1);
+  }
+
+  98% {
+    transform: translateX(-8vw) translateY(0) scaleX(-1);
+  }
+
+  to {
+    transform: translateX(-8vw) translateY(0) scaleX(1);
+  }
+}
+
+@keyframes pet-blink {
+  0%, 92%, 100% {
+    transform: scaleY(1);
+  }
+
+  94% {
+    transform: scaleY(0.15);
+  }
+}
+
+@keyframes tail-signal {
+  0%, 100% {
+    transform: rotate(-8deg);
+  }
+
+  50% {
+    transform: rotate(14deg);
+  }
+}
+
 .app-header {
   position: relative;
   height: 66px;
@@ -2612,6 +2920,10 @@ a:focus-visible {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .easter-egg-layer {
+    display: none;
+  }
+
   *,
   *::before,
   *::after {

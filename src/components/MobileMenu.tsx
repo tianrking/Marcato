@@ -12,6 +12,7 @@ import {
   Plus,
   Save,
   Share2,
+  Sparkles,
   SplitSquareHorizontal,
   X,
 } from "lucide-react";
@@ -191,6 +192,14 @@ export function MobileMenu({
               />
             ))}
           </div>
+          <label className="mobile-toggle">
+            <input
+              type="checkbox"
+              checked={globalState.easterEggs}
+              onChange={(event) => onGlobalChange({ easterEggs: event.target.checked })}
+            />
+            <Sparkles size={15} />{t("setting.easterEggs")}
+          </label>
           <label className="mobile-toggle">
             <input
               type="checkbox"
