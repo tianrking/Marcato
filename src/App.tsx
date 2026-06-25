@@ -27,6 +27,7 @@ import {
   Search,
   ShieldCheck,
   Sigma,
+  Smile,
   Strikethrough,
   Table2,
   Trash2,
@@ -34,6 +35,7 @@ import {
 } from "lucide-react";
 import { AppHeader } from "./components/AppHeader";
 import { AlertInsertModal } from "./components/AlertInsertModal";
+import { EmojiInsertModal } from "./components/EmojiInsertModal";
 import { FindReplacePanel } from "./components/FindReplacePanel";
 import { IconButton, Modal } from "./components/Common";
 import { GitHubImportModal } from "./components/GitHubImportModal";
@@ -106,6 +108,7 @@ function App() {
   const [referenceSelection, setReferenceSelection] = useState<{ end: number; number: number; start: number } | null>(null);
   const [symbolsSelection, setSymbolsSelection] = useState<{ end: number; start: number } | null>(null);
   const [alertSelection, setAlertSelection] = useState<{ end: number; start: number } | null>(null);
+  const [emojiSelection, setEmojiSelection] = useState<{ end: number; start: number } | null>(null);
   const [toast, setToast] = useState("");
   const [dragging, setDragging] = useState(false);
 
@@ -496,6 +499,29 @@ function App() {
     });
   };
 
+  const openEmojiModal = () => {
+    const editor = editorRef.current;
+    if (!editor) {
+      setEmojiSelection({ start: 0, end: 0 });
+      return;
+    }
+    setEmojiSelection({ start: editor.selectionStart, end: editor.selectionEnd });
+  };
+
+  const insertEmojis = (shortcodes: string[]) => {
+    if (!activeTab || !emojiSelection || shortcodes.length === 0) return;
+    const insertion = shortcodes.join(" ");
+    const next = activeTab.content.slice(0, emojiSelection.start) + insertion + activeTab.content.slice(emojiSelection.end);
+    commitContent(next);
+    requestAnimationFrame(() => {
+      const editor = editorRef.current;
+      if (!editor) return;
+      const caret = emojiSelection.start + insertion.length;
+      editor.focus();
+      editor.setSelectionRange(caret, caret);
+    });
+  };
+
   const onScrollEditor = () => {
     if (!globalState.syncScroll || syncingRef.current || !editorRef.current || !previewPaneRef.current) return;
     syncingRef.current = true;
@@ -603,6 +629,7 @@ function App() {
         <IconButton title="Link" onClick={openLinkModal}><Link size={16} /></IconButton>
         <IconButton title="Image" onClick={openImageModal}><Image size={16} /></IconButton>
         <IconButton title="Reference" onClick={openReferenceModal}><BookMarked size={16} /></IconButton>
+        <IconButton title="GitHub Emojis" onClick={openEmojiModal}><Smile size={16} /></IconButton>
         <IconButton title="Symbols & HTML entities" onClick={openSymbolsModal}><BadgeCent size={16} /></IconButton>
         <IconButton title="Markdown alerts" onClick={openAlertModal}><BadgeAlert size={16} /></IconButton>
         <IconButton title="Inline code" onClick={() => runCommand("inlineCode")}><Code2 size={16} /></IconButton>
@@ -763,6 +790,13 @@ function App() {
         <AlertInsertModal
           onClose={() => setAlertSelection(null)}
           onInsert={insertConfiguredAlert}
+        />
+      )}
+
+      {emojiSelection && (
+        <EmojiInsertModal
+          onClose={() => setEmojiSelection(null)}
+          onInsert={insertEmojis}
         />
       )}
 
