@@ -42,6 +42,7 @@ interface MobileMenuProps {
   onExportPdf: () => void;
   onExportPng: () => void;
   onGithubImport: () => void;
+  onHealthDetails: () => void;
   onImportFiles: () => void;
   onNewTab: () => void;
   onSelectTab: (id: string) => void;
@@ -72,6 +73,7 @@ export function MobileMenu({
   onExportPdf,
   onExportPng,
   onGithubImport,
+  onHealthDetails,
   onImportFiles,
   onNewTab,
   onSelectTab,
@@ -126,6 +128,9 @@ export function MobileMenu({
             <span>{t("health.images", { count: health.signals.images })}</span>
             <span>{t("health.code", { count: health.signals.codeBlocks })}</span>
           </div>
+          <button type="button" className="mobile-wide-action" onClick={() => runAndClose(onHealthDetails)}>
+            <Eye size={16} />Details
+          </button>
         </section>
 
         <section className="mobile-drawer-section">

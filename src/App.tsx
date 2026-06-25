@@ -46,6 +46,7 @@ import {
 } from "lucide-react";
 import { AppHeader } from "./components/AppHeader";
 import { ConfirmModal } from "./components/ConfirmModal";
+import { DocumentHealthModal } from "./components/DocumentHealthModal";
 import { FindReplacePanel } from "./components/FindReplacePanel";
 import { IconButton } from "./components/Common";
 import { GitHubImportModal } from "./components/GitHubImportModal";
@@ -118,6 +119,7 @@ function App() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [pdfExport, setPdfExport] = useState<PdfExportState | null>(null);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
+  const [healthOpen, setHealthOpen] = useState(false);
 
   const editorRef = useRef<HTMLTextAreaElement | null>(null);
   const previewRef = useRef<HTMLElement | null>(null);
@@ -560,7 +562,7 @@ function App() {
                 <span>{t("health.code", { count: health.signals.codeBlocks })}</span>
               </div>
               <ul>
-                {health.issues.length ? health.issues.map((issue) => (
+                {health.issues.length ? health.issues.slice(0, 5).map((issue) => (
                   <li key={`${issue.code}-${JSON.stringify(issue.params || {})}`} className={issue.level}>
                     {issue.line ? (
                       <button className="health-issue-button" type="button" onClick={() => jumpToLine(issue.line!)}>
@@ -574,6 +576,9 @@ function App() {
                   <li className="info">{t("health.empty")}</li>
                 )}
               </ul>
+              <button className="health-details-button" type="button" onClick={() => setHealthOpen(true)}>
+                Details
+              </button>
             </div>
           </aside>
         )}
@@ -615,6 +620,7 @@ function App() {
         onExportPdf={() => void doExportPdf()}
         onExportPng={() => previewRef.current && void exportPreviewPng()}
         onGithubImport={githubImport.open}
+        onHealthDetails={() => setHealthOpen(true)}
         onImportFiles={() => fileInputRef.current?.click()}
         onNewTab={() => newTab("", undefined)}
         onSelectTab={setActiveTabId}
@@ -625,6 +631,17 @@ function App() {
       <InsertModalHost {...insertModals.hostProps} />
 
       <ShareModal mode={share.mode} onClose={share.close} onCopy={share.copy} onModeChange={share.setModeUrl} tooLong={share.tooLong} url={share.url} />
+
+      {healthOpen && (
+        <DocumentHealthModal
+          health={health}
+          onClose={() => setHealthOpen(false)}
+          onJumpToLine={(line) => {
+            setHealthOpen(false);
+            jumpToLine(line);
+          }}
+        />
+      )}
 
       {findReplace.replacePreview && (
         <ReplacePreviewModal

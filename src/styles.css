@@ -693,6 +693,102 @@ button:focus-visible {
   text-decoration: underline;
 }
 
+.health-details-button {
+  justify-self: start;
+  min-height: 30px;
+  font-size: 12px;
+}
+
+.health-detail-modal {
+  display: grid;
+  gap: 14px;
+  width: min(640px, 86vw);
+}
+
+.health-detail-score {
+  display: grid;
+  grid-template-columns: 32px auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel-2);
+}
+
+.health-detail-score strong {
+  font-size: 34px;
+  line-height: 1;
+}
+
+.health-detail-score span {
+  color: var(--muted);
+}
+
+.health-detail-score.strong strong {
+  color: var(--accent-2);
+}
+
+.health-detail-score.good strong {
+  color: var(--accent);
+}
+
+.health-detail-score.weak strong {
+  color: var(--danger);
+}
+
+.health-detail-signals {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.health-detail-signals span {
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  background: var(--panel);
+  text-align: center;
+}
+
+.health-detail-issues {
+  display: grid;
+  gap: 8px;
+  max-height: min(48vh, 420px);
+  overflow: auto;
+}
+
+.health-detail-issue {
+  display: grid;
+  grid-template-columns: 70px minmax(0, 1fr) auto;
+  justify-content: stretch;
+  gap: 10px;
+  min-height: 42px;
+  padding: 8px 10px;
+  text-align: left;
+  background: var(--panel);
+}
+
+.health-detail-issue span {
+  color: var(--muted);
+  text-transform: capitalize;
+}
+
+.health-detail-issue.warning span {
+  color: var(--danger);
+}
+
+.health-detail-issue strong {
+  min-width: 0;
+  font-weight: 560;
+}
+
+.health-detail-issue small {
+  color: var(--muted);
+}
+
 .render-pill {
   margin-left: auto;
   border: 1px solid var(--line);

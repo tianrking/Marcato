@@ -84,6 +84,10 @@ await withApp(async ({ consoleMessages, context, page, server }) => {
   await clearDialog.getByRole("button", { name: "Cancel" }).click();
   expect((await page.locator(".editor-pane textarea").inputValue()).includes("# Smoke Fixture"), "Canceling clear confirmation should keep the document.");
 
+  await page.locator(".health-panel").getByRole("button", { name: "Details" }).click();
+  await page.getByRole("dialog", { name: "Document health" }).waitFor({ state: "visible" });
+  await page.getByRole("dialog", { name: "Document health" }).getByRole("button", { name: "Close Document health" }).click();
+
   const workspaceToolbar = page.locator(".workspace-toolbar");
   await workspaceToolbar.getByRole("button", { name: "GitHub" }).click();
   await page.getByRole("dialog", { name: "Import from GitHub" }).waitFor({ state: "visible" });

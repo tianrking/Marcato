@@ -90,7 +90,7 @@ export function analyzeDocumentHealth(markdown: string): DocumentHealthReport {
   return {
     score,
     label,
-    issues: issues.slice(0, 5),
+    issues,
     signals: {
       headings: headings.length,
       links: normalLinks.length,
