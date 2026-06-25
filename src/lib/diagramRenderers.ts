@@ -19,7 +19,6 @@ const REMOTE_DIAGRAM_ENGINES = [
   "plantuml",
   "d2",
   "wavedrom",
-  "markmap",
 ];
 
 export async function postProcessPreview(root: HTMLElement, theme: "light" | "dark", offlineFirst: boolean, signal?: AbortSignal) {
@@ -37,6 +36,8 @@ export async function postProcessPreview(root: HTMLElement, theme: "light" | "da
   await renderGraphviz(root, theme, signal);
   if (isAborted(signal, root)) return;
   await renderVegaLite(root, theme, signal);
+  if (isAborted(signal, root)) return;
+  await renderMarkmap(root, theme, signal);
   if (isAborted(signal, root)) return;
   renderStl(root, theme, signal);
   if (isAborted(signal, root)) return;
@@ -424,6 +425,58 @@ function withVegaLiteTheme(spec: Record<string, unknown>, theme: "light" | "dark
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === "object" && !Array.isArray(value));
+}
+
+async function renderMarkmap(root: HTMLElement, theme: "light" | "dark", signal?: AbortSignal) {
+  const nodes = [...root.querySelectorAll<HTMLElement>('.diagram-viewer[data-diagram-engine="markmap"] .diagram-surface')];
+  if (nodes.length === 0) return;
+  const [{ Transformer }, { Markmap }] = await Promise.all([import("markmap-lib"), import("markmap-view")]);
+  if (isAborted(signal, root)) return;
+  const transformer = new Transformer();
+  for (const node of nodes) {
+    if (isAborted(signal, root)) return;
+    if (node.dataset.rendered === "1") continue;
+    const viewer = node.closest<HTMLElement>(".diagram-viewer");
+    const code = decodeURIComponent(node.dataset.originalCode || "");
+    try {
+      const { root: markmapRoot } = transformer.transform(code);
+      if (isAborted(signal, root) || !node.isConnected) return;
+      node.innerHTML = "";
+      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svg.classList.add("markmap-svg");
+      svg.setAttribute("role", "img");
+      svg.setAttribute("aria-label", "Markmap diagram");
+      svg.setAttribute("width", String(Math.max(640, Math.round(node.clientWidth || 720))));
+      svg.setAttribute("height", "420");
+      svg.style.width = "100%";
+      svg.style.minHeight = "320px";
+      node.appendChild(svg);
+      const markmap = Markmap.create(svg, {
+        autoFit: true,
+        duration: 0,
+        embedGlobalCSS: true,
+        initialExpandLevel: 8,
+        maxWidth: 280,
+        pan: true,
+        zoom: true,
+        color: () => theme === "dark" ? "#60a5fa" : "#2563eb",
+      }, markmapRoot);
+      await markmap.fit();
+      if (isAborted(signal, root) || !node.isConnected) {
+        markmap.destroy();
+        return;
+      }
+      registerPreviewCleanup(node, () => {
+        markmap.destroy();
+        delete node.dataset.rendered;
+        node.innerHTML = "";
+      });
+      node.dataset.rendered = "1";
+      markReady(viewer);
+    } catch (error) {
+      markDiagramFallback(viewer, node, "markmap", error instanceof Error ? error.message : "Local Markmap render failed");
+    }
+  }
 }
 
 async function renderRemoteDiagrams(root: HTMLElement, signal?: AbortSignal) {

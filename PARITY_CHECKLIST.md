@@ -55,7 +55,7 @@ must remain smooth and predictable after initial access.
 | PlantUML | Partial | `script.js`, `preview-worker.js` | `src/lib/diagramRenderers.ts`, `tests/e2e/diagram-remote.spec.mjs` | Source normalization, retry, and remote SVG sanitization have browser proof; PNG/export details still need parity. |
 | D2 | Partial | `script.js`, `preview-worker.js` | `src/lib/diagramRenderers.ts`, `tests/e2e/diagram-remote.spec.mjs` | Fenced-source normalization, retry, and remote SVG sanitization have browser proof; PNG/export details still need parity. |
 | WaveDrom | Partial | `script.js`, `preview-worker.js` | `src/lib/diagramRenderers.ts` | Remote/fallback only; local rendering missing. |
-| Markmap | Partial | `script.js`, `preview-worker.js` | `src/lib/diagramRenderers.ts` | Remote/fallback only; local SVG render missing. |
+| Markmap | Partial | `script.js`, `preview-worker.js` | `src/lib/diagramRenderers.ts`, `tests/e2e/diagrams.spec.mjs` | Local SVG render works offline-first with browser proof; export and interaction parity still need polish. |
 | Diagram toolbar | Partial | `index.html`, `script.js`, `styles.css` | `src/lib/diagramActions.ts` | Basic copy/SVG/PNG/zoom exists; missing original modal and remote-image PNG details. |
 | Diagram templates modal | Missing | `index.html`, `script.js` | none | Need searchable categorized templates and insert flow. |
 

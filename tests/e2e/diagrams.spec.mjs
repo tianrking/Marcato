@@ -28,6 +28,19 @@ author -> preview: render
 \`\`\`
 `;
 
+const markmapFixture = `# Local Markmap Fixture
+
+\`\`\`markmap
+# Product Plan
+## PDF
+- Pagination
+- Export progress
+## Diagrams
+- Local Markmap
+- Remote SVG safety
+\`\`\`
+`;
+
 const startedAt = Date.now();
 
 await withApp(async ({ consoleMessages, page, server }) => {
@@ -65,6 +78,24 @@ await withApp(async ({ consoleMessages, page, server }) => {
     });
   });
 
+  await setMarkdown(page, markmapFixture);
+  await waitForPreviewText(page, "Local Markmap Fixture");
+  await page.locator('.diagram-viewer[data-diagram-engine="markmap"] svg.markmap-svg').waitFor({ state: "visible", timeout: 20_000 });
+  const markmapChecks = await page.evaluate(() => {
+    const viewer = document.querySelector('.diagram-viewer[data-diagram-engine="markmap"]');
+    const svg = viewer?.querySelector("svg.markmap-svg");
+    return {
+      fallback: viewer?.classList.contains("is-fallback") || false,
+      ready: !viewer?.classList.contains("is-loading") && !viewer?.classList.contains("is-error"),
+      rendered: viewer?.querySelector(".diagram-surface")?.getAttribute("data-rendered"),
+      text: svg?.textContent?.replace(/\s+/g, " ").trim() || "",
+    };
+  });
+  expect(markmapChecks.ready, `Local Markmap should be ready. Checks: ${JSON.stringify(markmapChecks)}`);
+  expect(!markmapChecks.fallback, `Local Markmap should not use remote fallback. Checks: ${JSON.stringify(markmapChecks)}`);
+  expect(markmapChecks.rendered === "1", `Local Markmap surface should be marked rendered. Checks: ${JSON.stringify(markmapChecks)}`);
+  expect(markmapChecks.text.includes("Product Plan") && markmapChecks.text.includes("Local Markmap"), `Local Markmap text missing. Checks: ${JSON.stringify(markmapChecks)}`);
+
   await page.getByLabel("Offline first").uncheck();
   await setMarkdown(page, fixture);
   await waitForPreviewText(page, "Remote Diagram Fixture");
@@ -97,16 +128,17 @@ await withApp(async ({ consoleMessages, page, server }) => {
   expect(checks.renderedText.some((text) => text?.includes("PlantUML sanitized")), "Sanitized PlantUML SVG did not render.");
   expect(checks.renderedText.some((text) => text?.includes("D2 sanitized")), "Sanitized D2 SVG did not render after retry.");
 
-  await takeScreenshot(page, "diagram-remote-sanitized.png");
+  await takeScreenshot(page, "diagrams-sanitized-and-local.png");
   expectNoBrowserErrors(consoleMessages.filter((message) => !message.includes("503")));
-  await writeJsonArtifact("diagram-remote.json", {
+  await writeJsonArtifact("diagrams.json", {
     baseUrl: server.baseUrl,
     durationMs: Date.now() - startedAt,
     d2Requests,
+    markmapChecks,
     plantumlRequests,
     checks,
     consoleMessages,
   });
 });
 
-console.log(`Remote diagram test passed in ${Date.now() - startedAt}ms.`);
+console.log(`Diagram test passed in ${Date.now() - startedAt}ms.`);
