@@ -634,6 +634,31 @@ textarea {
   box-shadow: var(--shadow);
 }
 
+.find-panel > input {
+  width: 100%;
+  min-height: 34px;
+  padding: 0 8px;
+}
+
+.find-scope {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.find-scope select {
+  min-height: 34px;
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0 8px;
+  background: var(--panel);
+  color: var(--text);
+}
+
 .find-panel.docked {
   left: 12px;
   right: 12px;

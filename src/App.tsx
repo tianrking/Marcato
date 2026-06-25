@@ -9,7 +9,6 @@ import {
   Code2,
   Eye,
   FilePlus2,
-  FileSearch,
   Heading1,
   Heading2,
   Heading3,
@@ -22,7 +21,6 @@ import {
   Play,
   Redo2,
   RefreshCw,
-  Replace,
   Search,
   ShieldCheck,
   Sigma,
@@ -32,6 +30,7 @@ import {
   Undo2,
 } from "lucide-react";
 import { AppHeader } from "./components/AppHeader";
+import { FindReplacePanel } from "./components/FindReplacePanel";
 import { IconButton, Modal } from "./components/Common";
 import { GitHubImportModal } from "./components/GitHubImportModal";
 import { PreviewPane } from "./components/PreviewPane";
@@ -59,6 +58,7 @@ const INITIAL_FIND: FindOptions = {
   regex: false,
   inSelection: false,
   preserveCase: false,
+  scope: "document",
 };
 
 function App() {
@@ -122,6 +122,10 @@ function App() {
   useEffect(() => {
     void initializeWorkspace();
   }, [initializeWorkspace]);
+
+  useEffect(() => {
+    if (activeMatch >= matches.length) setActiveMatch(Math.max(0, matches.length - 1));
+  }, [activeMatch, matches.length]);
 
   useEffect(() => {
     if (!activeTab) return;
@@ -520,29 +524,18 @@ function App() {
       </main>
 
       {findOpen && (
-        <div className={globalState.findDocked ? "find-panel docked" : "find-panel"}>
-          <div className="modal-head">
-            <strong><FileSearch size={16} /> {t("find.title")}</strong>
-            <button onClick={() => setFindOpen(false)}>x</button>
-          </div>
-          <input value={findOptions.query} placeholder={t("find.find")} onChange={(event) => setFindOptions({ ...findOptions, query: event.target.value })} />
-          <input value={findOptions.replacement} placeholder={t("find.replacement")} onChange={(event) => setFindOptions({ ...findOptions, replacement: event.target.value })} />
-          <div className="check-grid">
-            <label><input type="checkbox" checked={findOptions.caseSensitive} onChange={(event) => setFindOptions({ ...findOptions, caseSensitive: event.target.checked })} />{t("find.case")}</label>
-            <label><input type="checkbox" checked={findOptions.wholeWord} onChange={(event) => setFindOptions({ ...findOptions, wholeWord: event.target.checked })} />{t("find.word")}</label>
-            <label><input type="checkbox" checked={findOptions.regex} onChange={(event) => setFindOptions({ ...findOptions, regex: event.target.checked })} />{t("find.regex")}</label>
-            <label><input type="checkbox" checked={findOptions.inSelection} onChange={(event) => setFindOptions({ ...findOptions, inSelection: event.target.checked })} />{t("find.selection")}</label>
-            <label><input type="checkbox" checked={findOptions.preserveCase} onChange={(event) => setFindOptions({ ...findOptions, preserveCase: event.target.checked })} />{t("find.preserveCase")}</label>
-            <label><input type="checkbox" checked={globalState.findDocked} onChange={(event) => updateGlobal({ findDocked: event.target.checked })} />{t("find.dock")}</label>
-          </div>
-          <div className="modal-actions">
-            <button onClick={() => cycleMatch(-1)}>{t("find.prev")}</button>
-            <button onClick={() => cycleMatch(1)}>{t("find.next")}</button>
-            <button onClick={replaceCurrent}><Replace size={15} />{t("find.current")}</button>
-            <button onClick={replaceEveryMatch}><Replace size={15} />{t("find.all")}</button>
-          </div>
-          <small>{matches.length ? `${activeMatch + 1} / ${matches.length}` : t("find.noMatches")}</small>
-        </div>
+        <FindReplacePanel
+          activeMatch={activeMatch}
+          docked={globalState.findDocked}
+          matches={matches}
+          options={findOptions}
+          onClose={() => setFindOpen(false)}
+          onDockedChange={(findDocked) => updateGlobal({ findDocked })}
+          onOptionsChange={setFindOptions}
+          onReplaceAll={replaceEveryMatch}
+          onReplaceCurrent={replaceCurrent}
+          onStep={cycleMatch}
+        />
       )}
 
       {githubOpen && (
@@ -643,7 +636,6 @@ function getRenderDelay(text: string) {
 
 function getCurrentSelection(editor: HTMLTextAreaElement | null) {
   if (!editor) return undefined;
-  if (editor.selectionStart === editor.selectionEnd) return undefined;
   return { start: editor.selectionStart, end: editor.selectionEnd };
 }
 

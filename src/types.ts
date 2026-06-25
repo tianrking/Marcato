@@ -54,6 +54,7 @@ export interface FindOptions {
   regex: boolean;
   inSelection: boolean;
   preserveCase: boolean;
+  scope: FindScope;
 }
 
 export interface FindMatch {
@@ -61,6 +62,8 @@ export interface FindMatch {
   end: number;
   text: string;
 }
+
+export type FindScope = "document" | "selection" | "heading" | "code" | "prose";
 
 export interface GitHubMarkdownFile {
   path: string;
