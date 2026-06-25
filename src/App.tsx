@@ -7,52 +7,40 @@ import {
   Bold,
   Braces,
   Code2,
-  Copy,
-  Download,
   Eye,
-  FileCode2,
-  FileDown,
-  FileImage,
   FilePlus2,
   FileSearch,
-  GitBranch,
   Heading1,
   Heading2,
   Heading3,
   Image,
   Italic,
-  Languages,
   Link,
   List,
   ListChecks,
   ListOrdered,
-  Moon,
-  PanelLeft,
-  PanelRight,
   Play,
-  Plus,
   Redo2,
   RefreshCw,
   Replace,
-  Save,
   Search,
-  Share2,
   ShieldCheck,
   Sigma,
-  SplitSquareHorizontal,
   Strikethrough,
-  Sun,
   Table2,
   Trash2,
   Undo2,
 } from "lucide-react";
+import { AppHeader } from "./components/AppHeader";
+import { IconButton, Modal } from "./components/Common";
+import { WorkspaceToolbar } from "./components/WorkspaceToolbar";
 import { MAX_IMPORT_BYTES, MAX_TABS, SHARE_URL_SOFT_LIMIT } from "./lib/constants";
 import { applyCommand, handleSmartEnter, type MarkdownCommand } from "./lib/editorCommands";
 import { copyImage, exportHtml, exportMarkdown, exportPdf, exportPng, getExportName } from "./lib/exporters";
 import { analyzeDocumentHealth } from "./lib/documentHealth";
 import { buildDiffPreview, findMatches, replaceAll, replaceOne } from "./lib/findReplace";
 import { fetchMarkdownFile, importFromGitHubUrl } from "./lib/githubImport";
-import { i18n, LANGUAGE_LABELS } from "./lib/i18n";
+import { i18n } from "./lib/i18n";
 import { renderMarkdownToHtml } from "./lib/markdownCore";
 import { sanitizePreviewHtml } from "./lib/sanitizer";
 import { buildShareUrl, readShareFromLocation } from "./lib/share";
@@ -68,7 +56,7 @@ import {
   saveTabs,
   saveUntitledCounter,
 } from "./lib/storage";
-import type { FindOptions, GitHubMarkdownFile, GlobalState, MarkdownTab, RenderResult, ViewMode } from "./types";
+import type { FindOptions, GitHubMarkdownFile, GlobalState, MarkdownTab, RenderResult } from "./types";
 
 const INITIAL_FIND: FindOptions = {
   query: "",
@@ -507,58 +495,29 @@ function App() {
         void handleFiles(event.dataTransfer.files);
       }}
     >
-      <header className="app-header">
-        <div className="brand">
-          <img src="/icon.jpg" alt="" />
-          <div>
-            <h1>{t("app.title")}</h1>
-            <p>{stats.minutes} min read | {stats.words} words | {stats.chars} chars</p>
-          </div>
-        </div>
-        <div className="header-actions">
-          <Segmented
-            value={globalState.viewMode}
-            options={[
-              ["editor", <PanelLeft key="editor" size={16} />, t("view.editor")],
-              ["split", <SplitSquareHorizontal key="split" size={16} />, t("view.split")],
-              ["preview", <PanelRight key="preview" size={16} />, t("view.preview")],
-            ]}
-            onChange={(value) => updateGlobal({ viewMode: value as ViewMode })}
-          />
-          <IconButton title="Toggle theme" onClick={() => updateGlobal({ theme: globalState.theme === "dark" ? "light" : "dark" })}>
-            {globalState.theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}
-          </IconButton>
-          <IconButton title="GitHub" onClick={() => window.open("https://github.com/ThisIs-Developer/Markdown-Viewer", "_blank", "noopener")}>
-            <GitBranch size={17} />
-          </IconButton>
-        </div>
-      </header>
+      <AppHeader
+        stats={stats}
+        theme={globalState.theme}
+        viewMode={globalState.viewMode}
+        onThemeChange={(theme) => updateGlobal({ theme })}
+        onViewModeChange={(viewMode) => updateGlobal({ viewMode })}
+      />
 
-      <div className="workspace-toolbar">
-        <div className="toolbar-group">
-          <button onClick={() => newTab("", undefined)}><Plus size={16} />{t("action.new")}</button>
-          <button onClick={() => fileInputRef.current?.click()}><Download size={16} />{t("action.import")}</button>
-          <button onClick={openGithubImport}><GitBranch size={16} />GitHub</button>
-          <input ref={fileInputRef} hidden type="file" multiple accept=".md,.markdown,.txt" onChange={(event) => event.target.files && void handleFiles(event.target.files)} />
-        </div>
-        <div className="toolbar-group">
-          <button onClick={() => exportMarkdown(getExportName(activeTab?.title || "document"), text)}><Save size={16} />MD</button>
-          <button onClick={() => exportHtml(getExportName(activeTab?.title || "document"), renderedHtml, activeTab?.title || "Document")}><FileCode2 size={16} />HTML</button>
-          <button onClick={() => previewRef.current && void exportPdf(getExportName(activeTab?.title || "document"), previewRef.current)}><FileDown size={16} />PDF</button>
-          <button onClick={() => previewRef.current && void exportPng(getExportName(activeTab?.title || "document"), previewRef.current)}><FileImage size={16} />PNG</button>
-          <button onClick={doCopyMarkdown}><Copy size={16} />{t("action.copy")}</button>
-          <button onClick={doCopyPreviewImage}><FileImage size={16} />{t("action.copyPng")}</button>
-          <button onClick={() => void doShare(true)}><Share2 size={16} />{t("action.share")}</button>
-        </div>
-        <div className="toolbar-group compact">
-          <label><input type="checkbox" checked={globalState.syncScroll} onChange={(event) => updateGlobal({ syncScroll: event.target.checked })} />{t("setting.sync")}</label>
-          <label><input type="checkbox" checked={globalState.offlineFirst} onChange={(event) => updateGlobal({ offlineFirst: event.target.checked })} />{t("setting.offlineFirst")}</label>
-          <select value={globalState.language} onChange={(event) => updateGlobal({ language: event.target.value })} title={t("setting.language")}>
-            {Object.entries(LANGUAGE_LABELS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
-          </select>
-          <button onClick={() => updateGlobal({ direction: globalState.direction === "rtl" ? "ltr" : "rtl" })}><Languages size={16} />{globalState.direction.toUpperCase()}</button>
-        </div>
-      </div>
+      <WorkspaceToolbar
+        fileInputRef={fileInputRef}
+        globalState={globalState}
+        onGlobalChange={updateGlobal}
+        onNewTab={() => newTab("", undefined)}
+        onGithubImport={openGithubImport}
+        onFilesSelected={(files) => void handleFiles(files)}
+        onExportMarkdown={() => exportMarkdown(getExportName(activeTab?.title || "document"), text)}
+        onExportHtml={() => exportHtml(getExportName(activeTab?.title || "document"), renderedHtml, activeTab?.title || t("status.document"))}
+        onExportPdf={() => previewRef.current && void exportPdf(getExportName(activeTab?.title || "document"), previewRef.current)}
+        onExportPng={() => previewRef.current && void exportPng(getExportName(activeTab?.title || "document"), previewRef.current)}
+        onCopyMarkdown={doCopyMarkdown}
+        onCopyPreviewImage={doCopyPreviewImage}
+        onShare={() => void doShare(true)}
+      />
 
       <nav className="tab-strip" aria-label={t("status.document")}>
         {tabs.map((tab) => (
@@ -806,48 +765,6 @@ function hasBinaryBytes(text: string) {
 
 function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function Segmented({
-  value,
-  options,
-  onChange,
-}: {
-  value: string;
-  options: Array<[string, React.ReactNode, string]>;
-  onChange: (value: string) => void;
-}) {
-  return (
-    <div className="segmented">
-      {options.map(([id, icon, label]) => (
-        <button key={id} title={label} className={value === id ? "active" : ""} onClick={() => onChange(id)}>
-          {icon}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function IconButton({ title, onClick, children }: { title: string; onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button className="icon-button" title={title} aria-label={title} onClick={onClick}>
-      {children}
-    </button>
-  );
-}
-
-function Modal({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
-  return (
-    <div className="modal-backdrop" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
-      <section className="modal" role="dialog" aria-modal="true" aria-label={title}>
-        <div className="modal-head">
-          <strong>{title}</strong>
-          <button onClick={onClose}>x</button>
-        </div>
-        {children}
-      </section>
-    </div>
-  );
 }
 
 export default App;
