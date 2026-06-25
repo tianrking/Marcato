@@ -45,20 +45,10 @@ import { fetchMarkdownFile, importFromGitHubUrl } from "./lib/githubImport";
 import { i18n } from "./lib/i18n";
 import { renderMarkdownToHtml } from "./lib/markdownCore";
 import { createPreviewDocument, EMPTY_PREVIEW_DOCUMENT, previewDocumentToHtml, type PreviewBlock } from "./lib/previewDocument";
-import { buildShareUrl, readShareFromLocation } from "./lib/share";
-import {
-  loadActiveTabId,
-  loadDefaultMarkdown,
-  loadGlobalState,
-  loadTabs,
-  loadUntitledCounter,
-  makeTab,
-  saveActiveTabId,
-  saveGlobalState,
-  saveTabs,
-  saveUntitledCounter,
-} from "./lib/storage";
-import type { FindOptions, GitHubMarkdownFile, GlobalState, MarkdownTab, RenderResult } from "./types";
+import { buildShareUrl } from "./lib/share";
+import { makeTab } from "./lib/storage";
+import { useAppStore } from "./stores/appStore";
+import type { FindOptions, GitHubMarkdownFile, MarkdownTab, RenderResult } from "./types";
 
 const INITIAL_FIND: FindOptions = {
   query: "",
@@ -72,10 +62,21 @@ const INITIAL_FIND: FindOptions = {
 
 function App() {
   const { t } = useTranslation();
-  const [globalState, setGlobalState] = useState<GlobalState>(() => loadGlobalState());
-  const [tabs, setTabs] = useState<MarkdownTab[]>([]);
-  const [activeTabId, setActiveTabId] = useState<string>("");
-  const [untitledCounter, setUntitledCounter] = useState(() => loadUntitledCounter());
+  const globalState = useAppStore((state) => state.globalState);
+  const tabs = useAppStore((state) => state.tabs);
+  const activeTabId = useAppStore((state) => state.activeTabId);
+  const untitledCounter = useAppStore((state) => state.untitledCounter);
+  const initializeWorkspace = useAppStore((state) => state.initializeWorkspace);
+  const updateGlobal = useAppStore((state) => state.updateGlobal);
+  const setActiveTabId = useAppStore((state) => state.setActiveTabId);
+  const updateActiveContent = useAppStore((state) => state.updateActiveContent);
+  const addTab = useAppStore((state) => state.addTab);
+  const addTabs = useAppStore((state) => state.addTabs);
+  const closeStoreTab = useAppStore((state) => state.closeTab);
+  const renameStoreTab = useAppStore((state) => state.renameTab);
+  const duplicateStoreTab = useAppStore((state) => state.duplicateTab);
+  const undo = useAppStore((state) => state.undo);
+  const redo = useAppStore((state) => state.redo);
   const [previewDocument, setPreviewDocument] = useState(EMPTY_PREVIEW_DOCUMENT);
   const [toc, setToc] = useState<RenderResult["toc"]>([]);
   const [renderState, setRenderState] = useState<"idle" | "rendering" | "error">("idle");
@@ -115,40 +116,11 @@ function App() {
     document.documentElement.lang = globalState.language === "zh" ? "zh-Hans" : globalState.language === "tw" ? "zh-Hant" : globalState.language;
     document.body.dir = globalState.direction;
     void i18n.changeLanguage(globalState.language);
-    saveGlobalState(globalState);
   }, [globalState]);
 
   useEffect(() => {
-    const shared = readShareFromLocation();
-    const storedTabs = loadTabs();
-    void loadDefaultMarkdown().then((defaultMarkdown) => {
-      if (shared) {
-        const tab = makeTab(shared.editable ? "Shared edit" : "Shared view", shared.markdown);
-        setTabs([tab]);
-        setActiveTabId(tab.id);
-        return;
-      }
-      if (storedTabs.length) {
-        const storedActive = loadActiveTabId();
-        setTabs(storedTabs);
-        setActiveTabId(storedActive && storedTabs.some((tab) => tab.id === storedActive) ? storedActive : storedTabs[0].id);
-      } else {
-        const tab = makeTab("Welcome.md", defaultMarkdown);
-        setTabs([tab]);
-        setActiveTabId(tab.id);
-      }
-    });
-  }, []);
-
-  useEffect(() => {
-    if (!tabs.length) return;
-    saveTabs(tabs);
-    if (activeTabId) saveActiveTabId(activeTabId);
-  }, [tabs, activeTabId]);
-
-  useEffect(() => {
-    saveUntitledCounter(untitledCounter);
-  }, [t, untitledCounter]);
+    void initializeWorkspace();
+  }, [initializeWorkspace]);
 
   useEffect(() => {
     if (!activeTab) return;
@@ -240,25 +212,6 @@ function App() {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [activeTabId, globalState.syncScroll, text, activeTab?.title]);
 
-  const updateGlobal = useCallback((patch: Partial<GlobalState>) => {
-    setGlobalState((state) => ({ ...state, ...patch }));
-  }, []);
-
-  const updateActiveContent = useCallback((content: string, commitHistory = false) => {
-    setTabs((currentTabs) =>
-      currentTabs.map((tab) => {
-        if (tab.id !== activeTabId) return tab;
-        let history = tab.history;
-        let historyIndex = tab.historyIndex;
-        if (commitHistory && content !== tab.content) {
-          history = tab.history.slice(0, tab.historyIndex + 1).concat(content).slice(-80);
-          historyIndex = history.length - 1;
-        }
-        return { ...tab, content, updatedAt: Date.now(), history, historyIndex };
-      }),
-    );
-  }, [activeTabId]);
-
   const commitContent = useCallback((content: string) => updateActiveContent(content, true), [updateActiveContent]);
 
   const runCommand = (command: MarkdownCommand) => {
@@ -273,64 +226,24 @@ function App() {
   };
 
   const newTab = useCallback((content = "", title?: string) => {
-    setTabs((current) => {
-      if (current.length >= MAX_TABS) {
-        showToast(`Tab limit is ${MAX_TABS}.`);
-        return current;
-      }
-      const nextTitle = title || `${t("status.untitled")}-${untitledCounter}.md`;
-      const tab = makeTab(nextTitle, content);
-      setActiveTabId(tab.id);
-      setUntitledCounter((value) => value + 1);
-      return [...current, tab];
-    });
-  }, [untitledCounter]);
+    const tab = addTab(content, title || `${t("status.untitled")}-${untitledCounter}.md`);
+    if (!tab) showToast(`Tab limit is ${MAX_TABS}.`);
+  }, [addTab, t, untitledCounter]);
 
   const closeTab = useCallback((id: string) => {
-    setTabs((current) => {
-      if (current.length <= 1) {
-        const tab = makeTab(`${t("status.untitled")}-${untitledCounter}.md`, "");
-        setActiveTabId(tab.id);
-        setUntitledCounter((value) => value + 1);
-        return [tab];
-      }
-      const index = current.findIndex((tab) => tab.id === id);
-      const next = current.filter((tab) => tab.id !== id);
-      if (id === activeTabId) setActiveTabId(next[Math.max(0, index - 1)]?.id || next[0].id);
-      return next;
-    });
-  }, [activeTabId, t, untitledCounter]);
+    closeStoreTab(id, `${t("status.untitled")}-${untitledCounter}.md`);
+  }, [closeStoreTab, t, untitledCounter]);
 
   const renameTab = (id: string) => {
     const tab = tabs.find((item) => item.id === id);
     const title = window.prompt("Rename tab", tab?.title || "");
     if (!title) return;
-    setTabs((current) => current.map((item) => (item.id === id ? { ...item, title } : item)));
+    renameStoreTab(id, title);
   };
 
   const duplicateTab = (id: string) => {
-    const tab = tabs.find((item) => item.id === id);
-    if (tab) newTab(tab.content, `${tab.title.replace(/\.md$/i, "")} copy.md`);
-  };
-
-  const undo = () => {
-    setTabs((current) =>
-      current.map((tab) => {
-        if (tab.id !== activeTabId || tab.historyIndex <= 0) return tab;
-        const historyIndex = tab.historyIndex - 1;
-        return { ...tab, historyIndex, content: tab.history[historyIndex], updatedAt: Date.now() };
-      }),
-    );
-  };
-
-  const redo = () => {
-    setTabs((current) =>
-      current.map((tab) => {
-        if (tab.id !== activeTabId || tab.historyIndex >= tab.history.length - 1) return tab;
-        const historyIndex = tab.historyIndex + 1;
-        return { ...tab, historyIndex, content: tab.history[historyIndex], updatedAt: Date.now() };
-      }),
-    );
+    const tab = duplicateStoreTab(id);
+    if (!tab) showToast(`Tab limit is ${MAX_TABS}.`);
   };
 
   const onEditorKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -372,8 +285,7 @@ function App() {
       imported.push(makeTab(file.name, content));
     }
     if (!imported.length) return;
-    setTabs((current) => [...current, ...imported].slice(0, MAX_TABS));
-    setActiveTabId(imported[0].id);
+    addTabs(imported, imported[0].id);
   };
 
   const openGithubImport = async () => {
