@@ -845,6 +845,12 @@ textarea {
   margin-top: 10px;
 }
 
+.modal-actions button.active {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
 .insert-form {
   display: grid;
   gap: 12px;
@@ -1383,6 +1389,12 @@ textarea {
   min-height: 120px;
   padding: 10px;
   resize: vertical;
+}
+
+.share-warning {
+  margin: 8px 0 0;
+  color: var(--danger);
+  font-size: 13px;
 }
 
 .zoom-body {

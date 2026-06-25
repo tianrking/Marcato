@@ -1,4 +1,7 @@
 import { deflate, inflate } from "pako";
+import { SHARE_URL_SOFT_LIMIT } from "./constants";
+
+const CANONICAL_SHARE_BASE = "https://markdownviewer.pages.dev/";
 
 export function encodeShare(markdown: string) {
   const bytes = new TextEncoder().encode(markdown);
@@ -12,23 +15,36 @@ export function decodeShare(payload: string) {
 }
 
 export function buildShareUrl(markdown: string, editable: boolean) {
-  const base = isLocalBase() ? "https://markdownviewer.pages.dev/" : `${window.location.origin}${window.location.pathname}`;
+  const base = getShareBaseUrl();
   const payload = encodeShare(markdown);
   return `${base}#share=${payload}${editable ? "&edit=1" : ""}`;
 }
 
+export function isShareUrlTooLong(url: string) {
+  return url.length > SHARE_URL_SOFT_LIMIT;
+}
+
 export function readShareFromLocation() {
   const hash = window.location.hash || "";
-  const match = /share=([^&]+)/.exec(hash);
-  if (!match) return null;
+  if (!hash.startsWith("#share=")) return null;
+  const rest = hash.slice("#share=".length);
+  const ampIndex = rest.indexOf("&");
+  const payload = ampIndex === -1 ? rest : rest.slice(0, ampIndex);
+  const params = ampIndex === -1 ? "" : rest.slice(ampIndex + 1);
+  if (!payload) return null;
   return {
-    markdown: decodeShare(decodeURIComponent(match[1])),
-    editable: /(?:^|&)edit=1(?:&|$)/.test(hash.replace(/^#/, "")),
+    markdown: decodeShare(decodeURIComponent(payload)),
+    editable: params.split("&").includes("edit=1"),
   };
 }
 
+function getShareBaseUrl() {
+  if (isLocalBase()) return CANONICAL_SHARE_BASE;
+  return `${window.location.origin}${window.location.pathname || "/"}`;
+}
+
 function isLocalBase() {
-  return ["", "null"].includes(window.location.origin) || /^https?:\/\/(?:localhost|127\.0\.0\.1)/.test(window.location.origin);
+  return ["", "null"].includes(window.location.origin) || /^https?:\/\/(?:localhost|127\.0\.0\.1)/.test(window.location.origin) || "Neutralino" in window;
 }
 
 function bytesToBase64Url(bytes: Uint8Array) {

@@ -52,8 +52,11 @@ export const useAppStore = create<AppStoreState>((set, get) => ({
 
     if (shared) {
       const tab = makeTab(shared.editable ? "Shared edit" : "Shared view", shared.markdown);
+      const globalState: GlobalState = { ...get().globalState, viewMode: shared.editable ? "split" : "preview" };
       tabs = [tab];
       activeTabId = tab.id;
+      saveGlobalState(globalState);
+      set({ globalState });
     } else if (storedTabs.length) {
       const storedActive = loadActiveTabId();
       tabs = storedTabs;

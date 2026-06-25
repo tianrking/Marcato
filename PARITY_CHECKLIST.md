@@ -81,7 +81,7 @@ must remain smooth and predictable after initial access.
 | Multi-tab documents | Partial | `script.js`, `index.html` | `src/stores/appStore.ts`, `src/App.tsx` | Basic tabs; missing overflow, action menu, reorder, delete confirm, mobile tab list parity. |
 | Drag/drop import | Needs proof | `script.js` | `src/App.tsx` | Verify multiple files, size limit, invalid files. |
 | GitHub import | Partial | `index.html`, `script.js` | `src/components/GitHubImportModal.tsx` | Tree exists; skeleton/error/mobile/tooling parity incomplete. |
-| Share view-only/edit links | Partial | `index.html`, `script.js` | `src/lib/share.ts`, `src/App.tsx` | Basic modes; verify view-only actually hides editor and large URL UX. |
+| Share view-only/edit links | Done | `index.html`, `script.js` | `src/lib/share.ts`, `src/App.tsx` | Original `#share=<payload>&edit=1` hash format restored; browser-verified view-only preview and editable split restore. |
 | Export Markdown | Needs proof | `script.js` | `src/lib/exporters.ts` | Verify filename/title behavior. |
 | Export HTML | Needs proof | `script.js` | `src/lib/exporters.ts` | Verify CSS, diagrams, sanitized HTML, standalone result. |
 | Export PNG | Partial | `script.js` | `src/lib/exporters.ts`, `src/lib/diagramActions.ts` | Needs white/transparent background choices and remote image handling proof. |
@@ -133,6 +133,6 @@ High-risk browser smoke cases:
 - Multiple GeoJSON/TopoJSON blocks in one document.
 - Ctrl/Cmd+T and Ctrl/Cmd+W keep browser behavior.
 - Alt+Shift+T and Alt+Shift+W control app tabs.
-- View-only share URL hides editing controls.
+- Share URL generation and fresh-page restore: view-only hides editing controls, edit link opens split mode.
 - Mobile viewport opens all primary actions.
 - Export PDF with long tables, headings near page breaks, diagrams, code blocks.

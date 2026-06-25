@@ -47,7 +47,7 @@ import { SymbolsInsertModal } from "./components/SymbolsInsertModal";
 import { TableInsertModal } from "./components/TableInsertModal";
 import { WorkspaceToolbar } from "./components/WorkspaceToolbar";
 import { useGlobalShortcuts } from "./hooks/useGlobalShortcuts";
-import { MAX_IMPORT_BYTES, MAX_TABS, SHARE_URL_SOFT_LIMIT } from "./lib/constants";
+import { MAX_IMPORT_BYTES, MAX_TABS } from "./lib/constants";
 import { applyCommand, buildMarkdownAlert, buildMarkdownImage, buildMarkdownLink, buildMarkdownReference, buildMarkdownTable, handleSmartEnter, insertText, suggestMarkdownReferenceNumber, type MarkdownAlertType, type MarkdownCommand, type TableAlignment } from "./lib/editorCommands";
 import { copyImage, exportHtml, exportMarkdown, exportPdf, exportPng, getExportName } from "./lib/exporters";
 import { analyzeDocumentHealth } from "./lib/documentHealth";
@@ -56,7 +56,7 @@ import { fetchMarkdownFile, importFromGitHubUrl } from "./lib/githubImport";
 import { i18n } from "./lib/i18n";
 import { renderMarkdownToHtml } from "./lib/markdownCore";
 import { createPreviewDocument, EMPTY_PREVIEW_DOCUMENT, previewDocumentToHtml, type PreviewBlock } from "./lib/previewDocument";
-import { buildShareUrl } from "./lib/share";
+import { buildShareUrl, isShareUrlTooLong } from "./lib/share";
 import { makeTab } from "./lib/storage";
 import { useAppStore } from "./stores/appStore";
 import type { FindOptions, GitHubMarkdownFile, MarkdownTab, RenderResult } from "./types";
@@ -98,6 +98,7 @@ function App() {
   const [findOptions, setFindOptions] = useState<FindOptions>(INITIAL_FIND);
   const [activeMatch, setActiveMatch] = useState(0);
   const [shareUrl, setShareUrl] = useState("");
+  const [shareMode, setShareMode] = useState<"view" | "edit">("view");
   const [githubOpen, setGithubOpen] = useState(false);
   const [githubUrl, setGithubUrl] = useState("");
   const [githubFiles, setGithubFiles] = useState<GitHubMarkdownFile[]>([]);
@@ -298,14 +299,27 @@ function App() {
     setGithubOpen(false);
   };
 
-  const doShare = async (editable: boolean) => {
-    const url = buildShareUrl(text, editable);
+  const showShareModal = (mode: "view" | "edit" = "view") => {
+    const url = buildShareUrl(text, mode === "edit");
+    setShareMode(mode);
     setShareUrl(url);
-    if (url.length <= SHARE_URL_SOFT_LIMIT) {
-      await navigator.clipboard.writeText(url);
+    if (isShareUrlTooLong(url)) showToast(t("toast.shareTooLong"));
+  };
+
+  const setShareModeUrl = (mode: "view" | "edit") => {
+    const url = buildShareUrl(text, mode === "edit");
+    setShareMode(mode);
+    setShareUrl(url);
+    if (isShareUrlTooLong(url)) showToast(t("toast.shareTooLong"));
+  };
+
+  const copyShareUrl = async () => {
+    if (!shareUrl || isShareUrlTooLong(shareUrl)) return;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
       showToast(t("toast.shareCopied"));
-    } else {
-      showToast(t("toast.shareTooLong"));
+    } catch {
+      showToast(t("toast.clipboardImageUnavailable"));
     }
   };
 
@@ -600,7 +614,7 @@ function App() {
         onExportPng={() => previewRef.current && void exportPng(getExportName(activeTab?.title || "document"), previewRef.current)}
         onCopyMarkdown={doCopyMarkdown}
         onCopyPreviewImage={doCopyPreviewImage}
-        onShare={() => void doShare(true)}
+        onShare={() => showShareModal("view")}
       />
 
       <nav className="tab-strip" aria-label={t("status.document")}>
@@ -807,10 +821,11 @@ function App() {
       {shareUrl && (
         <Modal title="Share URL" onClose={() => setShareUrl("")}>
           <textarea className="share-url" readOnly value={shareUrl} />
+          {isShareUrlTooLong(shareUrl) && <p className="share-warning">{t("toast.shareTooLong")}</p>}
           <div className="modal-actions">
-            <button onClick={() => void doShare(false)}>{t("status.viewOnlyShare")}</button>
-            <button onClick={() => void doShare(true)}>{t("status.editableShare")}</button>
-            <button onClick={() => void navigator.clipboard.writeText(shareUrl)}>{t("action.copy")}</button>
+            <button className={shareMode === "view" ? "active" : ""} onClick={() => setShareModeUrl("view")}>{t("status.viewOnlyShare")}</button>
+            <button className={shareMode === "edit" ? "active" : ""} onClick={() => setShareModeUrl("edit")}>{t("status.editableShare")}</button>
+            <button disabled={isShareUrlTooLong(shareUrl)} onClick={() => void copyShareUrl()}>{t("action.copy")}</button>
           </div>
         </Modal>
       )}
