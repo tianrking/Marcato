@@ -134,6 +134,12 @@ export function buildMarkdownTable(columns: number, rows: number, alignment: Tab
   ].join("\n");
 }
 
+export function buildMarkdownLink(label: string, url: string) {
+  const safeLabel = (label.trim() || "link text").replace(/\]/g, "\\]");
+  const safeUrl = (url.trim() || "https://example.com").replace(/\)/g, "%29");
+  return `[${safeLabel}](${safeUrl})`;
+}
+
 function tableDivider(alignment: TableAlignment) {
   if (alignment === "left") return ":---";
   if (alignment === "center") return ":---:";

@@ -845,6 +845,22 @@ textarea {
   margin-top: 10px;
 }
 
+.insert-form {
+  display: grid;
+  gap: 12px;
+}
+
+.insert-form label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.insert-form input {
+  min-height: 38px;
+}
+
 .table-insert {
   display: grid;
   gap: 12px;

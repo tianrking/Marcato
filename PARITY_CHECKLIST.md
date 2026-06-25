@@ -64,7 +64,7 @@ must remain smooth and predictable after initial access.
 | Area | Status | Original evidence | React evidence | Gap / acceptance |
 | --- | --- | --- | --- | --- |
 | Formatting toolbar | Partial | `index.html`, `script.js` | `src/App.tsx`, `src/lib/editorCommands.ts` | Core commands exist; several commands are simplified. |
-| Link insert modal | Missing | `index.html` link modal | fixed template | Need URL/text modal and selection handling. |
+| Link insert modal | Done | `index.html` link modal | `src/components/LinkInsertModal.tsx` | URL/text modal with selection replacement implemented. |
 | Image insert modal | Missing | `index.html` image modal | fixed template | Need URL/file/alt flow. |
 | Table insert modal | Done | `index.html` table modal | `src/components/TableInsertModal.tsx` | Rows, columns, and table-wide alignment insert flow implemented. |
 | Reference insert modal | Missing | `index.html` reference modal | fixed template | Need number/url/title flow. |
