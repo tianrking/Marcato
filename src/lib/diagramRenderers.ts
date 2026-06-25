@@ -6,6 +6,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
 import { setupDiagramActions } from "./diagramActions";
+import type { TopLevelSpec } from "vega-lite";
 
 let mermaidReady = false;
 const previewCleanups = new Map<HTMLElement, () => void>();
@@ -13,8 +14,6 @@ let graphvizInstance: Promise<import("@viz-js/viz").Viz> | null = null;
 const REMOTE_DIAGRAM_ENGINES = [
   "plantuml",
   "d2",
-  "vegalite",
-  "vega-lite",
   "wavedrom",
   "markmap",
 ];
@@ -25,6 +24,7 @@ export async function postProcessPreview(root: HTMLElement, theme: "light" | "da
   await renderAbc(root);
   await renderLeafletMaps(root, theme);
   await renderGraphviz(root, theme);
+  await renderVegaLite(root, theme);
   renderStl(root, theme);
   if (offlineFirst) renderRemoteDiagramFallbacks(root, "Offline-first is on. Remote rendering was skipped.");
   else await renderRemoteDiagrams(root);
@@ -292,6 +292,52 @@ async function renderGraphviz(root: HTMLElement, theme: "light" | "dark") {
 async function getGraphviz() {
   graphvizInstance ||= import("@viz-js/viz").then(({ instance }) => instance());
   return await graphvizInstance;
+}
+
+async function renderVegaLite(root: HTMLElement, theme: "light" | "dark") {
+  const nodes = [...root.querySelectorAll<HTMLElement>('.diagram-viewer[data-diagram-engine="vegalite"] .diagram-surface,.diagram-viewer[data-diagram-engine="vega-lite"] .diagram-surface')];
+  if (nodes.length === 0) return;
+  const [{ compile }, vega] = await Promise.all([import("vega-lite"), import("vega")]);
+  for (const node of nodes) {
+    if (node.dataset.rendered === "1") continue;
+    const viewer = node.closest<HTMLElement>(".diagram-viewer");
+    const engine = viewer?.dataset.diagramEngine || "vegalite";
+    const code = decodeURIComponent(node.dataset.originalCode || "");
+    try {
+      const spec = JSON.parse(code) as Record<string, unknown>;
+      const compiled = compile(withVegaLiteTheme(spec, theme) as TopLevelSpec).spec;
+      const view = new vega.View(vega.parse(compiled), {
+        renderer: "none",
+      }).initialize();
+      const svg = await view.toSVG().finally(() => view.finalize());
+      node.innerHTML = svg;
+      node.dataset.rendered = "1";
+      markReady(viewer);
+    } catch (error) {
+      markDiagramFallback(viewer, node, engine, error instanceof Error ? error.message : "Local Vega-Lite render failed");
+    }
+  }
+}
+
+function withVegaLiteTheme(spec: Record<string, unknown>, theme: "light" | "dark") {
+  const userConfig = isRecord(spec.config) ? spec.config : {};
+  const axisColor = theme === "dark" ? "#9aa7b7" : "#64748b";
+  const textColor = theme === "dark" ? "#e6edf3" : "#172033";
+  return {
+    ...spec,
+    background: spec.background ?? "transparent",
+    config: {
+      view: { stroke: "transparent" },
+      axis: { domainColor: axisColor, gridColor: theme === "dark" ? "#303744" : "#d7dee9", labelColor: textColor, tickColor: axisColor, titleColor: textColor },
+      legend: { labelColor: textColor, titleColor: textColor },
+      title: { color: textColor, subtitleColor: axisColor },
+      ...(userConfig as Record<string, unknown>),
+    },
+  };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value));
 }
 
 async function renderRemoteDiagrams(root: HTMLElement) {
