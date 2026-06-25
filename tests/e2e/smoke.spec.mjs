@@ -82,7 +82,12 @@ await withApp(async ({ consoleMessages, context, page, server }) => {
   await mobilePage.goto(server.baseUrl, { waitUntil: "networkidle" });
   await setMarkdown(mobilePage, "# Mobile Smoke\n\nThe responsive shell should remain usable.");
   await waitForPreviewText(mobilePage, "Mobile Smoke");
-  await mobilePage.locator(".workspace-toolbar").waitFor({ state: "visible" });
+  await mobilePage.getByRole("button", { name: "Open mobile menu" }).click();
+  const mobileMenu = mobilePage.getByRole("dialog", { name: "Mobile workspace menu" });
+  await mobileMenu.waitFor({ state: "visible" });
+  await mobileMenu.getByRole("button", { name: "GitHub" }).waitFor({ state: "visible" });
+  await mobileMenu.getByRole("button", { name: "Share" }).waitFor({ state: "visible" });
+  await mobilePage.getByRole("button", { name: "Close mobile menu" }).click();
   const mobileWidth = await mobilePage.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(mobileWidth < 48, `Mobile layout overflow is too large: ${mobileWidth}px`);
   await takeScreenshot(mobilePage, "smoke-mobile.png");

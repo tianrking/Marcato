@@ -1,4 +1,4 @@
-import { Moon, PanelLeft, PanelRight, SplitSquareHorizontal, Sun } from "lucide-react";
+import { Menu, Moon, PanelLeft, PanelRight, SplitSquareHorizontal, Sun } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { ThemeMode, ViewMode } from "../types";
 import { IconButton, Segmented } from "./Common";
@@ -11,11 +11,12 @@ interface AppHeaderProps {
   };
   theme: ThemeMode;
   viewMode: ViewMode;
+  onOpenMobileMenu: () => void;
   onThemeChange: (theme: ThemeMode) => void;
   onViewModeChange: (viewMode: ViewMode) => void;
 }
 
-export function AppHeader({ stats, theme, viewMode, onThemeChange, onViewModeChange }: AppHeaderProps) {
+export function AppHeader({ stats, theme, viewMode, onOpenMobileMenu, onThemeChange, onViewModeChange }: AppHeaderProps) {
   const { t } = useTranslation();
 
   return (
@@ -28,6 +29,9 @@ export function AppHeader({ stats, theme, viewMode, onThemeChange, onViewModeCha
         </div>
       </div>
       <div className="header-actions">
+        <button className="icon-button mobile-menu-trigger" title="Open mobile menu" aria-label="Open mobile menu" onClick={onOpenMobileMenu}>
+          <Menu size={17} />
+        </button>
         <Segmented
           value={viewMode}
           options={[

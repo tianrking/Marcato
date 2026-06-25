@@ -38,6 +38,7 @@ import { FindReplacePanel } from "./components/FindReplacePanel";
 import { IconButton } from "./components/Common";
 import { GitHubImportModal } from "./components/GitHubImportModal";
 import { InsertModalHost } from "./components/InsertModalHost";
+import { MobileMenu } from "./components/MobileMenu";
 import { PreviewPane } from "./components/PreviewPane";
 import { ShareModal } from "./components/ShareModal";
 import { WorkspaceToolbar } from "./components/WorkspaceToolbar";
@@ -91,6 +92,7 @@ function App() {
   const [selectedPreviewBlockId, setSelectedPreviewBlockId] = useState("");
   const [toast, setToast] = useState("");
   const [dragging, setDragging] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [pdfExport, setPdfExport] = useState<PdfExportState | null>(null);
 
   const editorRef = useRef<HTMLTextAreaElement | null>(null);
@@ -359,6 +361,7 @@ function App() {
         stats={stats}
         theme={globalState.theme}
         viewMode={globalState.viewMode}
+        onOpenMobileMenu={() => setMobileMenuOpen(true)}
         onThemeChange={(theme) => updateGlobal({ theme })}
         onViewModeChange={(viewMode) => updateGlobal({ viewMode })}
       />
@@ -516,6 +519,30 @@ function App() {
       )}
 
       {githubImport.opened && <GitHubImportModal {...githubImport.modalProps} />}
+
+      <MobileMenu
+        activeTabId={activeTabId}
+        globalState={globalState}
+        health={health}
+        opened={mobileMenuOpen}
+        stats={stats}
+        tabs={tabs}
+        onClose={() => setMobileMenuOpen(false)}
+        onCloseTab={closeTab}
+        onCopyMarkdown={() => void doCopyMarkdown()}
+        onCopyPreviewImage={() => void doCopyPreviewImage()}
+        onDuplicateTab={duplicateTab}
+        onExportHtml={() => void exportHtmlFile()}
+        onExportMarkdown={() => void exportMarkdownFile()}
+        onExportPdf={() => void doExportPdf()}
+        onExportPng={() => previewRef.current && void exportPreviewPng()}
+        onGithubImport={githubImport.open}
+        onImportFiles={() => fileInputRef.current?.click()}
+        onNewTab={() => newTab("", undefined)}
+        onSelectTab={setActiveTabId}
+        onShare={() => share.open("view")}
+        onGlobalChange={updateGlobal}
+      />
 
       <InsertModalHost {...insertModals.hostProps} />
 

@@ -270,6 +270,10 @@ button:focus-visible {
   padding: 0;
 }
 
+.mobile-menu-trigger {
+  display: none;
+}
+
 .tab-strip {
   display: flex;
   align-items: stretch;
@@ -1680,6 +1684,190 @@ button:focus-visible {
   justify-self: end;
 }
 
+.mobile-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: none;
+  background:
+    linear-gradient(135deg, rgba(37, 99, 235, 0.18), rgba(15, 118, 110, 0.14)),
+    rgba(15, 23, 42, 0.48);
+}
+
+.mobile-drawer {
+  width: min(360px, calc(100vw - 34px));
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto;
+  align-content: start;
+  gap: 14px;
+  padding: 14px;
+  overflow: auto;
+  border-right: 1px solid var(--line);
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.mobile-drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.mobile-drawer-head > div {
+  display: grid;
+  gap: 3px;
+}
+
+.mobile-drawer-head strong {
+  font-size: 18px;
+}
+
+.mobile-drawer-head span,
+.mobile-section-title,
+.mobile-drawer-foot {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.mobile-drawer-section {
+  display: grid;
+  gap: 9px;
+  padding: 11px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--accent) 5%, transparent), transparent),
+    var(--panel-2);
+}
+
+.mobile-section-title {
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.mobile-view-grid,
+.mobile-action-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.mobile-view-grid button,
+.mobile-action-grid button,
+.mobile-wide-action {
+  min-height: 42px;
+  justify-content: center;
+}
+
+.mobile-view-grid button.active {
+  border-color: var(--accent);
+  color: #fff;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+}
+
+.mobile-health {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.mobile-health strong {
+  font-size: 34px;
+  line-height: 1;
+}
+
+.mobile-health.strong strong {
+  color: var(--accent-2);
+}
+
+.mobile-health.good strong {
+  color: var(--accent);
+}
+
+.mobile-health.weak strong {
+  color: var(--danger);
+}
+
+.mobile-health-signals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.mobile-health-signals span {
+  padding: 3px 7px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.mobile-tab-list {
+  display: grid;
+  gap: 7px;
+  max-height: 240px;
+  overflow: auto;
+}
+
+.mobile-tab-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 36px 36px;
+  gap: 6px;
+}
+
+.mobile-tab-row.active .mobile-tab-name {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.mobile-tab-name {
+  justify-content: flex-start;
+  min-width: 0;
+}
+
+.mobile-tab-name span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mobile-tab-name small {
+  margin-left: auto;
+  color: var(--muted);
+}
+
+.mobile-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.mobile-settings-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.mobile-settings-row select {
+  min-width: 0;
+  min-height: 38px;
+}
+
+.mobile-drawer-foot {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 2px 10px;
+}
+
 @media (max-width: 1080px) {
   .app-header {
     height: auto;
@@ -1719,6 +1907,14 @@ button:focus-visible {
     flex-direction: column;
   }
 
+  .mobile-menu-trigger {
+    display: inline-flex;
+  }
+
+  .mobile-drawer-backdrop {
+    display: block;
+  }
+
   .header-actions {
     width: 100%;
     justify-content: space-between;
@@ -1735,6 +1931,29 @@ button:focus-visible {
   .workspace-toolbar button,
   .toolbar-group.compact label {
     font-size: 12px;
+  }
+
+  .workspace-toolbar,
+  .format-toolbar {
+    display: none;
+  }
+
+  .tab-strip {
+    display: none;
+  }
+
+  .app-shell {
+    grid-template-rows: auto 1fr;
+  }
+
+  .workspace {
+    min-height: 0;
+  }
+}
+
+@media (max-width: 420px) {
+  .mobile-action-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
