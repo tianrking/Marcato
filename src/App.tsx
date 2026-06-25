@@ -54,6 +54,7 @@ import { InsertModalHost } from "./components/InsertModalHost";
 import { MobileMenu } from "./components/MobileMenu";
 import { PreviewPane } from "./components/PreviewPane";
 import { ReplacePreviewModal } from "./components/ReplacePreviewModal";
+import { RenameTabModal } from "./components/RenameTabModal";
 import { ShareModal } from "./components/ShareModal";
 import { TabStrip } from "./components/TabStrip";
 import { WorkspaceToolbar } from "./components/WorkspaceToolbar";
@@ -120,6 +121,7 @@ function App() {
   const [pdfExport, setPdfExport] = useState<PdfExportState | null>(null);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const [healthOpen, setHealthOpen] = useState(false);
+  const [renameTabId, setRenameTabId] = useState<string | null>(null);
 
   const editorRef = useRef<HTMLTextAreaElement | null>(null);
   const previewRef = useRef<HTMLElement | null>(null);
@@ -202,10 +204,8 @@ function App() {
   }, [closeStoreTab, t, tabs, untitledCounter]);
 
   const renameTab = (id: string) => {
-    const tab = tabs.find((item) => item.id === id);
-    const title = window.prompt("Rename tab", tab?.title || "");
-    if (!title) return;
-    renameStoreTab(id, title);
+    if (!tabs.some((item) => item.id === id)) return;
+    setRenameTabId(id);
   };
 
   const duplicateTab = (id: string) => {
@@ -660,6 +660,17 @@ function App() {
           title={confirmAction.title}
           onCancel={() => setConfirmAction(null)}
           onConfirm={confirmAction.onConfirm}
+        />
+      )}
+
+      {renameTabId && (
+        <RenameTabModal
+          initialTitle={tabs.find((tab) => tab.id === renameTabId)?.title || ""}
+          onClose={() => setRenameTabId(null)}
+          onRename={(title) => {
+            renameStoreTab(renameTabId, title);
+            setRenameTabId(null);
+          }}
         />
       )}
 
