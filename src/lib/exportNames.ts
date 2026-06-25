@@ -1,3 +1,10 @@
 export function getExportName(title: string) {
-  return (title || "document").replace(/[\\/:*?"<>|]+/g, "-").replace(/\s+/g, "-").toLowerCase();
+  const withoutMarkdownExtension = (title || "document").replace(/\.(?:md|markdown|txt)$/i, "");
+  const normalized = withoutMarkdownExtension
+    .replace(/[\\/:*?"<>|]+/g, "-")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .toLowerCase();
+  return normalized || "document";
 }

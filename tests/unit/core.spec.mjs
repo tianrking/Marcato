@@ -13,6 +13,7 @@ const server = await createServer({
 try {
   const editor = await server.ssrLoadModule("/src/lib/editorCommands.ts");
   const find = await server.ssrLoadModule("/src/lib/findReplace.ts");
+  const exportNames = await server.ssrLoadModule("/src/lib/exportNames.ts");
   const health = await server.ssrLoadModule("/src/lib/documentHealth.ts");
   const profiles = await server.ssrLoadModule("/src/lib/professionalProfiles.ts");
   const share = await server.ssrLoadModule("/src/lib/share.ts");
@@ -40,6 +41,9 @@ try {
   expect(matches.length === 3, `Expected 3 find matches, got ${matches.length}`);
   expect(find.replaceAll("Marcato marcato MARCATO", matches, options) === "Studio studio STUDIO", "Preserve-case replaceAll regressed.");
   expect(find.buildDiffPreview("Marcato marcato", matches, options).length > 0, "Diff preview should include items.");
+
+  expect(exportNames.getExportName("Release Notes.md") === "release-notes", "Export names should strip Markdown extensions.");
+  expect(exportNames.getExportName("My: Unsafe/File.txt") === "my-unsafe-file", "Export names should sanitize unsafe filename characters.");
 
   const report = health.analyzeDocumentHealth("## Jump\n\n[]( )\n\n![ ](x.png)\n```js\nopen");
   expect(report.score < 100, "Health report should detect document issues.");

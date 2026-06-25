@@ -1,4 +1,4 @@
-import { Menu, Moon, Palette, PanelLeft, PanelRight, Sparkles, SplitSquareHorizontal, Sun } from "lucide-react";
+import { Files, Menu, Moon, Palette, PanelLeft, PanelRight, Sparkles, SplitSquareHorizontal, Sun } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { AccentPalette, ThemeMode, ViewMode } from "../types";
 import { IconButton, Segmented } from "./Common";
@@ -13,6 +13,7 @@ interface AppHeaderProps {
   easterEggs: boolean;
   theme: ThemeMode;
   viewMode: ViewMode;
+  onOpenDocumentLibrary: () => void;
   onAccentChange: (accent: AccentPalette) => void;
   onEasterEggsChange: (enabled: boolean) => void;
   onOpenMobileMenu: () => void;
@@ -28,7 +29,7 @@ const ACCENT_OPTIONS: Array<{ id: AccentPalette; label: string }> = [
   { id: "amber", label: "Amber" },
 ];
 
-export function AppHeader({ accent, easterEggs, stats, theme, viewMode, onAccentChange, onEasterEggsChange, onOpenMobileMenu, onThemeChange, onViewModeChange }: AppHeaderProps) {
+export function AppHeader({ accent, easterEggs, stats, theme, viewMode, onAccentChange, onEasterEggsChange, onOpenDocumentLibrary, onOpenMobileMenu, onThemeChange, onViewModeChange }: AppHeaderProps) {
   const { t } = useTranslation();
 
   return (
@@ -41,6 +42,9 @@ export function AppHeader({ accent, easterEggs, stats, theme, viewMode, onAccent
         </div>
       </div>
       <div className="header-actions">
+        <button className="icon-button library-trigger" title="Document library" aria-label="Open document library" onClick={onOpenDocumentLibrary}>
+          <Files size={17} />
+        </button>
         <button className="icon-button mobile-menu-trigger" title="Open mobile menu" aria-label="Open mobile menu" onClick={onOpenMobileMenu}>
           <Menu size={17} />
         </button>

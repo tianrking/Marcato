@@ -46,6 +46,7 @@ import {
 } from "lucide-react";
 import { AppHeader } from "./components/AppHeader";
 import { ConfirmModal } from "./components/ConfirmModal";
+import { DocumentLibraryPanel } from "./components/DocumentLibraryPanel";
 import { DocumentHealthModal } from "./components/DocumentHealthModal";
 import { EasterEggLayer } from "./components/EasterEggLayer";
 import { FindReplacePanel } from "./components/FindReplacePanel";
@@ -132,6 +133,7 @@ function App() {
   const redo = useAppStore((state) => state.redo);
   const [selectedPreviewBlockId, setSelectedPreviewBlockId] = useState("");
   const [toast, setToast] = useState("");
+  const [documentLibraryOpen, setDocumentLibraryOpen] = useState(false);
   const [dragging, setDragging] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [pdfExport, setPdfExport] = useState<PdfExportState | null>(null);
@@ -465,6 +467,7 @@ function App() {
         viewMode={globalState.viewMode}
         onAccentChange={(accent) => updateGlobal({ accent })}
         onEasterEggsChange={(easterEggs) => updateGlobal({ easterEggs })}
+        onOpenDocumentLibrary={() => setDocumentLibraryOpen(true)}
         onOpenMobileMenu={() => setMobileMenuOpen(true)}
         onThemeChange={(theme) => updateGlobal({ theme })}
         onViewModeChange={(viewMode) => updateGlobal({ viewMode })}
@@ -494,6 +497,20 @@ function App() {
         onNewTab={() => newTab("", undefined)}
         onRenameTab={renameTab}
         onReorderTab={reorderStoreTab}
+        onSelectTab={setActiveTabId}
+      />
+
+      <DocumentLibraryPanel
+        activeTabId={activeTabId}
+        opened={documentLibraryOpen}
+        tabs={tabs}
+        onClose={() => setDocumentLibraryOpen(false)}
+        onCloseTab={closeTab}
+        onDuplicateTab={duplicateTab}
+        onGithubImport={githubImport.open}
+        onImportFiles={() => fileInputRef.current?.click()}
+        onNewTab={() => newTab("", undefined)}
+        onRenameTab={renameTab}
         onSelectTab={setActiveTabId}
       />
 

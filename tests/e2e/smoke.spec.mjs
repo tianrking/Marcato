@@ -55,6 +55,13 @@ await withApp(async ({ consoleMessages, context, page, server }) => {
 
   await page.getByRole("button", { name: "New tab" }).click();
   await page.getByRole("tab", { name: /Untitled/ }).waitFor({ state: "visible" });
+  await page.getByRole("button", { name: "Open document library" }).click();
+  const library = page.getByRole("dialog", { name: "Document library" });
+  await library.waitFor({ state: "visible" });
+  await library.getByPlaceholder("Search documents").fill("Untitled");
+  await library.getByText(/Untitled/).first().waitFor({ state: "visible" });
+  await library.getByRole("button", { name: "Close document library" }).click();
+  await library.waitFor({ state: "hidden" });
   await page.getByRole("button", { name: /Actions for Untitled/ }).click();
   await page.getByRole("menuitem", { name: "Duplicate" }).click();
   expect((await page.getByRole("tab").count()) >= 3, "Tab action menu should duplicate the active tab.");

@@ -19,11 +19,11 @@ This document verifies the real toolbar export buttons.
 | PDF | download |
 `;
 
-const expectedExtensions = {
-  HTML: ".html",
-  MD: ".md",
-  PDF: ".pdf",
-  PNG: ".png",
+const expectedFilenames = {
+  HTML: "welcome.html",
+  MD: "welcome.md",
+  PDF: "welcome.pdf",
+  PNG: "welcome.png",
 };
 
 const startedAt = Date.now();
@@ -42,7 +42,7 @@ await withApp(async ({ consoleMessages, page }) => {
     const filename = download.suggestedFilename();
     const failure = await download.failure();
     expect(!failure, `${label} download failed: ${failure}`);
-    expect(filename.toLowerCase().endsWith(expectedExtensions[label]), `${label} should download ${expectedExtensions[label]}, got ${filename}`);
+    expect(filename.toLowerCase() === expectedFilenames[label], `${label} should download ${expectedFilenames[label]}, got ${filename}`);
     downloads[label] = filename;
   }
 
