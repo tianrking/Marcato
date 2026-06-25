@@ -3058,6 +3058,17 @@ a:focus-visible {
     grid-template-rows: minmax(260px, 44vh) 8px minmax(260px, 1fr);
   }
 
+  .view-editor .workspace,
+  .view-preview .workspace {
+    grid-template-rows: minmax(0, 1fr);
+  }
+
+  .view-editor .editor-pane,
+  .view-preview .preview-pane {
+    min-height: 0;
+    height: 100%;
+  }
+
   .resizer {
     cursor: row-resize;
   }
@@ -3084,6 +3095,10 @@ a:focus-visible {
 }
 
 @media (max-width: 720px) {
+  .app-shell {
+    height: 100dvh;
+  }
+
   .app-shell {
     grid-template-rows: auto auto auto auto 1fr;
   }
@@ -3137,6 +3152,35 @@ a:focus-visible {
 
   .workspace {
     min-height: 0;
+    grid-template-rows: minmax(210px, 42%) 6px minmax(240px, 1fr);
+    overflow: hidden;
+  }
+
+  .view-editor .workspace,
+  .view-preview .workspace {
+    grid-template-rows: minmax(0, 1fr);
+  }
+
+  .view-editor .editor-pane,
+  .view-preview .preview-pane {
+    display: block;
+    height: 100%;
+  }
+
+  .view-editor .editor-wrap {
+    height: calc(100% - 38px);
+  }
+
+  .view-preview .preview-article {
+    min-height: calc(100% - 38px);
+    padding: 22px clamp(16px, 5vw, 28px) 72px;
+  }
+
+  .view-preview .preview-article.profile-wechat {
+    margin: 0 auto;
+    border-left: 0;
+    border-right: 0;
+    border-radius: 0;
   }
 
   .diagram-template-modal {

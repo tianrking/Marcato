@@ -127,6 +127,40 @@ await withApp(async ({ consoleMessages, context, page, server }) => {
   await mobileMenu.getByRole("button", { name: "GitHub" }).waitFor({ state: "visible" });
   await mobileMenu.getByRole("button", { name: "Share" }).waitFor({ state: "visible" });
   await mobilePage.getByRole("button", { name: "Close mobile menu" }).click();
+  await mobilePage.locator(".segmented button").nth(0).click();
+  const editorOnly = await mobilePage.evaluate(() => {
+    const workspace = document.querySelector(".workspace")?.getBoundingClientRect();
+    const editor = document.querySelector(".editor-pane")?.getBoundingClientRect();
+    const preview = document.querySelector(".preview-pane")?.getBoundingClientRect();
+    return {
+      editorFills: Boolean(workspace && editor && editor.height >= workspace.height - 4),
+      previewHidden: !preview || preview.height === 0,
+    };
+  });
+  expect(editorOnly.editorFills && editorOnly.previewHidden, `Mobile editor mode should fill the workspace: ${JSON.stringify(editorOnly)}`);
+
+  await mobilePage.locator(".segmented button").nth(2).click();
+  const previewOnly = await mobilePage.evaluate(() => {
+    const workspace = document.querySelector(".workspace")?.getBoundingClientRect();
+    const editor = document.querySelector(".editor-pane")?.getBoundingClientRect();
+    const preview = document.querySelector(".preview-pane")?.getBoundingClientRect();
+    return {
+      editorHidden: !editor || editor.height === 0,
+      previewFills: Boolean(workspace && preview && preview.height >= workspace.height - 4),
+    };
+  });
+  expect(previewOnly.editorHidden && previewOnly.previewFills, `Mobile preview mode should fill the workspace: ${JSON.stringify(previewOnly)}`);
+
+  await mobilePage.locator(".segmented button").nth(1).click();
+  const splitView = await mobilePage.evaluate(() => {
+    const editor = document.querySelector(".editor-pane")?.getBoundingClientRect();
+    const preview = document.querySelector(".preview-pane")?.getBoundingClientRect();
+    return {
+      editorVisible: Boolean(editor && editor.height > 120),
+      previewVisible: Boolean(preview && preview.height > 120),
+    };
+  });
+  expect(splitView.editorVisible && splitView.previewVisible, `Mobile split mode should keep both panes visible: ${JSON.stringify(splitView)}`);
   const mobileWidth = await mobilePage.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(mobileWidth < 48, `Mobile layout overflow is too large: ${mobileWidth}px`);
   await takeScreenshot(mobilePage, "smoke-mobile.png");
