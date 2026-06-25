@@ -41,6 +41,62 @@
   --shadow-soft: 0 10px 28px rgba(45, 212, 191, 0.12);
 }
 
+:root[data-accent="teal"] {
+  --accent: #0f766e;
+  --accent-2: #2563eb;
+  --accent-3: #d97706;
+  --shadow-soft: 0 8px 22px rgba(15, 118, 110, 0.14);
+}
+
+:root[data-theme="dark"][data-accent="teal"] {
+  --accent: #2dd4bf;
+  --accent-2: #60a5fa;
+  --accent-3: #fbbf24;
+  --shadow-soft: 0 10px 28px rgba(45, 212, 191, 0.14);
+}
+
+:root[data-accent="violet"] {
+  --accent: #7c3aed;
+  --accent-2: #0f766e;
+  --accent-3: #db2777;
+  --shadow-soft: 0 8px 22px rgba(124, 58, 237, 0.14);
+}
+
+:root[data-theme="dark"][data-accent="violet"] {
+  --accent: #a78bfa;
+  --accent-2: #2dd4bf;
+  --accent-3: #f0abfc;
+  --shadow-soft: 0 10px 28px rgba(167, 139, 250, 0.14);
+}
+
+:root[data-accent="rose"] {
+  --accent: #e11d48;
+  --accent-2: #2563eb;
+  --accent-3: #ca8a04;
+  --shadow-soft: 0 8px 22px rgba(225, 29, 72, 0.14);
+}
+
+:root[data-theme="dark"][data-accent="rose"] {
+  --accent: #fb7185;
+  --accent-2: #60a5fa;
+  --accent-3: #fbbf24;
+  --shadow-soft: 0 10px 28px rgba(251, 113, 133, 0.14);
+}
+
+:root[data-accent="amber"] {
+  --accent: #b45309;
+  --accent-2: #2563eb;
+  --accent-3: #0f766e;
+  --shadow-soft: 0 8px 22px rgba(180, 83, 9, 0.13);
+}
+
+:root[data-theme="dark"][data-accent="amber"] {
+  --accent: #f59e0b;
+  --accent-2: #60a5fa;
+  --accent-3: #2dd4bf;
+  --shadow-soft: 0 10px 28px rgba(245, 158, 11, 0.13);
+}
+
 * {
   box-sizing: border-box;
 }
@@ -137,7 +193,8 @@ textarea {
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible,
-button:focus-visible {
+button:focus-visible,
+a:focus-visible {
   outline: 0;
   border-color: var(--accent);
   box-shadow: var(--focus-ring);
@@ -281,6 +338,80 @@ button:focus-visible {
 .icon-button {
   width: 34px;
   padding: 0;
+}
+
+.repo-link {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--accent) 12%, transparent), color-mix(in srgb, var(--accent-2) 8%, transparent)),
+    var(--panel);
+  color: var(--text);
+  text-decoration: none;
+  transition: border-color 150ms ease, box-shadow 150ms ease, color 150ms ease, transform 150ms ease;
+}
+
+.repo-link:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  box-shadow: var(--shadow-soft);
+  transform: translateY(-1px);
+}
+
+.accent-picker,
+.mobile-accent-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--panel) 84%, var(--panel-2));
+  color: var(--muted);
+}
+
+.accent-picker button,
+.mobile-accent-picker button {
+  width: 18px;
+  height: 18px;
+  min-height: 18px;
+  padding: 0;
+  border-radius: 999px;
+  border-color: color-mix(in srgb, #fff 44%, var(--line));
+  background: var(--swatch);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.32);
+}
+
+.accent-picker button.active,
+.mobile-accent-picker button.active {
+  border-color: var(--text);
+  box-shadow:
+    0 0 0 2px var(--panel),
+    0 0 0 4px color-mix(in srgb, var(--swatch) 54%, transparent);
+}
+
+[data-accent-option="blue"] {
+  --swatch: linear-gradient(135deg, #2563eb, #0f766e);
+}
+
+[data-accent-option="teal"] {
+  --swatch: linear-gradient(135deg, #0f766e, #2563eb);
+}
+
+[data-accent-option="violet"] {
+  --swatch: linear-gradient(135deg, #7c3aed, #0f766e);
+}
+
+[data-accent-option="rose"] {
+  --swatch: linear-gradient(135deg, #e11d48, #2563eb);
+}
+
+[data-accent-option="amber"] {
+  --swatch: linear-gradient(135deg, #b45309, #2563eb);
 }
 
 .mobile-menu-trigger {
@@ -2341,6 +2472,18 @@ button:focus-visible {
   gap: 8px;
 }
 
+.mobile-accent-picker {
+  justify-content: space-between;
+  width: 100%;
+  padding: 8px 10px;
+}
+
+.mobile-accent-picker button {
+  width: 24px;
+  height: 24px;
+  min-height: 24px;
+}
+
 .mobile-settings-row select {
   min-width: 0;
   min-height: 38px;
@@ -2415,6 +2558,10 @@ button:focus-visible {
   .header-actions {
     width: 100%;
     justify-content: space-between;
+  }
+
+  .app-header .accent-picker {
+    display: none;
   }
 
   .tab-frame {

@@ -15,6 +15,7 @@ export const SHARE_URL_SOFT_LIMIT = 32_000;
 
 export const DEFAULT_GLOBAL_STATE: GlobalState = {
   theme: "light",
+  accent: "blue",
   viewMode: "split",
   syncScroll: true,
   splitPercent: 50,

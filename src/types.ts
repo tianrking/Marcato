@@ -1,5 +1,6 @@
 export type ViewMode = "split" | "editor" | "preview";
 export type ThemeMode = "light" | "dark";
+export type AccentPalette = "blue" | "teal" | "violet" | "rose" | "amber";
 
 export interface MarkdownTab {
   id: string;
@@ -14,6 +15,7 @@ export interface MarkdownTab {
 
 export interface GlobalState {
   theme: ThemeMode;
+  accent: AccentPalette;
   viewMode: ViewMode;
   syncScroll: boolean;
   splitPercent: number;

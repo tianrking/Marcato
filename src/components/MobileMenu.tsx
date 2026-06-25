@@ -19,7 +19,7 @@ import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { LANGUAGE_LABELS } from "../lib/i18n";
 import type { DocumentHealthReport } from "../lib/documentHealth";
-import type { GlobalState, MarkdownTab, ViewMode } from "../types";
+import type { AccentPalette, GlobalState, MarkdownTab, ViewMode } from "../types";
 
 interface MobileMenuProps {
   activeTabId: string;
@@ -54,6 +54,14 @@ const VIEW_OPTIONS: Array<{ icon: ReactNode; id: ViewMode; labelKey: string }> =
   { id: "editor", icon: <PanelLeft size={16} />, labelKey: "view.editor" },
   { id: "split", icon: <SplitSquareHorizontal size={16} />, labelKey: "view.split" },
   { id: "preview", icon: <PanelRight size={16} />, labelKey: "view.preview" },
+];
+
+const ACCENT_OPTIONS: Array<{ id: AccentPalette; label: string }> = [
+  { id: "blue", label: "Blue" },
+  { id: "teal", label: "Teal" },
+  { id: "violet", label: "Violet" },
+  { id: "rose", label: "Rose" },
+  { id: "amber", label: "Amber" },
 ];
 
 export function MobileMenu({
@@ -169,6 +177,20 @@ export function MobileMenu({
 
         <section className="mobile-drawer-section">
           <span className="mobile-section-title">{t("setting.language")}</span>
+          <div className="mobile-accent-picker" aria-label="Accent color">
+            {ACCENT_OPTIONS.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                className={globalState.accent === option.id ? "active" : ""}
+                data-accent-option={option.id}
+                title={`${option.label} accent`}
+                aria-label={`${option.label} accent`}
+                aria-pressed={globalState.accent === option.id}
+                onClick={() => onGlobalChange({ accent: option.id })}
+              />
+            ))}
+          </div>
           <label className="mobile-toggle">
             <input
               type="checkbox"

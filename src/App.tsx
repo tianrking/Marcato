@@ -152,6 +152,7 @@ function App() {
 
   useEffect(() => {
     document.documentElement.dataset.theme = globalState.theme;
+    document.documentElement.dataset.accent = globalState.accent;
     document.documentElement.lang = globalState.language === "zh" ? "zh-Hans" : globalState.language === "tw" ? "zh-Hant" : globalState.language;
     document.body.dir = globalState.direction;
     void i18n.changeLanguage(globalState.language);
@@ -431,9 +432,11 @@ function App() {
       }}
     >
       <AppHeader
+        accent={globalState.accent}
         stats={stats}
         theme={globalState.theme}
         viewMode={globalState.viewMode}
+        onAccentChange={(accent) => updateGlobal({ accent })}
         onOpenMobileMenu={() => setMobileMenuOpen(true)}
         onThemeChange={(theme) => updateGlobal({ theme })}
         onViewModeChange={(viewMode) => updateGlobal({ viewMode })}

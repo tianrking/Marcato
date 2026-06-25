@@ -29,6 +29,7 @@ export function loadGlobalState(): GlobalState {
   return {
     ...DEFAULT_GLOBAL_STATE,
     ...state,
+    accent: normalizeAccent(state.accent),
     language,
     findDocked: findDocked ? findDocked === "1" : Boolean(state.findDocked),
   };
@@ -116,4 +117,8 @@ function normalizeLanguage(value: string) {
   if (lower.startsWith("zh")) return "zh";
   const base = lower.split("-")[0];
   return ["en", "ja", "ko", "pt", "es", "fr", "de", "ru", "it", "tr", "pl", "uk"].includes(base) ? base : "en";
+}
+
+function normalizeAccent(value: unknown) {
+  return ["blue", "teal", "violet", "rose", "amber"].includes(String(value)) ? String(value) as GlobalState["accent"] : DEFAULT_GLOBAL_STATE.accent;
 }
