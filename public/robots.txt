@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /wiki/Contributing
+
+Sitemap: https://markdownviewer.pages.dev/sitemap.xml
