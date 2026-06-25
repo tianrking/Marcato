@@ -1,9 +1,11 @@
-import { forwardRef, memo } from "react";
+import { forwardRef, memo, useEffect, useImperativeHandle, useRef } from "react";
 import type { PreviewBlock, PreviewDocument } from "../lib/previewDocument";
 
 interface PreviewPaneProps {
   document: PreviewDocument;
+  offlineFirst: boolean;
   selectedBlockId?: string;
+  theme: "light" | "dark";
   onBlockSelect?: (block: PreviewBlock) => void;
 }
 
@@ -32,9 +34,34 @@ const PreviewBlockView = memo(function PreviewBlockView({
   );
 });
 
-export const PreviewPane = forwardRef<HTMLElement, PreviewPaneProps>(function PreviewPane({ document, selectedBlockId, onBlockSelect }, ref) {
+export const PreviewPane = forwardRef<HTMLElement, PreviewPaneProps>(function PreviewPane({
+  document,
+  offlineFirst,
+  selectedBlockId,
+  theme,
+  onBlockSelect,
+}, ref) {
+  const articleRef = useRef<HTMLElement | null>(null);
+
+  useImperativeHandle(ref, () => articleRef.current as HTMLElement, []);
+
+  useEffect(() => {
+    const root = articleRef.current;
+    if (!root) return undefined;
+    let cancelled = false;
+    void import("../lib/diagramRenderers").then(({ disposePreviewResources, postProcessPreview }) => {
+      if (cancelled) return;
+      disposePreviewResources(root);
+      void postProcessPreview(root, theme, offlineFirst);
+    });
+    return () => {
+      cancelled = true;
+      void import("../lib/diagramRenderers").then(({ disposePreviewResources }) => disposePreviewResources(root));
+    };
+  }, [document, theme, offlineFirst]);
+
   return (
-    <article ref={ref} className="markdown-body preview-article">
+    <article ref={articleRef} className="markdown-body preview-article">
       {document.mode === "segmented" ? (
         document.blocks.map((block) => (
           <PreviewBlockView

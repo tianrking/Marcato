@@ -159,21 +159,6 @@ function App() {
     return () => window.clearTimeout(timer);
   }, [activeTab]);
 
-  useEffect(() => {
-    if (!previewRef.current) return;
-    const root = previewRef.current;
-    let cancelled = false;
-    void import("./lib/diagramRenderers").then(({ disposePreviewResources, postProcessPreview }) => {
-      if (cancelled) return;
-      disposePreviewResources(root);
-      void postProcessPreview(root, globalState.theme, globalState.offlineFirst);
-    });
-    return () => {
-      cancelled = true;
-      void import("./lib/diagramRenderers").then(({ disposePreviewResources }) => disposePreviewResources(root));
-    };
-  }, [renderedHtml, globalState.theme, globalState.offlineFirst]);
-
   const commitContent = useCallback((content: string) => updateActiveContent(content, true), [updateActiveContent]);
 
   const runCommand = (command: MarkdownCommand) => {
@@ -487,7 +472,9 @@ function App() {
           <PreviewPane
             ref={previewRef}
             document={previewDocument}
+            offlineFirst={globalState.offlineFirst}
             selectedBlockId={selectedPreviewBlockId}
+            theme={globalState.theme}
             onBlockSelect={selectPreviewBlock}
           />
         </section>
