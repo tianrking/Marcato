@@ -101,6 +101,7 @@ function App() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const renderRequestRef = useRef(0);
   const syncingRef = useRef(false);
+  const toastTimerRef = useRef<number | null>(null);
 
   const activeTab = useMemo(
     () => tabs.find((tab) => tab.id === activeTabId) || tabs[0],
@@ -122,6 +123,12 @@ function App() {
   useEffect(() => {
     void initializeWorkspace();
   }, [initializeWorkspace]);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     if (activeMatch >= matches.length) setActiveMatch(Math.max(0, matches.length - 1));
@@ -375,8 +382,11 @@ function App() {
 
   function showToast(message: string) {
     setToast(message);
-    window.clearTimeout((showToast as any).timer);
-    (showToast as any).timer = window.setTimeout(() => setToast(""), 2600);
+    if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = window.setTimeout(() => {
+      setToast("");
+      toastTimerRef.current = null;
+    }, 2600);
   }
 
   return (
