@@ -124,6 +124,9 @@ Each completed feature batch must include:
 
 - `npm.cmd run lint`
 - `npm.cmd run build`
+- `npm.cmd run test:smoke`
+- `npm.cmd run test:pdf` for export/PDF/layout changes
+- `npm.cmd run test:perf` for renderer/editor/performance changes
 - Browser smoke test for the touched workflow
 - A focused commit message
 

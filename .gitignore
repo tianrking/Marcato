@@ -11,7 +11,9 @@ node_modules
 dist
 dist-ssr
 *.local
-smoke-*.png
+test-artifacts/**
+!test-artifacts/
+!test-artifacts/README.md
 
 # Editor directories and files
 .vscode/*
