@@ -167,17 +167,24 @@ async function renderAbc(root: HTMLElement, signal?: AbortSignal) {
     const code = decodeURIComponent(node.dataset.originalCode || "");
     try {
       node.innerHTML = "";
-      abcjs.renderAbc(node, code, { responsive: "resize", add_classes: true });
+      const [visualObj] = abcjs.renderAbc(node, code, { responsive: "resize", add_classes: true });
       const play = document.createElement("button");
       play.type = "button";
       play.textContent = "Play";
       play.className = "mini-button";
       play.addEventListener("click", async () => {
-        const synth = new abcjs.synth.CreateSynth();
-        const visualObj = abcjs.renderAbc(node, code)[0];
-        await synth.init({ visualObj });
-        await synth.prime();
-        synth.start();
+        if (!visualObj) return;
+        play.disabled = true;
+        try {
+          const synth = new abcjs.synth.CreateSynth();
+          await synth.init({ visualObj });
+          await synth.prime();
+          synth.start();
+        } catch (error) {
+          markError(node.closest<HTMLElement>(".diagram-viewer"), error);
+        } finally {
+          play.disabled = false;
+        }
       });
       node.prepend(play);
       node.dataset.rendered = "1";
