@@ -493,7 +493,6 @@ function App() {
         activeTabId={activeTabId}
         tabs={tabs}
         onCloseTab={closeTab}
-        onDuplicateTab={duplicateTab}
         onNewTab={() => newTab("", undefined)}
         onRenameTab={renameTab}
         onReorderTab={reorderStoreTab}

@@ -62,9 +62,17 @@ await withApp(async ({ consoleMessages, context, page, server }) => {
   await library.getByText(/Untitled/).first().waitFor({ state: "visible" });
   await library.getByRole("button", { name: "Close document library" }).click();
   await library.waitFor({ state: "hidden" });
-  await page.getByRole("button", { name: /Actions for Untitled/ }).click();
-  await page.getByRole("menuitem", { name: "Duplicate" }).click();
-  expect((await page.getByRole("tab").count()) >= 3, "Tab action menu should duplicate the active tab.");
+  await page.getByRole("button", { name: /Rename Untitled/ }).click();
+  const renameDialog = page.getByRole("dialog", { name: "Rename tab" });
+  await renameDialog.waitFor({ state: "visible" });
+  await page.keyboard.press("Escape");
+  await renameDialog.waitFor({ state: "hidden" });
+  await page.getByRole("button", { name: "Open document library" }).click();
+  await library.waitFor({ state: "visible" });
+  await library.getByRole("button", { name: /Duplicate Untitled/ }).first().click();
+  await library.getByRole("button", { name: "Close document library" }).click();
+  await library.waitFor({ state: "hidden" });
+  expect((await page.getByRole("tab").count()) >= 3, "Document library should duplicate the active tab.");
   await page.getByRole("tab", { name: /Welcome|Smoke|Shared|Untitled/ }).first().click();
 
   await page.getByRole("button", { name: "Link" }).click();

@@ -1,12 +1,11 @@
 import { useRef, useState, type KeyboardEvent } from "react";
-import { ChevronLeft, ChevronRight, CopyPlus, MoreHorizontal, Pencil, Plus, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, MoreHorizontal, Plus, X } from "lucide-react";
 import type { MarkdownTab } from "../types";
 
 interface TabStripProps {
   activeTabId: string;
   tabs: MarkdownTab[];
   onCloseTab: (id: string) => void;
-  onDuplicateTab: (id: string) => void;
   onNewTab: () => void;
   onRenameTab: (id: string) => void;
   onReorderTab: (draggedId: string, targetId: string) => void;
@@ -17,14 +16,12 @@ export function TabStrip({
   activeTabId,
   tabs,
   onCloseTab,
-  onDuplicateTab,
   onNewTab,
   onRenameTab,
   onReorderTab,
   onSelectTab,
 }: TabStripProps) {
   const scrollerRef = useRef<HTMLDivElement | null>(null);
-  const [menuTabId, setMenuTabId] = useState<string | null>(null);
   const [draggedTabId, setDraggedTabId] = useState<string | null>(null);
 
   const activeIndex = Math.max(0, tabs.findIndex((tab) => tab.id === activeTabId));
@@ -68,7 +65,6 @@ export function TabStrip({
       <div ref={scrollerRef} className="tab-strip" role="tablist" aria-label="Open documents" onKeyDown={onKeyDown}>
         {tabs.map((tab) => {
           const active = tab.id === activeTabId;
-          const menuOpen = menuTabId === tab.id;
           return (
             <div
               key={tab.id}
@@ -98,11 +94,11 @@ export function TabStrip({
               <button
                 className="tab-action"
                 type="button"
-                aria-label={`Actions for ${tab.title}`}
-                aria-expanded={menuOpen}
+                aria-label={`Rename ${tab.title}`}
+                title={`Rename ${tab.title}`}
                 onClick={(event) => {
                   event.stopPropagation();
-                  setMenuTabId(menuOpen ? null : tab.id);
+                  onRenameTab(tab.id);
                 }}
               >
                 <MoreHorizontal size={15} />
@@ -118,19 +114,6 @@ export function TabStrip({
               >
                 <X size={14} />
               </button>
-              {menuOpen && (
-                <div className="tab-menu" role="menu">
-                  <button type="button" role="menuitem" onClick={() => { onRenameTab(tab.id); setMenuTabId(null); }}>
-                    <Pencil size={14} /> Rename
-                  </button>
-                  <button type="button" role="menuitem" onClick={() => { onDuplicateTab(tab.id); setMenuTabId(null); }}>
-                    <CopyPlus size={14} /> Duplicate
-                  </button>
-                  <button type="button" role="menuitem" onClick={() => { onCloseTab(tab.id); setMenuTabId(null); }}>
-                    <X size={14} /> Close
-                  </button>
-                </div>
-              )}
             </div>
           );
         })}
