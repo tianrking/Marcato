@@ -47,6 +47,7 @@ import { SymbolsInsertModal } from "./components/SymbolsInsertModal";
 import { TableInsertModal } from "./components/TableInsertModal";
 import { WorkspaceToolbar } from "./components/WorkspaceToolbar";
 import { useGlobalShortcuts } from "./hooks/useGlobalShortcuts";
+import { useMarkdownRender } from "./hooks/useMarkdownRender";
 import { MAX_IMPORT_BYTES, MAX_TABS } from "./lib/constants";
 import { applyCommand, buildMarkdownAlert, buildMarkdownImage, buildMarkdownLink, buildMarkdownReference, buildMarkdownTable, handleSmartEnter, insertText, suggestMarkdownReferenceNumber, type MarkdownAlertType, type MarkdownCommand, type TableAlignment } from "./lib/editorCommands";
 import { copyImage, exportHtml, exportMarkdown, exportPdf, exportPng, getExportName } from "./lib/exporters";
@@ -54,12 +55,11 @@ import { analyzeDocumentHealth } from "./lib/documentHealth";
 import { buildDiffPreview, findMatches, replaceAll, replaceOne } from "./lib/findReplace";
 import { fetchMarkdownFile, importFromGitHubUrl } from "./lib/githubImport";
 import { i18n } from "./lib/i18n";
-import { renderMarkdownToHtml } from "./lib/markdownCore";
-import { createPreviewDocument, EMPTY_PREVIEW_DOCUMENT, previewDocumentToHtml, type PreviewBlock } from "./lib/previewDocument";
+import { previewDocumentToHtml, type PreviewBlock } from "./lib/previewDocument";
 import { buildShareUrl, isShareUrlTooLong } from "./lib/share";
 import { makeTab } from "./lib/storage";
 import { useAppStore } from "./stores/appStore";
-import type { FindOptions, GitHubMarkdownFile, MarkdownTab, RenderResult } from "./types";
+import type { FindOptions, GitHubMarkdownFile, MarkdownTab } from "./types";
 
 const INITIAL_FIND: FindOptions = {
   query: "",
@@ -89,10 +89,6 @@ function App() {
   const duplicateStoreTab = useAppStore((state) => state.duplicateTab);
   const undo = useAppStore((state) => state.undo);
   const redo = useAppStore((state) => state.redo);
-  const [previewDocument, setPreviewDocument] = useState(EMPTY_PREVIEW_DOCUMENT);
-  const [toc, setToc] = useState<RenderResult["toc"]>([]);
-  const [renderState, setRenderState] = useState<"idle" | "rendering" | "error">("idle");
-  const [renderError, setRenderError] = useState("");
   const [selectedPreviewBlockId, setSelectedPreviewBlockId] = useState("");
   const [findOpen, setFindOpen] = useState(false);
   const [findOptions, setFindOptions] = useState<FindOptions>(INITIAL_FIND);
@@ -118,7 +114,6 @@ function App() {
   const editorPaneRef = useRef<HTMLDivElement | null>(null);
   const previewPaneRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const renderRequestRef = useRef(0);
   const syncingRef = useRef(false);
   const toastTimerRef = useRef<number | null>(null);
 
@@ -126,6 +121,7 @@ function App() {
     () => tabs.find((tab) => tab.id === activeTabId) || tabs[0],
     [activeTabId, tabs],
   );
+  const { document: previewDocument, toc, state: renderState, error: renderError } = useMarkdownRender(activeTab);
   const text = activeTab?.content || "";
   const matches = useMemo(() => findMatches(text, findOptions, getCurrentSelection(editorRef.current)), [text, findOptions]);
   const stats = useMemo(() => getStats(text), [text]);
@@ -152,38 +148,6 @@ function App() {
   useEffect(() => {
     if (activeMatch >= matches.length) setActiveMatch(Math.max(0, matches.length - 1));
   }, [activeMatch, matches.length]);
-
-  useEffect(() => {
-    if (!activeTab) return;
-    setRenderState("rendering");
-    const requestId = ++renderRequestRef.current;
-    const timer = window.setTimeout(() => {
-      renderWithWorker(activeTab.content, requestId)
-        .then((result) => {
-          if (renderRequestRef.current !== requestId) return;
-          const nextDocument = createPreviewDocument(result);
-          setPreviewDocument(nextDocument);
-          setToc(result.toc);
-          setRenderState("idle");
-          setRenderError("");
-        })
-        .catch((error) => {
-          if (renderRequestRef.current !== requestId) return;
-          try {
-            const fallback = renderMarkdownToHtml(activeTab.content, false);
-            const nextDocument = createPreviewDocument(fallback);
-            setPreviewDocument(nextDocument);
-            setToc(fallback.toc);
-            setRenderState("idle");
-            setRenderError("");
-          } catch {
-            setRenderState("error");
-            setRenderError(error instanceof Error ? error.message : "Render failed");
-          }
-        });
-    }, getRenderDelay(activeTab.content));
-    return () => window.clearTimeout(timer);
-  }, [activeTab]);
 
   const commitContent = useCallback((content: string) => updateActiveContent(content, true), [updateActiveContent]);
 
@@ -845,38 +809,6 @@ function App() {
   }
 }
 
-function renderWithWorker(markdown: string, requestId: number): Promise<RenderResult> {
-  return new Promise((resolve, reject) => {
-    const worker = getWorker();
-    let settled = false;
-    const onMessage = (event: MessageEvent) => {
-      if (event.data?.id !== requestId) return;
-      if (settled) return;
-      settled = true;
-      window.clearTimeout(timeout);
-      worker.removeEventListener("message", onMessage);
-      if (event.data.ok) resolve(event.data.result as RenderResult);
-      else reject(new Error(event.data.error || "Preview worker failed"));
-    };
-    const timeout = window.setTimeout(() => {
-      if (settled) return;
-      settled = true;
-      worker.removeEventListener("message", onMessage);
-      reject(new Error("Preview worker timed out"));
-    }, 6000);
-    worker.addEventListener("message", onMessage);
-    worker.postMessage({ id: requestId, markdown, segmented: true });
-  });
-}
-
-let workerSingleton: Worker | null = null;
-function getWorker() {
-  if (!workerSingleton) {
-    workerSingleton = new Worker(new URL("./workers/markdown.worker.ts", import.meta.url), { type: "module" });
-  }
-  return workerSingleton;
-}
-
 function getStats(text: string) {
   const words = (text.match(/[\p{L}\p{N}_'-]+/gu) || []).length;
   const chars = text.length;
@@ -913,12 +845,6 @@ function splitLinesWithBreaks(text: string) {
 function lineBreakLength(line: string) {
   const match = line.match(/\r\n$|\r$|\n$/);
   return match?.[0].length || 0;
-}
-
-function getRenderDelay(text: string) {
-  if (text.length > 80_000) return 420;
-  if (text.length > 20_000) return 240;
-  return 90;
 }
 
 function getCurrentSelection(editor: HTMLTextAreaElement | null) {
