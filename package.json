@@ -16,6 +16,7 @@
     "@types/leaflet": "^1.9.21",
     "@types/pako": "^2.0.4",
     "@types/three": "^0.184.1",
+    "@viz-js/viz": "^3.28.0",
     "abcjs": "^6.6.3",
     "dompurify": "^3.4.11",
     "file-saver": "^2.0.5",

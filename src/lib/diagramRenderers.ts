@@ -9,10 +9,10 @@ import { setupDiagramActions } from "./diagramActions";
 
 let mermaidReady = false;
 const previewCleanups = new Map<HTMLElement, () => void>();
+let graphvizInstance: Promise<import("@viz-js/viz").Viz> | null = null;
 const REMOTE_DIAGRAM_ENGINES = [
   "plantuml",
   "d2",
-  "graphviz",
   "vegalite",
   "vega-lite",
   "wavedrom",
@@ -24,6 +24,7 @@ export async function postProcessPreview(root: HTMLElement, theme: "light" | "da
   await renderMermaid(root, theme);
   await renderAbc(root);
   await renderLeafletMaps(root, theme);
+  await renderGraphviz(root, theme);
   renderStl(root, theme);
   if (offlineFirst) renderRemoteDiagramFallbacks(root, "Offline-first is on. Remote rendering was skipped.");
   else await renderRemoteDiagrams(root);
@@ -247,6 +248,50 @@ function renderStl(root: HTMLElement, theme: "light" | "dark") {
       markError(node.closest<HTMLElement>(".diagram-viewer"), error);
     }
   });
+}
+
+async function renderGraphviz(root: HTMLElement, theme: "light" | "dark") {
+  const nodes = [...root.querySelectorAll<HTMLElement>('.diagram-viewer[data-diagram-engine="graphviz"] .diagram-surface')];
+  if (nodes.length === 0) return;
+  const viz = await getGraphviz();
+  for (const node of nodes) {
+    if (node.dataset.rendered === "1") continue;
+    const viewer = node.closest<HTMLElement>(".diagram-viewer");
+    const code = decodeURIComponent(node.dataset.originalCode || "");
+    try {
+      const svg = viz.renderSVGElement(code, {
+        engine: "dot",
+        graphAttributes: {
+          bgcolor: "transparent",
+          color: theme === "dark" ? "#94a3b8" : "#64748b",
+          fontcolor: theme === "dark" ? "#e6edf3" : "#172033",
+        },
+        nodeAttributes: {
+          color: theme === "dark" ? "#60a5fa" : "#2563eb",
+          fontcolor: theme === "dark" ? "#e6edf3" : "#172033",
+          fontname: "Inter, Segoe UI, Arial",
+          style: "rounded,filled",
+          fillcolor: theme === "dark" ? "#20242d" : "#f8fafc",
+        },
+        edgeAttributes: {
+          color: theme === "dark" ? "#2dd4bf" : "#0f766e",
+          fontcolor: theme === "dark" ? "#e6edf3" : "#172033",
+        },
+      });
+      svg.setAttribute("role", "img");
+      svg.setAttribute("aria-label", "Graphviz diagram");
+      node.replaceChildren(svg);
+      node.dataset.rendered = "1";
+      markReady(viewer);
+    } catch (error) {
+      markDiagramFallback(viewer, node, "graphviz", error instanceof Error ? error.message : "Local Graphviz render failed");
+    }
+  }
+}
+
+async function getGraphviz() {
+  graphvizInstance ||= import("@viz-js/viz").then(({ instance }) => instance());
+  return await graphvizInstance;
 }
 
 async function renderRemoteDiagrams(root: HTMLElement) {
