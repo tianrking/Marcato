@@ -14,6 +14,14 @@ dist-ssr
 test-artifacts/**
 !test-artifacts/
 !test-artifacts/README.md
+!test-artifacts/professional-wechat-desktop.png
+!test-artifacts/professional-github-desktop.png
+!test-artifacts/professional-docusaurus-desktop.png
+!test-artifacts/mobile-layout-editor.png
+!test-artifacts/mobile-layout-preview.png
+!test-artifacts/mobile-layout-split.png
+!test-artifacts/desktop-easter-visible.png
+!test-artifacts/mobile-03-drawer-settings.png
 
 # Editor directories and files
 .vscode/*
