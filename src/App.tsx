@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import { AppHeader } from "./components/AppHeader";
 import { IconButton, Modal } from "./components/Common";
+import { PreviewPane } from "./components/PreviewPane";
 import { WorkspaceToolbar } from "./components/WorkspaceToolbar";
 import { MAX_IMPORT_BYTES, MAX_TABS, SHARE_URL_SOFT_LIMIT } from "./lib/constants";
 import { applyCommand, handleSmartEnter, type MarkdownCommand } from "./lib/editorCommands";
@@ -42,7 +43,7 @@ import { buildDiffPreview, findMatches, replaceAll, replaceOne } from "./lib/fin
 import { fetchMarkdownFile, importFromGitHubUrl } from "./lib/githubImport";
 import { i18n } from "./lib/i18n";
 import { renderMarkdownToHtml } from "./lib/markdownCore";
-import { sanitizePreviewHtml } from "./lib/sanitizer";
+import { createPreviewDocument, EMPTY_PREVIEW_DOCUMENT, previewDocumentToHtml } from "./lib/previewDocument";
 import { buildShareUrl, readShareFromLocation } from "./lib/share";
 import {
   loadActiveTabId,
@@ -74,7 +75,7 @@ function App() {
   const [tabs, setTabs] = useState<MarkdownTab[]>([]);
   const [activeTabId, setActiveTabId] = useState<string>("");
   const [untitledCounter, setUntitledCounter] = useState(() => loadUntitledCounter());
-  const [renderedHtml, setRenderedHtml] = useState("");
+  const [previewDocument, setPreviewDocument] = useState(EMPTY_PREVIEW_DOCUMENT);
   const [toc, setToc] = useState<RenderResult["toc"]>([]);
   const [renderState, setRenderState] = useState<"idle" | "rendering" | "error">("idle");
   const [renderError, setRenderError] = useState("");
@@ -105,6 +106,7 @@ function App() {
   const matches = useMemo(() => findMatches(text, findOptions, getCurrentSelection(editorRef.current)), [text, findOptions]);
   const stats = useMemo(() => getStats(text), [text]);
   const health = useMemo(() => analyzeDocumentHealth(text), [text]);
+  const renderedHtml = useMemo(() => previewDocumentToHtml(previewDocument), [previewDocument]);
 
   useEffect(() => {
     document.documentElement.dataset.theme = globalState.theme;
@@ -154,7 +156,8 @@ function App() {
       renderWithWorker(activeTab.content, requestId)
         .then((result) => {
           if (renderRequestRef.current !== requestId) return;
-          setRenderedHtml(resultToHtml(result));
+          const nextDocument = createPreviewDocument(result);
+          setPreviewDocument(nextDocument);
           setToc(result.toc);
           setRenderState("idle");
           setRenderError("");
@@ -163,7 +166,8 @@ function App() {
           if (renderRequestRef.current !== requestId) return;
           try {
             const fallback = renderMarkdownToHtml(activeTab.content, false);
-            setRenderedHtml(resultToHtml(fallback));
+            const nextDocument = createPreviewDocument(fallback);
+            setPreviewDocument(nextDocument);
             setToc(fallback.toc);
             setRenderState("idle");
             setRenderError("");
@@ -581,11 +585,7 @@ function App() {
             {renderState === "rendering" && <span className="render-pill">{t("status.rendering")}</span>}
             {renderError && <span className="render-pill error">{renderError}</span>}
           </div>
-          <article
-            ref={previewRef}
-            className="markdown-body preview-article"
-            dangerouslySetInnerHTML={{ __html: renderedHtml }}
-          />
+          <PreviewPane ref={previewRef} document={previewDocument} />
         </section>
         {(toc.length > 0 || text.trim().length > 0) && (
           <aside className="toc-panel">
@@ -699,17 +699,6 @@ function App() {
     const next = text.slice(0, editor.selectionStart) + html + text.slice(editor.selectionEnd);
     commitContent(next);
   }
-}
-
-function resultToHtml(result: RenderResult) {
-  if (result.mode === "segmented") {
-    return sanitizePreviewHtml(
-      (result.blocks || [])
-        .map((block) => `<div class="preview-block" data-start-line="${block.startLine}" data-end-line="${block.endLine}">${block.html}</div>`)
-        .join("\n"),
-    );
-  }
-  return sanitizePreviewHtml(result.html || "");
 }
 
 function renderWithWorker(markdown: string, requestId: number): Promise<RenderResult> {
