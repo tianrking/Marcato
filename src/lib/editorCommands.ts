@@ -9,6 +9,9 @@ export type MarkdownCommand =
   | "h1"
   | "h2"
   | "h3"
+  | "h4"
+  | "h5"
+  | "h6"
   | "ul"
   | "ol"
   | "task"
@@ -21,8 +24,10 @@ export type MarkdownCommand =
   | "mermaid"
   | "math"
   | "date"
+  | "datetime"
   | "upper"
   | "lower"
+  | "title"
   | "clear";
 
 export interface CommandResult {
@@ -59,7 +64,10 @@ export function applyCommand(value: string, command: MarkdownCommand, start: num
       return replaceRange(value, lineRange.start, lineRange.end, prefixLines(lineText || selected || "quote", "> "));
     case "h1":
     case "h2":
-    case "h3": {
+    case "h3":
+    case "h4":
+    case "h5":
+    case "h6": {
       const level = Number(command.slice(1));
       const clean = lineText.replace(/^#{1,6}\s*/, "") || "Heading";
       return replaceRange(value, lineRange.start, lineRange.end, `${"#".repeat(level)} ${clean}`);
@@ -92,10 +100,14 @@ export function applyCommand(value: string, command: MarkdownCommand, start: num
       return insertBlock(value, start, "\n$$\nE = mc^2\n$$\n");
     case "date":
       return replaceRange(value, start, end, new Date().toISOString().slice(0, 10));
+    case "datetime":
+      return replaceRange(value, start, end, formatLocalDateTime(new Date()));
     case "upper":
       return replaceRange(value, start, end, selected.toUpperCase());
     case "lower":
       return replaceRange(value, start, end, selected.toLowerCase());
+    case "title":
+      return replaceRange(value, start, end, toTitleCase(selected || lineText));
     case "clear":
       return replaceRange(value, start, end, stripMarkdownFormatting(selected || lineText));
     default:
@@ -217,6 +229,20 @@ function tableDivider(alignment: TableAlignment) {
   if (alignment === "center") return ":---:";
   if (alignment === "right") return "---:";
   return "---";
+}
+
+function formatLocalDateTime(date: Date) {
+  return date.toLocaleString(undefined, {
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function toTitleCase(text: string) {
+  return text.toLowerCase().replace(/\b([\p{L}\p{N}])/gu, (match) => match.toUpperCase());
 }
 
 function markdownTableRow(cells: string[]) {

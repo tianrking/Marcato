@@ -4,14 +4,21 @@ import {
   AlignCenter,
   AlignLeft,
   AlignRight,
+  ALargeSmall,
   BadgeAlert,
   BadgeCent,
   BookMarked,
   Bold,
   Braces,
+  CalendarClock,
+  CaseLower,
+  CaseUpper,
   Code2,
   Eye,
   FilePlus2,
+  Heading4,
+  Heading5,
+  Heading6,
   Heading1,
   Heading2,
   Heading3,
@@ -30,7 +37,11 @@ import {
   Smile,
   Strikethrough,
   Table2,
+  Maximize2,
+  Minus,
+  Terminal,
   Trash2,
+  TextQuote,
   Undo2,
 } from "lucide-react";
 import { AppHeader } from "./components/AppHeader";
@@ -321,6 +332,15 @@ function App() {
     });
   };
 
+  const toggleFullscreen = async () => {
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen();
+      else await document.documentElement.requestFullscreen();
+    } catch {
+      showToast("Fullscreen is unavailable in this browser.");
+    }
+  };
+
   const selectPreviewBlock = useCallback((block: PreviewBlock) => {
     const editor = editorRef.current;
     if (!editor) return;
@@ -444,9 +464,14 @@ function App() {
         <IconButton title="Heading 1" onClick={() => runCommand("h1")}><Heading1 size={16} /></IconButton>
         <IconButton title="Heading 2" onClick={() => runCommand("h2")}><Heading2 size={16} /></IconButton>
         <IconButton title="Heading 3" onClick={() => runCommand("h3")}><Heading3 size={16} /></IconButton>
+        <IconButton title="Heading 4" onClick={() => runCommand("h4")}><Heading4 size={16} /></IconButton>
+        <IconButton title="Heading 5" onClick={() => runCommand("h5")}><Heading5 size={16} /></IconButton>
+        <IconButton title="Heading 6" onClick={() => runCommand("h6")}><Heading6 size={16} /></IconButton>
+        <IconButton title="Quote" onClick={() => runCommand("quote")}><TextQuote size={16} /></IconButton>
         <IconButton title="Bulleted list" onClick={() => runCommand("ul")}><List size={16} /></IconButton>
         <IconButton title="Numbered list" onClick={() => runCommand("ol")}><ListOrdered size={16} /></IconButton>
         <IconButton title="Task list" onClick={() => runCommand("task")}><ListChecks size={16} /></IconButton>
+        <IconButton title="Horizontal rule" onClick={() => runCommand("hr")}><Minus size={16} /></IconButton>
         <IconButton title="Link" onClick={insertModals.openLinkModal}><Link size={16} /></IconButton>
         <IconButton title="Image" onClick={insertModals.openImageModal}><Image size={16} /></IconButton>
         <IconButton title="Reference" onClick={insertModals.openReferenceModal}><BookMarked size={16} /></IconButton>
@@ -455,15 +480,21 @@ function App() {
         <IconButton title="Markdown alerts" onClick={insertModals.openAlertModal}><BadgeAlert size={16} /></IconButton>
         <IconButton title="Inline code" onClick={() => runCommand("inlineCode")}><Code2 size={16} /></IconButton>
         <IconButton title="Code block" onClick={() => runCommand("codeBlock")}><Braces size={16} /></IconButton>
+        <IconButton title="Terminal block" onClick={() => runCommand("terminal")}><Terminal size={16} /></IconButton>
         <IconButton title="Table" onClick={insertModals.openTableModal}><Table2 size={16} /></IconButton>
         <IconButton title="Math" onClick={() => runCommand("math")}><Sigma size={16} /></IconButton>
         <IconButton title="Diagram templates" onClick={insertModals.openDiagramModal}><Play size={16} /></IconButton>
+        <IconButton title="Insert date and time" onClick={() => runCommand("datetime")}><CalendarClock size={16} /></IconButton>
+        <IconButton title="Uppercase" onClick={() => runCommand("upper")}><CaseUpper size={16} /></IconButton>
+        <IconButton title="Lowercase" onClick={() => runCommand("lower")}><CaseLower size={16} /></IconButton>
+        <IconButton title="Title case" onClick={() => runCommand("title")}><ALargeSmall size={16} /></IconButton>
         <IconButton title="Find and replace" onClick={() => findReplace.setOpen(true)}><Search size={16} /></IconButton>
         <IconButton title="Clear formatting" onClick={() => runCommand("clear")}><RefreshCw size={16} /></IconButton>
         <IconButton title="Delete current document" onClick={requestClearDocument}><Trash2 size={16} /></IconButton>
         <IconButton title="Left align" onClick={() => insertAlignment("left")}><AlignLeft size={16} /></IconButton>
         <IconButton title="Center align" onClick={() => insertAlignment("center")}><AlignCenter size={16} /></IconButton>
         <IconButton title="Right align" onClick={() => insertAlignment("right")}><AlignRight size={16} /></IconButton>
+        <IconButton title="Toggle fullscreen" onClick={() => void toggleFullscreen()}><Maximize2 size={16} /></IconButton>
       </div>
 
       <main className="workspace" style={{ "--split": `${globalState.splitPercent}%` } as React.CSSProperties}>
