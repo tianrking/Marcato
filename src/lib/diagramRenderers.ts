@@ -6,6 +6,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
 import { setupDiagramActions } from "./diagramActions";
+import { loadGitHubEmojis } from "./githubEmojis";
 import type { TopLevelSpec } from "vega-lite";
 
 let mermaidReady = false;
@@ -23,6 +24,8 @@ const REMOTE_DIAGRAM_ENGINES = [
 export async function postProcessPreview(root: HTMLElement, theme: "light" | "dark", offlineFirst: boolean, signal?: AbortSignal) {
   if (isAborted(signal, root)) return;
   renderMath(root);
+  if (isAborted(signal, root)) return;
+  await renderEmojiShortcodes(root, signal);
   if (isAborted(signal, root)) return;
   await renderMermaid(root, theme, signal);
   if (isAborted(signal, root)) return;
@@ -75,6 +78,59 @@ function renderMath(root: HTMLElement) {
       node.classList.add("render-error");
     }
   });
+}
+
+async function renderEmojiShortcodes(root: HTMLElement, signal?: AbortSignal) {
+  if (!root.textContent?.includes(":")) return;
+  let emojis: Map<string, string>;
+  try {
+    const entries = await loadGitHubEmojis();
+    emojis = new Map(entries.map((entry) => [entry.name, entry.url]));
+  } catch {
+    return;
+  }
+  if (isAborted(signal, root) || emojis.size === 0) return;
+
+  const nodes: Text[] = [];
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  while (walker.nextNode()) {
+    const node = walker.currentNode as Text;
+    const parent = node.parentElement;
+    if (!parent || !node.nodeValue?.includes(":")) continue;
+    if (parent.closest("a,button,code,pre,script,style,textarea,mjx-container")) continue;
+    nodes.push(node);
+  }
+
+  const shortcodePattern = /:([a-z0-9_+-]+):/gi;
+  for (const node of nodes) {
+    if (isAborted(signal, root)) return;
+    const text = node.nodeValue || "";
+    shortcodePattern.lastIndex = 0;
+    let match: RegExpExecArray | null;
+    let lastIndex = 0;
+    let changed = false;
+    const fragment = document.createDocumentFragment();
+    while ((match = shortcodePattern.exec(text)) !== null) {
+      const url = emojis.get(match[1].toLowerCase());
+      if (!url) continue;
+      const before = text.slice(lastIndex, match.index);
+      if (before) fragment.appendChild(document.createTextNode(before));
+      const shortcode = match[0];
+      const image = document.createElement("img");
+      image.className = "preview-emoji";
+      image.src = url;
+      image.alt = shortcode;
+      image.title = shortcode;
+      image.loading = "lazy";
+      fragment.appendChild(image);
+      lastIndex = match.index + shortcode.length;
+      changed = true;
+    }
+    if (!changed) continue;
+    const after = text.slice(lastIndex);
+    if (after) fragment.appendChild(document.createTextNode(after));
+    node.replaceWith(fragment);
+  }
 }
 
 async function renderMermaid(root: HTMLElement, theme: "light" | "dark", signal?: AbortSignal) {

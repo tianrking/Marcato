@@ -68,7 +68,7 @@ must remain smooth and predictable after initial access.
 | Image insert modal | Done | `index.html` image modal | `src/components/ImageInsertModal.tsx` | URL, file embed, alt text, and selection replacement flow implemented. |
 | Table insert modal | Done | `index.html` table modal | `src/components/TableInsertModal.tsx` | Rows, columns, and table-wide alignment insert flow implemented. |
 | Reference insert modal | Done | `index.html` reference modal | `src/components/ReferenceInsertModal.tsx`, `src/lib/editorCommands.ts` | Scans used definitions, suggests the next number, inserts inline marker plus definition with optional title. |
-| Emoji picker | Done | `index.html`, `script.js` | `src/components/EmojiInsertModal.tsx`, `src/lib/githubEmojis.ts` | Lazy GitHub emoji fetch/cache, skeleton loading, search, multi-select, copy, and shortcode insertion implemented. |
+| Emoji picker and preview | Done | `index.html`, `script.js` | `src/components/EmojiInsertModal.tsx`, `src/lib/githubEmojis.ts`, `src/lib/diagramRenderers.ts` | Lazy GitHub emoji fetch/cache, skeleton loading, search, multi-select, copy, shortcode insertion, and preview image replacement implemented. |
 | Symbols/entities picker | Done | `script.js` symbol groups | `src/components/SymbolsInsertModal.tsx` | Searchable grouped picker with multi-select, ordered entity insertion, and per-entity copy. |
 | Alert insert UI | Done | `index.html`, `script.js`, `styles.css` | `src/components/AlertInsertModal.tsx`, `src/lib/editorCommands.ts` | Type picker with previews inserts selected alert, preserving selected text as body. |
 | Smart enter/list continuation | Needs proof | `script.js` | `src/lib/editorCommands.ts` | Verify task/list/quote continuation and indentation edge cases. |
