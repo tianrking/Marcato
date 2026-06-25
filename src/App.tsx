@@ -597,14 +597,22 @@ function App() {
 function renderWithWorker(markdown: string, requestId: number): Promise<RenderResult> {
   return new Promise((resolve, reject) => {
     const worker = getWorker();
-    const timeout = window.setTimeout(() => reject(new Error("Preview worker timed out")), 6000);
+    let settled = false;
     const onMessage = (event: MessageEvent) => {
       if (event.data?.id !== requestId) return;
+      if (settled) return;
+      settled = true;
       window.clearTimeout(timeout);
       worker.removeEventListener("message", onMessage);
       if (event.data.ok) resolve(event.data.result as RenderResult);
       else reject(new Error(event.data.error || "Preview worker failed"));
     };
+    const timeout = window.setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      worker.removeEventListener("message", onMessage);
+      reject(new Error("Preview worker timed out"));
+    }, 6000);
     worker.addEventListener("message", onMessage);
     worker.postMessage({ id: requestId, markdown, segmented: true });
   });

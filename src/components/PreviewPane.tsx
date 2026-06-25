@@ -48,14 +48,14 @@ export const PreviewPane = forwardRef<HTMLElement, PreviewPaneProps>(function Pr
   useEffect(() => {
     const root = articleRef.current;
     if (!root) return undefined;
-    let cancelled = false;
+    const controller = new AbortController();
     void import("../lib/diagramRenderers").then(({ disposePreviewResources, postProcessPreview }) => {
-      if (cancelled) return;
+      if (controller.signal.aborted) return;
       disposePreviewResources(root);
-      void postProcessPreview(root, theme, offlineFirst);
+      void postProcessPreview(root, theme, offlineFirst, controller.signal);
     });
     return () => {
-      cancelled = true;
+      controller.abort();
       void import("../lib/diagramRenderers").then(({ disposePreviewResources }) => disposePreviewResources(root));
     };
   }, [document, theme, offlineFirst]);

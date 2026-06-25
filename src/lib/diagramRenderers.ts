@@ -20,22 +20,31 @@ const REMOTE_DIAGRAM_ENGINES = [
   "markmap",
 ];
 
-export async function postProcessPreview(root: HTMLElement, theme: "light" | "dark", offlineFirst: boolean) {
+export async function postProcessPreview(root: HTMLElement, theme: "light" | "dark", offlineFirst: boolean, signal?: AbortSignal) {
+  if (isAborted(signal, root)) return;
   renderMath(root);
-  await renderMermaid(root, theme);
-  await renderAbc(root);
-  await renderLeafletMaps(root, theme);
-  await renderGraphviz(root, theme);
-  await renderVegaLite(root, theme);
-  renderStl(root, theme);
+  if (isAborted(signal, root)) return;
+  await renderMermaid(root, theme, signal);
+  if (isAborted(signal, root)) return;
+  await renderAbc(root, signal);
+  if (isAborted(signal, root)) return;
+  await renderLeafletMaps(root, theme, signal);
+  if (isAborted(signal, root)) return;
+  await renderGraphviz(root, theme, signal);
+  if (isAborted(signal, root)) return;
+  await renderVegaLite(root, theme, signal);
+  if (isAborted(signal, root)) return;
+  renderStl(root, theme, signal);
+  if (isAborted(signal, root)) return;
   if (offlineFirst) renderRemoteDiagramFallbacks(root, "Offline-first is on. Remote rendering was skipped.");
-  else await renderRemoteDiagrams(root);
+  else await renderRemoteDiagrams(root, signal);
+  if (isAborted(signal, root)) return;
   setupPreviewLinks(root);
 }
 
 export function disposePreviewResources(root?: HTMLElement) {
   for (const [node, cleanup] of previewCleanups) {
-    if (root && node !== root && !root.contains(node) && node.isConnected) continue;
+    if (root && node !== root && !root.contains(node)) continue;
     cleanup();
     previewCleanups.delete(node);
   }
@@ -44,6 +53,10 @@ export function disposePreviewResources(root?: HTMLElement) {
 function registerPreviewCleanup(node: HTMLElement, cleanup: () => void) {
   previewCleanups.get(node)?.();
   previewCleanups.set(node, cleanup);
+}
+
+function isAborted(signal: AbortSignal | undefined, root: HTMLElement) {
+  return Boolean(signal?.aborted || !root.isConnected);
 }
 
 function renderMath(root: HTMLElement) {
@@ -64,18 +77,20 @@ function renderMath(root: HTMLElement) {
   });
 }
 
-async function renderMermaid(root: HTMLElement, theme: "light" | "dark") {
+async function renderMermaid(root: HTMLElement, theme: "light" | "dark", signal?: AbortSignal) {
   if (!mermaidReady) {
     mermaid.initialize({ startOnLoad: false, securityLevel: "strict", theme: theme === "dark" ? "dark" : "default" });
     mermaidReady = true;
   }
   const nodes = [...root.querySelectorAll<HTMLElement>('.diagram-viewer[data-diagram-engine="mermaid"] .diagram-surface')];
   for (const node of nodes) {
+    if (isAborted(signal, root)) return;
     if (node.dataset.rendered === "1") continue;
     const code = decodeURIComponent(node.dataset.originalCode || "");
     const id = `mermaid-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     try {
       const { svg } = await mermaid.render(id, code);
+      if (isAborted(signal, root) || !node.isConnected) return;
       node.innerHTML = svg;
       node.dataset.rendered = "1";
       markReady(node.closest<HTMLElement>(".diagram-viewer"));
@@ -85,11 +100,13 @@ async function renderMermaid(root: HTMLElement, theme: "light" | "dark") {
   }
 }
 
-async function renderAbc(root: HTMLElement) {
+async function renderAbc(root: HTMLElement, signal?: AbortSignal) {
   const nodes = [...root.querySelectorAll<HTMLElement>('.diagram-viewer[data-diagram-engine="abc"] .diagram-surface')];
   if (nodes.length === 0) return;
   const abcjs = await import("abcjs");
+  if (isAborted(signal, root)) return;
   for (const node of nodes) {
+    if (isAborted(signal, root)) return;
     if (node.dataset.rendered === "1") continue;
     const code = decodeURIComponent(node.dataset.originalCode || "");
     try {
@@ -115,12 +132,14 @@ async function renderAbc(root: HTMLElement) {
   }
 }
 
-async function renderLeafletMaps(root: HTMLElement, theme: "light" | "dark") {
+async function renderLeafletMaps(root: HTMLElement, theme: "light" | "dark", signal?: AbortSignal) {
   const nodes = [...root.querySelectorAll<HTMLElement>('.diagram-viewer[data-diagram-engine="geojson"] .diagram-surface,.diagram-viewer[data-diagram-engine="topojson"] .diagram-surface')];
   if (nodes.length === 0) return;
   const topojson = await import("topojson-client");
+  if (isAborted(signal, root)) return;
   for (const node of nodes) {
-    if (node.dataset.rendered === "1") return;
+    if (isAborted(signal, root)) return;
+    if (node.dataset.rendered === "1") continue;
     const code = decodeURIComponent(node.dataset.originalCode || "");
     try {
       const raw = JSON.parse(code);
@@ -128,6 +147,7 @@ async function renderLeafletMaps(root: HTMLElement, theme: "light" | "dark") {
       if (node.classList.contains("topojson")) {
         data = topojsonToFeatureCollection(topojson, raw);
       }
+      if (isAborted(signal, root) || !node.isConnected) return;
       node.innerHTML = "";
       const mapElement = document.createElement("div");
       mapElement.className = "leaflet-map-canvas";
@@ -202,8 +222,9 @@ function featurePopup(properties: unknown) {
   return rows ? `<table class="leaflet-popup-table"><tbody>${rows}</tbody></table>` : "Feature";
 }
 
-function renderStl(root: HTMLElement, theme: "light" | "dark") {
+function renderStl(root: HTMLElement, theme: "light" | "dark", signal?: AbortSignal) {
   root.querySelectorAll<HTMLElement>('.diagram-viewer[data-diagram-engine="stl"] .diagram-surface').forEach((node) => {
+    if (isAborted(signal, root)) return;
     if (node.dataset.rendered === "1") return;
     const code = decodeURIComponent(node.dataset.originalCode || "");
     try {
@@ -252,11 +273,13 @@ function renderStl(root: HTMLElement, theme: "light" | "dark") {
   });
 }
 
-async function renderGraphviz(root: HTMLElement, theme: "light" | "dark") {
+async function renderGraphviz(root: HTMLElement, theme: "light" | "dark", signal?: AbortSignal) {
   const nodes = [...root.querySelectorAll<HTMLElement>('.diagram-viewer[data-diagram-engine="graphviz"] .diagram-surface')];
   if (nodes.length === 0) return;
   const viz = await getGraphviz();
+  if (isAborted(signal, root)) return;
   for (const node of nodes) {
+    if (isAborted(signal, root)) return;
     if (node.dataset.rendered === "1") continue;
     const viewer = node.closest<HTMLElement>(".diagram-viewer");
     const code = decodeURIComponent(node.dataset.originalCode || "");
@@ -282,6 +305,7 @@ async function renderGraphviz(root: HTMLElement, theme: "light" | "dark") {
       });
       svg.setAttribute("role", "img");
       svg.setAttribute("aria-label", "Graphviz diagram");
+      if (isAborted(signal, root) || !node.isConnected) return;
       node.replaceChildren(svg);
       node.dataset.rendered = "1";
       markReady(viewer);
@@ -296,11 +320,13 @@ async function getGraphviz() {
   return await graphvizInstance;
 }
 
-async function renderVegaLite(root: HTMLElement, theme: "light" | "dark") {
+async function renderVegaLite(root: HTMLElement, theme: "light" | "dark", signal?: AbortSignal) {
   const nodes = [...root.querySelectorAll<HTMLElement>('.diagram-viewer[data-diagram-engine="vegalite"] .diagram-surface,.diagram-viewer[data-diagram-engine="vega-lite"] .diagram-surface')];
   if (nodes.length === 0) return;
   const [{ compile }, vega] = await Promise.all([import("vega-lite"), import("vega")]);
+  if (isAborted(signal, root)) return;
   for (const node of nodes) {
+    if (isAborted(signal, root)) return;
     if (node.dataset.rendered === "1") continue;
     const viewer = node.closest<HTMLElement>(".diagram-viewer");
     const engine = viewer?.dataset.diagramEngine || "vegalite";
@@ -312,6 +338,7 @@ async function renderVegaLite(root: HTMLElement, theme: "light" | "dark") {
         renderer: "none",
       }).initialize();
       const svg = await view.toSVG().finally(() => view.finalize());
+      if (isAborted(signal, root) || !node.isConnected) return;
       node.innerHTML = svg;
       node.dataset.rendered = "1";
       markReady(viewer);
@@ -342,15 +369,17 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === "object" && !Array.isArray(value));
 }
 
-async function renderRemoteDiagrams(root: HTMLElement) {
+async function renderRemoteDiagrams(root: HTMLElement, signal?: AbortSignal) {
   const nodes = [...root.querySelectorAll<HTMLElement>(remoteDiagramSelector())];
   for (const node of nodes) {
+    if (isAborted(signal, root)) return;
     if (node.dataset.rendered === "1") continue;
     const viewer = node.closest<HTMLElement>(".diagram-viewer");
     const engine = viewer?.dataset.diagramEngine || "";
     const code = decodeURIComponent(node.dataset.originalCode || "");
     try {
       const svg = await fetchRemoteSvgCached(engine, code);
+      if (isAborted(signal, root) || !node.isConnected) return;
       node.innerHTML = svg;
       node.dataset.rendered = "1";
       markReady(viewer);
