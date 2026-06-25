@@ -92,7 +92,7 @@ must remain smooth and predictable after initial access.
 | Area | Status | Original evidence | React evidence | Gap / acceptance |
 | --- | --- | --- | --- | --- |
 | Editor find/replace | Partial | `index.html`, `script.js` | `src/components/FindReplacePanel.tsx`, `src/lib/findReplace.ts` | Core exists; original history, diff modal, wrap UI, draggable panel not fully matched. |
-| Preview find highlighting | Missing | `script.js` | none | Need preview-side highlight and navigation parity. |
+| Preview find highlighting | Done | `script.js` | `src/lib/previewFind.ts`, `src/components/PreviewPane.tsx` | Preview text nodes are highlighted, active hit is synced to find navigation and scrolled into view. |
 | Synced scroll | Needs proof | `script.js` | `src/App.tsx` | Verify segmented preview and heading jumps. |
 | Outline/TOC | Needs proof | `script.js` | `src/App.tsx`, `src/lib/markdownCore.ts` | Verify duplicate/non-Latin slugs and click behavior. |
 | Document health | Partial | `index.html`, `script.js`, `styles.css` | `src/lib/documentHealth.ts`, `src/App.tsx` | Current panel is simplified; original modal/detail/mobile parity missing. |

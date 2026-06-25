@@ -672,6 +672,10 @@ function App() {
           <PreviewPane
             ref={previewRef}
             document={previewDocument}
+            findActiveIndex={activeMatch}
+            findEditorMatchCount={matches.length}
+            findOpen={findOpen}
+            findOptions={findOptions}
             offlineFirst={globalState.offlineFirst}
             selectedBlockId={selectedPreviewBlockId}
             theme={globalState.theme}

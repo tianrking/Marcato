@@ -997,6 +997,26 @@ textarea {
   vertical-align: -0.2em;
 }
 
+.preview-find-highlight {
+  padding: 0 1px;
+  border-radius: 3px;
+  background: #ffdf5d;
+  color: inherit;
+}
+
+.preview-find-highlight.active {
+  background: #ff9f1c;
+  box-shadow: 0 0 0 2px color-mix(in srgb, #ff9f1c 35%, transparent);
+}
+
+[data-theme="dark"] .preview-find-highlight {
+  background: rgba(187, 128, 9, 0.48);
+}
+
+[data-theme="dark"] .preview-find-highlight.active {
+  background: rgba(227, 179, 65, 0.7);
+}
+
 @keyframes skeleton-shimmer {
   from {
     background-position: 200% 0;
