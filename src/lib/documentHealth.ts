@@ -1,7 +1,18 @@
 export interface DocumentHealthIssue {
   level: "info" | "warning";
-  message: string;
+  code: DocumentHealthIssueCode;
+  params?: Record<string, string | number>;
 }
+
+export type DocumentHealthIssueCode =
+  | "missingH1"
+  | "headingJump"
+  | "duplicateHeadings"
+  | "emptyLinks"
+  | "insecureLinks"
+  | "missingImageAlt"
+  | "unclosedFence"
+  | "todoMarkers";
 
 export interface DocumentHealthReport {
   score: number;
@@ -31,42 +42,42 @@ export function analyzeDocumentHealth(markdown: string): DocumentHealthReport {
   const normalLinks = links.filter((match) => !match[0].startsWith("!"));
 
   if (!headings.some((heading) => heading.level === 1)) {
-    issues.push({ level: "warning", message: "Missing an H1 title." });
+    issues.push({ level: "warning", code: "missingH1" });
   }
 
   const skipped = findSkippedHeadingLevel(headings.map((heading) => heading.level));
   if (skipped) {
-    issues.push({ level: "warning", message: `Heading jumps from H${skipped.from} to H${skipped.to}.` });
+    issues.push({ level: "warning", code: "headingJump", params: skipped });
   }
 
   const duplicates = findDuplicateHeadings(headings.map((heading) => heading.text));
   if (duplicates.length > 0) {
-    issues.push({ level: "info", message: `Duplicate headings: ${duplicates.slice(0, 3).join(", ")}.` });
+    issues.push({ level: "info", code: "duplicateHeadings", params: { headings: duplicates.slice(0, 3).join(", ") } });
   }
 
   const emptyLinks = normalLinks.filter((match) => !match[2].trim()).length;
   if (emptyLinks > 0) {
-    issues.push({ level: "warning", message: `${emptyLinks} link${emptyLinks === 1 ? " has" : "s have"} empty targets.` });
+    issues.push({ level: "warning", code: "emptyLinks", params: { count: emptyLinks } });
   }
 
   const insecureLinks = normalLinks.filter((match) => /^http:\/\//i.test(match[2].trim())).length;
   if (insecureLinks > 0) {
-    issues.push({ level: "info", message: `${insecureLinks} link${insecureLinks === 1 ? " uses" : "s use"} plain HTTP.` });
+    issues.push({ level: "info", code: "insecureLinks", params: { count: insecureLinks } });
   }
 
   const imagesWithoutAlt = images.filter((match) => !match[1].trim()).length;
   if (imagesWithoutAlt > 0) {
-    issues.push({ level: "warning", message: `${imagesWithoutAlt} image${imagesWithoutAlt === 1 ? " needs" : "s need"} alt text.` });
+    issues.push({ level: "warning", code: "missingImageAlt", params: { count: imagesWithoutAlt } });
   }
 
   const fenceCount = (markdown.match(FENCE_PATTERN) || []).length;
   if (fenceCount % 2 !== 0) {
-    issues.push({ level: "warning", message: "A code fence is not closed." });
+    issues.push({ level: "warning", code: "unclosedFence" });
   }
 
   const todos = (markdown.match(/\b(?:TODO|FIXME)\b/gi) || []).length;
   if (todos > 0) {
-    issues.push({ level: "info", message: `${todos} TODO/FIXME marker${todos === 1 ? "" : "s"} remain.` });
+    issues.push({ level: "info", code: "todoMarkers", params: { count: todos } });
   }
 
   const warningCount = issues.filter((issue) => issue.level === "warning").length;

@@ -92,6 +92,16 @@ const resources = {
         links: "{{count}} links",
         images: "{{count}} images",
         code: "{{count}} code",
+        issue: {
+          missingH1: "Missing an H1 title.",
+          headingJump: "Heading jumps from H{{from}} to H{{to}}.",
+          duplicateHeadings: "Duplicate headings: {{headings}}.",
+          emptyLinks: "{{count}} link(s) have empty targets.",
+          insecureLinks: "{{count}} link(s) use plain HTTP.",
+          missingImageAlt: "{{count}} image(s) need alt text.",
+          unclosedFence: "A code fence is not closed.",
+          todoMarkers: "{{count}} TODO/FIXME marker(s) remain.",
+        },
       },
     },
   },
@@ -107,7 +117,7 @@ const resources = {
       toast: { markdownCopied: "Markdown 已复制。", previewImageCopied: "预览图片已复制。", clipboardImageUnavailable: "当前浏览器无法复制图片到剪贴板。", shareCopied: "分享链接已复制。", shareTooLong: "分享链接已生成，但长度过长，剪贴板可能不可靠。" },
       error: { githubImportFailed: "GitHub 导入失败" },
       confirm: { replaceMatches: "替换 {{count}} 个匹配项？" },
-      health: { title: "健康度", empty: "未发现明显问题。", strong: "很稳", good: "良好", weak: "需处理", headings: "{{count}} 个标题", links: "{{count}} 个链接", images: "{{count}} 张图片", code: "{{count}} 段代码" },
+      health: { title: "健康度", empty: "未发现明显问题。", strong: "很稳", good: "良好", weak: "需处理", headings: "{{count}} 个标题", links: "{{count}} 个链接", images: "{{count}} 张图片", code: "{{count}} 段代码", issue: { missingH1: "缺少 H1 标题。", headingJump: "标题层级从 H{{from}} 跳到 H{{to}}。", duplicateHeadings: "重复标题：{{headings}}。", emptyLinks: "{{count}} 个链接目标为空。", insecureLinks: "{{count}} 个链接使用明文 HTTP。", missingImageAlt: "{{count}} 张图片缺少替代文本。", unclosedFence: "有代码围栏未闭合。", todoMarkers: "还有 {{count}} 个 TODO/FIXME 标记。" } },
     },
   },
   tw: {
@@ -122,7 +132,7 @@ const resources = {
       toast: { markdownCopied: "Markdown 已複製。", previewImageCopied: "預覽圖片已複製。", clipboardImageUnavailable: "目前瀏覽器無法複製圖片到剪貼簿。", shareCopied: "分享連結已複製。", shareTooLong: "分享連結已產生，但長度過長，剪貼簿可能不可靠。" },
       error: { githubImportFailed: "GitHub 匯入失敗" },
       confirm: { replaceMatches: "取代 {{count}} 個符合項？" },
-      health: { title: "健康度", empty: "未發現明顯問題。", strong: "穩健", good: "良好", weak: "需處理", headings: "{{count}} 個標題", links: "{{count}} 個連結", images: "{{count}} 張圖片", code: "{{count}} 段程式碼" },
+      health: { title: "健康度", empty: "未發現明顯問題。", strong: "穩健", good: "良好", weak: "需處理", headings: "{{count}} 個標題", links: "{{count}} 個連結", images: "{{count}} 張圖片", code: "{{count}} 段程式碼", issue: { missingH1: "缺少 H1 標題。", headingJump: "標題層級從 H{{from}} 跳到 H{{to}}。", duplicateHeadings: "重複標題：{{headings}}。", emptyLinks: "{{count}} 個連結目標為空。", insecureLinks: "{{count}} 個連結使用明文 HTTP。", missingImageAlt: "{{count}} 張圖片缺少替代文字。", unclosedFence: "有程式碼圍欄未閉合。", todoMarkers: "還有 {{count}} 個 TODO/FIXME 標記。" } },
     },
   },
   ja: {
@@ -137,7 +147,7 @@ const resources = {
       toast: { markdownCopied: "Markdown をコピーしました。", previewImageCopied: "プレビュー画像をコピーしました。", clipboardImageUnavailable: "画像をクリップボードにコピーできません。", shareCopied: "共有 URL をコピーしました。", shareTooLong: "共有 URL を生成しましたが、長すぎるためクリップボードでは不安定な場合があります。" },
       error: { githubImportFailed: "GitHub インポートに失敗しました" },
       confirm: { replaceMatches: "{{count}} 件を置換しますか？" },
-      health: { title: "ヘルス", empty: "明らかな問題はありません。", strong: "強い", good: "良好", weak: "要改善", headings: "{{count}} 見出し", links: "{{count}} リンク", images: "{{count}} 画像", code: "{{count}} コード" },
+      health: { title: "ヘルス", empty: "明らかな問題はありません。", strong: "強い", good: "良好", weak: "要改善", headings: "{{count}} 見出し", links: "{{count}} リンク", images: "{{count}} 画像", code: "{{count}} コード", issue: { missingH1: "H1 タイトルがありません。", headingJump: "見出しが H{{from}} から H{{to}} に飛んでいます。", duplicateHeadings: "重複する見出し: {{headings}}。", emptyLinks: "{{count}} 個のリンクに空の宛先があります。", insecureLinks: "{{count}} 個のリンクが HTTP を使用しています。", missingImageAlt: "{{count}} 個の画像に代替テキストが必要です。", unclosedFence: "コードフェンスが閉じられていません。", todoMarkers: "{{count}} 個の TODO/FIXME マーカーが残っています。" } },
     },
   },
   ko: {
@@ -152,7 +162,7 @@ const resources = {
       toast: { markdownCopied: "Markdown을 복사했습니다.", previewImageCopied: "미리보기 이미지를 복사했습니다.", clipboardImageUnavailable: "클립보드 이미지 복사를 사용할 수 없습니다.", shareCopied: "공유 URL을 복사했습니다.", shareTooLong: "공유 URL을 만들었지만 너무 길어 클립보드 사용이 불안정할 수 있습니다." },
       error: { githubImportFailed: "GitHub 가져오기에 실패했습니다" },
       confirm: { replaceMatches: "{{count}}개 항목을 바꿀까요?" },
-      health: { title: "상태", empty: "뚜렷한 문제가 없습니다.", strong: "강함", good: "좋음", weak: "개선 필요", headings: "{{count}} 제목", links: "{{count}} 링크", images: "{{count}} 이미지", code: "{{count}} 코드" },
+      health: { title: "상태", empty: "뚜렷한 문제가 없습니다.", strong: "강함", good: "좋음", weak: "개선 필요", headings: "{{count}} 제목", links: "{{count}} 링크", images: "{{count}} 이미지", code: "{{count}} 코드", issue: { missingH1: "H1 제목이 없습니다.", headingJump: "제목 단계가 H{{from}}에서 H{{to}}로 건너뜁니다.", duplicateHeadings: "중복 제목: {{headings}}.", emptyLinks: "{{count}}개 링크의 대상이 비어 있습니다.", insecureLinks: "{{count}}개 링크가 일반 HTTP를 사용합니다.", missingImageAlt: "{{count}}개 이미지에 대체 텍스트가 필요합니다.", unclosedFence: "코드 펜스가 닫히지 않았습니다.", todoMarkers: "{{count}}개의 TODO/FIXME 표시가 남아 있습니다." } },
     },
   },
   es: {
@@ -167,7 +177,7 @@ const resources = {
       toast: { markdownCopied: "Markdown copiado.", previewImageCopied: "Imagen de vista previa copiada.", clipboardImageUnavailable: "No se puede copiar la imagen al portapapeles.", shareCopied: "URL compartida copiada.", shareTooLong: "URL compartida generada, pero es demasiado larga para el portapapeles." },
       error: { githubImportFailed: "Error al importar desde GitHub" },
       confirm: { replaceMatches: "¿Reemplazar {{count}} coincidencia(s)?" },
-      health: { title: "Salud", empty: "No se encontraron problemas obvios.", strong: "Fuerte", good: "Bien", weak: "Necesita trabajo", headings: "{{count}} títulos", links: "{{count}} enlaces", images: "{{count}} imágenes", code: "{{count}} código" },
+      health: { title: "Salud", empty: "No se encontraron problemas obvios.", strong: "Fuerte", good: "Bien", weak: "Necesita trabajo", headings: "{{count}} títulos", links: "{{count}} enlaces", images: "{{count}} imágenes", code: "{{count}} código", issue: { missingH1: "Falta un título H1.", headingJump: "El encabezado salta de H{{from}} a H{{to}}.", duplicateHeadings: "Encabezados duplicados: {{headings}}.", emptyLinks: "{{count}} enlace(s) tienen destino vacío.", insecureLinks: "{{count}} enlace(s) usan HTTP sin cifrar.", missingImageAlt: "{{count}} imagen(es) necesitan texto alternativo.", unclosedFence: "Un bloque de código no está cerrado.", todoMarkers: "Quedan {{count}} marcador(es) TODO/FIXME." } },
     },
   },
   fr: {
@@ -182,7 +192,7 @@ const resources = {
       toast: { markdownCopied: "Markdown copié.", previewImageCopied: "Image d'aperçu copiée.", clipboardImageUnavailable: "La copie d'image dans le presse-papiers est indisponible.", shareCopied: "URL de partage copiée.", shareTooLong: "URL de partage générée, mais trop longue pour un presse-papiers fiable." },
       error: { githubImportFailed: "Échec de l'import GitHub" },
       confirm: { replaceMatches: "Remplacer {{count}} occurrence(s) ?" },
-      health: { title: "Santé", empty: "Aucun problème évident.", strong: "Solide", good: "Bon", weak: "À améliorer", headings: "{{count}} titres", links: "{{count}} liens", images: "{{count}} images", code: "{{count}} code" },
+      health: { title: "Santé", empty: "Aucun problème évident.", strong: "Solide", good: "Bon", weak: "À améliorer", headings: "{{count}} titres", links: "{{count}} liens", images: "{{count}} images", code: "{{count}} code", issue: { missingH1: "Titre H1 manquant.", headingJump: "Le titre saute de H{{from}} à H{{to}}.", duplicateHeadings: "Titres dupliqués : {{headings}}.", emptyLinks: "{{count}} lien(s) ont une cible vide.", insecureLinks: "{{count}} lien(s) utilisent HTTP.", missingImageAlt: "{{count}} image(s) nécessitent un texte alternatif.", unclosedFence: "Un bloc de code n'est pas fermé.", todoMarkers: "{{count}} marqueur(s) TODO/FIXME restent." } },
     },
   },
   de: {
@@ -197,7 +207,7 @@ const resources = {
       toast: { markdownCopied: "Markdown kopiert.", previewImageCopied: "Vorschaubild kopiert.", clipboardImageUnavailable: "Bildkopie in die Zwischenablage ist nicht verfügbar.", shareCopied: "Freigabe-URL kopiert.", shareTooLong: "Freigabe-URL erstellt, aber zu lang für die Zwischenablage." },
       error: { githubImportFailed: "GitHub-Import fehlgeschlagen" },
       confirm: { replaceMatches: "{{count}} Treffer ersetzen?" },
-      health: { title: "Qualität", empty: "Keine offensichtlichen Probleme gefunden.", strong: "Stark", good: "Gut", weak: "Verbessern", headings: "{{count}} Überschriften", links: "{{count}} Links", images: "{{count}} Bilder", code: "{{count}} Code" },
+      health: { title: "Qualität", empty: "Keine offensichtlichen Probleme gefunden.", strong: "Stark", good: "Gut", weak: "Verbessern", headings: "{{count}} Überschriften", links: "{{count}} Links", images: "{{count}} Bilder", code: "{{count}} Code", issue: { missingH1: "H1-Titel fehlt.", headingJump: "Überschrift springt von H{{from}} zu H{{to}}.", duplicateHeadings: "Doppelte Überschriften: {{headings}}.", emptyLinks: "{{count}} Link(s) haben leere Ziele.", insecureLinks: "{{count}} Link(s) verwenden unverschlüsseltes HTTP.", missingImageAlt: "{{count}} Bild(er) benötigen Alternativtext.", unclosedFence: "Ein Codeblock ist nicht geschlossen.", todoMarkers: "{{count}} TODO/FIXME-Markierung(en) verbleiben." } },
     },
   },
 } as const;

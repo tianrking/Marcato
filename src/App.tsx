@@ -514,9 +514,11 @@ function App() {
                 <span>{t("health.code", { count: health.signals.codeBlocks })}</span>
               </div>
               <ul>
-                {(health.issues.length ? health.issues : [{ level: "info" as const, message: t("health.empty") }]).map((issue) => (
-                  <li key={issue.message} className={issue.level}>{issue.message}</li>
-                ))}
+                {health.issues.length ? health.issues.map((issue) => (
+                  <li key={`${issue.code}-${JSON.stringify(issue.params || {})}`} className={issue.level}>{t(`health.issue.${issue.code}`, issue.params)}</li>
+                )) : (
+                  <li className="info">{t("health.empty")}</li>
+                )}
               </ul>
             </div>
           </aside>
