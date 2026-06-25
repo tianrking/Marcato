@@ -1,4 +1,5 @@
 import { saveAs } from "file-saver";
+import { copyPngBlobToClipboard, downloadBlob } from "./clipboardImages";
 
 interface DiagramActionOptions {
   registerCleanup?: (node: HTMLElement, cleanup: () => void) => void;
@@ -49,8 +50,9 @@ function makeToolButton(label: string, onClick: () => void | Promise<void>) {
 async function copyDiagram(surface: HTMLElement) {
   try {
     const blob = await renderSurfacePng(surface);
-    if (blob && navigator.clipboard && "write" in navigator.clipboard) {
-      await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
+    if (blob) {
+      if (await copyPngBlobToClipboard(blob)) return;
+      downloadBlob(blob, `diagram-${Date.now()}.png`);
       return;
     }
   } catch {
@@ -58,7 +60,18 @@ async function copyDiagram(surface: HTMLElement) {
   }
   const svg = surface.querySelector("svg");
   const text = svg ? new XMLSerializer().serializeToString(svg) : surface.textContent || "";
-  await navigator.clipboard.writeText(text);
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return;
+    }
+  } catch {
+    // Fall back to downloading the diagram source.
+  }
+  saveAs(
+    new Blob([text], { type: svg ? "image/svg+xml;charset=utf-8" : "text/plain;charset=utf-8" }),
+    `diagram-${Date.now()}${svg ? ".svg" : ".txt"}`,
+  );
 }
 
 function downloadSvg(surface: HTMLElement) {
