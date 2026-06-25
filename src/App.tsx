@@ -35,15 +35,17 @@ import {
 } from "lucide-react";
 import { AppHeader } from "./components/AppHeader";
 import { FindReplacePanel } from "./components/FindReplacePanel";
-import { IconButton, Modal } from "./components/Common";
+import { IconButton } from "./components/Common";
 import { GitHubImportModal } from "./components/GitHubImportModal";
 import { InsertModalHost } from "./components/InsertModalHost";
 import { PreviewPane } from "./components/PreviewPane";
+import { ShareModal } from "./components/ShareModal";
 import { WorkspaceToolbar } from "./components/WorkspaceToolbar";
 import { useFindReplace } from "./hooks/useFindReplace";
 import { useGlobalShortcuts } from "./hooks/useGlobalShortcuts";
 import { useInsertModals } from "./hooks/useInsertModals";
 import { useMarkdownRender } from "./hooks/useMarkdownRender";
+import { useShare } from "./hooks/useShare";
 import { MAX_IMPORT_BYTES, MAX_TABS } from "./lib/constants";
 import { applyCommand, handleSmartEnter, type MarkdownCommand } from "./lib/editorCommands";
 import { copyImage, exportHtml, exportMarkdown, exportPdf, exportPng, getExportName } from "./lib/exporters";
@@ -51,7 +53,6 @@ import { analyzeDocumentHealth } from "./lib/documentHealth";
 import { fetchMarkdownFile, importFromGitHubUrl } from "./lib/githubImport";
 import { i18n } from "./lib/i18n";
 import { previewDocumentToHtml, type PreviewBlock } from "./lib/previewDocument";
-import { buildShareUrl, isShareUrlTooLong } from "./lib/share";
 import { makeTab } from "./lib/storage";
 import { useAppStore } from "./stores/appStore";
 import type { GitHubMarkdownFile, MarkdownTab } from "./types";
@@ -74,8 +75,6 @@ function App() {
   const undo = useAppStore((state) => state.undo);
   const redo = useAppStore((state) => state.redo);
   const [selectedPreviewBlockId, setSelectedPreviewBlockId] = useState("");
-  const [shareUrl, setShareUrl] = useState("");
-  const [shareMode, setShareMode] = useState<"view" | "edit">("view");
   const [githubOpen, setGithubOpen] = useState(false);
   const [githubUrl, setGithubUrl] = useState("");
   const [githubFiles, setGithubFiles] = useState<GitHubMarkdownFile[]>([]);
@@ -100,6 +99,7 @@ function App() {
   const commitContent = useCallback((content: string) => updateActiveContent(content, true), [updateActiveContent]);
   const findReplace = useFindReplace(text, editorRef, commitContent);
   const insertModals = useInsertModals({ activeTab, commitContent, editorRef, text });
+  const share = useShare(text, showToast);
   const stats = useMemo(() => getStats(text), [text]);
   const health = useMemo(() => analyzeDocumentHealth(text), [text]);
   const renderedHtml = useMemo(() => previewDocumentToHtml(previewDocument), [previewDocument]);
@@ -233,30 +233,6 @@ function App() {
     setGithubOpen(false);
   };
 
-  const showShareModal = (mode: "view" | "edit" = "view") => {
-    const url = buildShareUrl(text, mode === "edit");
-    setShareMode(mode);
-    setShareUrl(url);
-    if (isShareUrlTooLong(url)) showToast(t("toast.shareTooLong"));
-  };
-
-  const setShareModeUrl = (mode: "view" | "edit") => {
-    const url = buildShareUrl(text, mode === "edit");
-    setShareMode(mode);
-    setShareUrl(url);
-    if (isShareUrlTooLong(url)) showToast(t("toast.shareTooLong"));
-  };
-
-  const copyShareUrl = async () => {
-    if (!shareUrl || isShareUrlTooLong(shareUrl)) return;
-    try {
-      await navigator.clipboard.writeText(shareUrl);
-      showToast(t("toast.shareCopied"));
-    } catch {
-      showToast(t("toast.clipboardImageUnavailable"));
-    }
-  };
-
   const doCopyMarkdown = async () => {
     await navigator.clipboard.writeText(text);
     showToast(t("toast.markdownCopied"));
@@ -367,7 +343,7 @@ function App() {
         onExportPng={() => previewRef.current && void exportPng(getExportName(activeTab?.title || "document"), previewRef.current)}
         onCopyMarkdown={doCopyMarkdown}
         onCopyPreviewImage={doCopyPreviewImage}
-        onShare={() => showShareModal("view")}
+        onShare={() => share.open("view")}
       />
 
       <nav className="tab-strip" aria-label={t("status.document")}>
@@ -521,17 +497,7 @@ function App() {
 
       <InsertModalHost {...insertModals.hostProps} />
 
-      {shareUrl && (
-        <Modal title="Share URL" onClose={() => setShareUrl("")}>
-          <textarea className="share-url" readOnly value={shareUrl} />
-          {isShareUrlTooLong(shareUrl) && <p className="share-warning">{t("toast.shareTooLong")}</p>}
-          <div className="modal-actions">
-            <button className={shareMode === "view" ? "active" : ""} onClick={() => setShareModeUrl("view")}>{t("status.viewOnlyShare")}</button>
-            <button className={shareMode === "edit" ? "active" : ""} onClick={() => setShareModeUrl("edit")}>{t("status.editableShare")}</button>
-            <button disabled={isShareUrlTooLong(shareUrl)} onClick={() => void copyShareUrl()}>{t("action.copy")}</button>
-          </div>
-        </Modal>
-      )}
+      <ShareModal mode={share.mode} onClose={share.close} onCopy={share.copy} onModeChange={share.setModeUrl} tooLong={share.tooLong} url={share.url} />
 
       {dragging && <div className="drag-overlay">{t("status.dropMarkdown")}</div>}
       {toast && <div className="toast" role="status">{toast}</div>}
