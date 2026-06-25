@@ -1,167 +1,51 @@
 ---
-title: Welcome to Markdown Viewer
-description: A GitHub-style Markdown renderer with live preview, math, diagrams, and export support.
-author: ThisIs-Developer
-tags: ["markdown", "preview", "mermaid", "latex", "open-source"]
+title: Welcome to Marcato
+description: A refined Markdown studio for live preview, diagrams, math, import, export, and shareable documents.
+author: Marcato
+tags: ["markdown", "preview", "mermaid", "latex", "pdf", "pwa"]
 ---
 
-# Welcome to Markdown Viewer
+# Welcome to Marcato
 
-## ✨ Key Features
-- **Live Preview** with GitHub styling
-- **Smart Import/Export** (MD, HTML, PDF)
-- **Mermaid Diagrams** for visual documentation
-- **LaTeX Math Support** for scientific notation
-- **Emoji Support** 😄 👍 🎉
+Marcato is a browser-native Markdown studio: write on the left, inspect a GitHub-styled preview on the right, and export or share when the document is ready.
 
-## 💻 Code with Syntax Highlighting
-```javascript
-  function renderMarkdown() {
-    const markdown = markdownEditor.value;
-    const html = marked.parse(markdown);
-    const sanitizedHtml = DOMPurify.sanitize(html);
-    markdownPreview.innerHTML = sanitizedHtml;
-    
-    // Syntax highlighting is handled automatically
-    // during the parsing phase by the marked renderer.
-    // Themes are applied instantly via CSS variables.
-  }
-```
-
-## 🧮 Mathematical Expressions
-Write complex formulas with LaTeX syntax:
-
-Inline equation: $$E = mc^2$$
-
-Display equations:
-$$\\frac{\\partial f}{\\partial x} = \\lim_{h \\to 0} \\frac{f(x+h) - f(x)}{h}$$
-
-$$\\sum_{i=1}^{n} i^2 = \\frac{n(n+1)(2n+1)}{6}$$
-
-## 📊 Mermaid Diagrams
-Create powerful visualizations directly in markdown:
+## Core Flow
 
 ```mermaid
 flowchart LR
-    A[Start] --> B{Is it working?}
-    B -->|Yes| C[Great!]
-    B -->|No| D[Debug]
-    C --> E[Deploy]
-    D --> B
+  write[Write Markdown] --> render[Worker preview]
+  render --> enrich[Diagrams and math]
+  enrich --> export[PDF / HTML / PNG]
+  enrich --> share[Compressed share URL]
 ```
 
-### Sequence Diagram Example
-```mermaid
-sequenceDiagram
-    User->>Editor: Type markdown
-    Editor->>Preview: Render content
-    User->>Editor: Make changes
-    Editor->>Preview: Update rendering
-    User->>Export: Save as PDF
-```
+## What It Handles
 
-## 📋 Task Management
-- [x] Create responsive layout
-- [x] Implement live preview with GitHub styling
-- [x] Add syntax highlighting for code blocks
-- [x] Support math expressions with LaTeX
-- [x] Enable mermaid diagrams
+- Multi-tab Markdown editing with local persistence.
+- GitHub-flavored Markdown, footnotes, task lists, alerts, frontmatter, and syntax highlighting.
+- KaTeX math:
 
-## 🆚 Feature Comparison
+$$
+\sum_{i=1}^{n} i = \frac{n(n+1)}{2}
+$$
 
-| Feature                  | Markdown Viewer (Ours) | Other Markdown Editors  |
-|:-------------------------|:----------------------:|:-----------------------:|
-| Live Preview             | ✅ GitHub-Styled       | ✅                     |
-| Sync Scrolling           | ✅ Two-way             | 🔄 Partial/None        |
-| Mermaid Support          | ✅                     | ❌/Limited             |
-| LaTeX Math Rendering     | ✅                     | ❌/Limited             |
+- Mermaid, Markmap, WaveDrom, PlantUML, D2, Graphviz, Vega-Lite, GeoJSON/TopoJSON, ABC notation, and STL previews.
+- PDF export with progress, cancellation, pagination, table handling, and visual layout checks.
 
-### 📝 Multi-row Headers Support
+## Editing Checklist
 
-<table>
-  <thead>
-    <tr>
-      <th rowspan="2">Document Type</th>
-      <th colspan="2">Support</th>
-    </tr>
-    <tr>
-      <th>Markdown Viewer (Ours)</th>
-      <th>Other Markdown Editors</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>Technical Docs</td>
-      <td>Full + Diagrams</td>
-      <td>Limited/Basic</td>
-    </tr>
-    <tr>
-      <td>Research Notes</td>
-      <td>Full + Math</td>
-      <td>Partial</td>
-    </tr>
-    <tr>
-      <td>Developer Guides</td>
-      <td>Full + Export Options</td>
-      <td>Basic</td>
-    </tr>
-  </tbody>
-</table>
+- [x] Draft locally
+- [x] Preview safely
+- [x] Export when ready
+- [ ] Share the polished version
 
-## 📝 Text Formatting Examples
+## Comparison
 
-### Text Formatting
+| Capability | Marcato | Plain editors |
+| --- | --- | --- |
+| Live split preview | Full | Mixed |
+| Diagram rendering | Local-first plus remote adapters | Usually limited |
+| PDF workflow | Paginated, cancellable, tested | Often browser print only |
+| Share URLs | Compressed view/edit modes | Rare |
 
-Text can be formatted in various ways for ~~strikethrough~~, **bold**, *italic*, or ***bold italic***.
-
-For highlighting important information, use <mark>highlighted text</mark> or add <u>underlines</u> where appropriate.
-
-### Superscript and Subscript
-
-Chemical formulas: H<sub>2</sub>O, CO<sub>2</sub>  
-Mathematical notation: x<sup>2</sup>, e<sup>iπ</sup>
-
-### Keyboard Keys
-
-Press <kbd>Ctrl</kbd> + <kbd>B</kbd> for bold text.
-
-### Abbreviations
-
-<abbr title="Graphical User Interface">GUI</abbr>  
-<abbr title="Application Programming Interface">API</abbr>
-
-### Text Alignment
-
-<div style="text-align: center">
-Centered text for headings or important notices
-</div>
-
-<div style="text-align: right">
-Right-aligned text (for dates, signatures, etc.)
-</div>
-
-### **Lists**
-
-Create bullet points:
-* Item 1
-* Item 2
-  * Nested item
-    * Nested further
-
-### **Links and Images**
-
-Add a [link](https://github.com/ThisIs-Developer/Markdown-Viewer) to important resources.
-
-Embed an image:
-![Markdown Logo](https://markdownviewer.pages.dev/assets/icon.jpg)
-
-### **Blockquotes**
-
-Quote someone famous:
-> "The best way to predict the future is to invent it." - Alan Kay
-
----
-
-## 🛡️ Security Note
-
-This is a fully client-side application. Your content never leaves your browser and stays secure on your device.
+> Marcato is fully client-side. Your document stays in your browser unless you intentionally import from GitHub, render through a remote diagram service, or share a URL.

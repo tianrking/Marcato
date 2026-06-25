@@ -1,7 +1,7 @@
 {
-  "name": "MD Preview",
-  "short_name": "MD Preview",
-  "description": "Offline-first React Markdown editor and live preview tool.",
+  "name": "Marcato",
+  "short_name": "Marcato",
+  "description": "A refined Markdown studio for writing, previewing, diagrams, sharing, and export.",
   "start_url": "/?utm_source=pwa",
   "display": "standalone",
   "background_color": "#f8fafc",

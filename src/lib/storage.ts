@@ -94,7 +94,7 @@ export async function loadDefaultMarkdown() {
   } catch {
     // Fall through to embedded starter document.
   }
-  return `# MD Preview\n\nA React rewrite of Markdown Viewer with live preview, diagrams, math, import/export, search, and offline-first persistence.\n\n\`\`\`mermaid\nflowchart LR\n  A[Write] --> B[Preview]\n  B --> C[Export]\n\`\`\`\n\nInline math $E=mc^2$ and display math:\n\n$$\n\\sum_{i=1}^{n} i = \\frac{n(n+1)}{2}\n$$\n`;
+  return `# Marcato\n\nA polished Markdown studio for focused writing, live preview, diagrams, math, import/export, sharing, and offline-first persistence.\n\n\`\`\`mermaid\nflowchart LR\n  A[Write] --> B[Preview]\n  B --> C[Export]\n\`\`\`\n\nInline math $E=mc^2$ and display math:\n\n$$\n\\sum_{i=1}^{n} i = \\frac{n(n+1)}{2}\n$$\n`;
 }
 
 function detectLanguage() {

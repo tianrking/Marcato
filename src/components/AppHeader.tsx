@@ -1,4 +1,4 @@
-import { GitBranch, Moon, PanelLeft, PanelRight, SplitSquareHorizontal, Sun } from "lucide-react";
+import { Moon, PanelLeft, PanelRight, SplitSquareHorizontal, Sun } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { ThemeMode, ViewMode } from "../types";
 import { IconButton, Segmented } from "./Common";
@@ -39,9 +39,6 @@ export function AppHeader({ stats, theme, viewMode, onThemeChange, onViewModeCha
         />
         <IconButton title="Toggle theme" onClick={() => onThemeChange(theme === "dark" ? "light" : "dark")}>
           {theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}
-        </IconButton>
-        <IconButton title="GitHub" onClick={() => window.open("https://github.com/ThisIs-Developer/Markdown-Viewer", "_blank", "noopener")}>
-          <GitBranch size={17} />
         </IconButton>
       </div>
     </header>

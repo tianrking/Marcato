@@ -1,4 +1,4 @@
-# Markdown Viewer React Parity Checklist
+# Marcato / Markdown-Viewer React Parity Checklist
 
 This checklist tracks the React rewrite against the original `E:\MD_DIY\Markdown-Viewer`
 implementation. Status values:

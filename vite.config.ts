@@ -28,12 +28,12 @@ export default defineConfig({
           {
             urlPattern: ({ url }) => url.protocol === 'http:' || url.protocol === 'https:',
             handler: 'StaleWhileRevalidate',
-            options: { cacheName: 'md-preview-local' },
+            options: { cacheName: 'marcato-local' },
           },
           {
             urlPattern: /^https:\/\/api\.github\.com\//,
             handler: 'NetworkFirst',
-            options: { cacheName: 'md-preview-github', networkTimeoutSeconds: 8 },
+            options: { cacheName: 'marcato-github', networkTimeoutSeconds: 8 },
           },
         ],
       },
