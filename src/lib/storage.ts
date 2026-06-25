@@ -24,7 +24,7 @@ export function safeWrite<T>(key: string, value: T) {
 
 export function loadGlobalState(): GlobalState {
   const state = safeRead<Partial<GlobalState>>(STORAGE_KEYS.global, {});
-  const language = window.localStorage.getItem(STORAGE_KEYS.language) || state.language || detectLanguage();
+  const language = normalizeLanguage(window.localStorage.getItem(STORAGE_KEYS.language) || state.language || detectLanguage());
   const findDocked = window.localStorage.getItem(STORAGE_KEYS.findDocked);
   return {
     ...DEFAULT_GLOBAL_STATE,
@@ -115,5 +115,5 @@ function normalizeLanguage(value: string) {
   if (lower.startsWith("zh-tw") || lower.startsWith("zh-hant") || lower === "tw") return "tw";
   if (lower.startsWith("zh")) return "zh";
   const base = lower.split("-")[0];
-  return ["en", "ja", "ko", "pt", "es", "fr", "de", "ru", "it", "tr", "pl", "uk"].includes(base) ? base : "en";
+  return ["en", "ja", "ko", "es", "fr", "de"].includes(base) ? base : "en";
 }

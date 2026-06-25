@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   AlignCenter,
   AlignLeft,
@@ -45,12 +46,13 @@ import {
   Trash2,
   Undo2,
 } from "lucide-react";
-import { MAX_IMPORT_BYTES, MAX_TABS, SHARE_URL_SOFT_LIMIT, LANGUAGE_LABELS, UI_TEXT } from "./lib/constants";
+import { MAX_IMPORT_BYTES, MAX_TABS, SHARE_URL_SOFT_LIMIT } from "./lib/constants";
 import { applyCommand, handleSmartEnter, type MarkdownCommand } from "./lib/editorCommands";
 import { copyImage, exportHtml, exportMarkdown, exportPdf, exportPng, getExportName } from "./lib/exporters";
 import { analyzeDocumentHealth } from "./lib/documentHealth";
 import { buildDiffPreview, findMatches, replaceAll, replaceOne } from "./lib/findReplace";
 import { fetchMarkdownFile, importFromGitHubUrl } from "./lib/githubImport";
+import { i18n, LANGUAGE_LABELS } from "./lib/i18n";
 import { renderMarkdownToHtml } from "./lib/markdownCore";
 import { sanitizePreviewHtml } from "./lib/sanitizer";
 import { buildShareUrl, readShareFromLocation } from "./lib/share";
@@ -79,6 +81,7 @@ const INITIAL_FIND: FindOptions = {
 };
 
 function App() {
+  const { t } = useTranslation();
   const [globalState, setGlobalState] = useState<GlobalState>(() => loadGlobalState());
   const [tabs, setTabs] = useState<MarkdownTab[]>([]);
   const [activeTabId, setActiveTabId] = useState<string>("");
@@ -111,7 +114,6 @@ function App() {
     [activeTabId, tabs],
   );
   const text = activeTab?.content || "";
-  const labels = UI_TEXT[globalState.language] || UI_TEXT.en;
   const matches = useMemo(() => findMatches(text, findOptions, getCurrentSelection(editorRef.current)), [text, findOptions]);
   const stats = useMemo(() => getStats(text), [text]);
   const health = useMemo(() => analyzeDocumentHealth(text), [text]);
@@ -120,6 +122,7 @@ function App() {
     document.documentElement.dataset.theme = globalState.theme;
     document.documentElement.lang = globalState.language === "zh" ? "zh-Hans" : globalState.language === "tw" ? "zh-Hant" : globalState.language;
     document.body.dir = globalState.direction;
+    void i18n.changeLanguage(globalState.language);
     saveGlobalState(globalState);
   }, [globalState]);
 
@@ -153,7 +156,7 @@ function App() {
 
   useEffect(() => {
     saveUntitledCounter(untitledCounter);
-  }, [untitledCounter]);
+  }, [t, untitledCounter]);
 
   useEffect(() => {
     if (!activeTab) return;
@@ -281,7 +284,7 @@ function App() {
         showToast(`Tab limit is ${MAX_TABS}.`);
         return current;
       }
-      const nextTitle = title || `Untitled-${untitledCounter}.md`;
+      const nextTitle = title || `${t("status.untitled")}-${untitledCounter}.md`;
       const tab = makeTab(nextTitle, content);
       setActiveTabId(tab.id);
       setUntitledCounter((value) => value + 1);
@@ -292,7 +295,7 @@ function App() {
   const closeTab = useCallback((id: string) => {
     setTabs((current) => {
       if (current.length <= 1) {
-        const tab = makeTab(`Untitled-${untitledCounter}.md`, "");
+        const tab = makeTab(`${t("status.untitled")}-${untitledCounter}.md`, "");
         setActiveTabId(tab.id);
         setUntitledCounter((value) => value + 1);
         return [tab];
@@ -302,7 +305,7 @@ function App() {
       if (id === activeTabId) setActiveTabId(next[Math.max(0, index - 1)]?.id || next[0].id);
       return next;
     });
-  }, [activeTabId, untitledCounter]);
+  }, [activeTabId, t, untitledCounter]);
 
   const renameTab = (id: string) => {
     const tab = tabs.find((item) => item.id === id);
@@ -391,7 +394,7 @@ function App() {
       setGithubFiles(files);
       setSelectedGithubPaths(new Set(files.length === 1 ? [files[0].path] : files.map((file) => file.path)));
     } catch (error) {
-      showToast(error instanceof Error ? error.message : "GitHub import failed");
+      showToast(error instanceof Error ? error.message : t("error.githubImportFailed"));
     }
   };
 
@@ -410,21 +413,21 @@ function App() {
     setShareUrl(url);
     if (url.length <= SHARE_URL_SOFT_LIMIT) {
       await navigator.clipboard.writeText(url);
-      showToast("Share URL copied.");
+      showToast(t("toast.shareCopied"));
     } else {
-      showToast("Share URL generated, but it is too long for reliable clipboard use.");
+      showToast(t("toast.shareTooLong"));
     }
   };
 
   const doCopyMarkdown = async () => {
     await navigator.clipboard.writeText(text);
-    showToast("Markdown copied.");
+    showToast(t("toast.markdownCopied"));
   };
 
   const doCopyPreviewImage = async () => {
     if (!previewRef.current) return;
     const ok = await copyImage(previewRef.current);
-    showToast(ok ? "Preview image copied." : "Clipboard image copy is unavailable.");
+    showToast(ok ? t("toast.previewImageCopied") : t("toast.clipboardImageUnavailable"));
   };
 
   const cycleMatch = (direction: 1 | -1) => {
@@ -445,7 +448,7 @@ function App() {
   const replaceEveryMatch = () => {
     if (!matches.length) return;
     const preview = buildDiffPreview(text, matches, findOptions);
-    if (window.confirm(`Replace ${matches.length} match(es)?\n\n${preview}`)) {
+    if (window.confirm(`${t("confirm.replaceMatches", { count: matches.length })}\n\n${preview}`)) {
       commitContent(replaceAll(text, matches, findOptions));
     }
   };
@@ -508,7 +511,7 @@ function App() {
         <div className="brand">
           <img src="/icon.jpg" alt="" />
           <div>
-            <h1>MD Preview</h1>
+            <h1>{t("app.title")}</h1>
             <p>{stats.minutes} min read | {stats.words} words | {stats.chars} chars</p>
           </div>
         </div>
@@ -516,9 +519,9 @@ function App() {
           <Segmented
             value={globalState.viewMode}
             options={[
-              ["editor", <PanelLeft key="editor" size={16} />, labels.editor],
-              ["split", <SplitSquareHorizontal key="split" size={16} />, labels.split],
-              ["preview", <PanelRight key="preview" size={16} />, labels.preview],
+              ["editor", <PanelLeft key="editor" size={16} />, t("view.editor")],
+              ["split", <SplitSquareHorizontal key="split" size={16} />, t("view.split")],
+              ["preview", <PanelRight key="preview" size={16} />, t("view.preview")],
             ]}
             onChange={(value) => updateGlobal({ viewMode: value as ViewMode })}
           />
@@ -533,8 +536,8 @@ function App() {
 
       <div className="workspace-toolbar">
         <div className="toolbar-group">
-          <button onClick={() => newTab("", undefined)}><Plus size={16} />{labels.newTab}</button>
-          <button onClick={() => fileInputRef.current?.click()}><Download size={16} />{labels.import}</button>
+          <button onClick={() => newTab("", undefined)}><Plus size={16} />{t("action.new")}</button>
+          <button onClick={() => fileInputRef.current?.click()}><Download size={16} />{t("action.import")}</button>
           <button onClick={openGithubImport}><GitBranch size={16} />GitHub</button>
           <input ref={fileInputRef} hidden type="file" multiple accept=".md,.markdown,.txt" onChange={(event) => event.target.files && void handleFiles(event.target.files)} />
         </div>
@@ -543,21 +546,21 @@ function App() {
           <button onClick={() => exportHtml(getExportName(activeTab?.title || "document"), renderedHtml, activeTab?.title || "Document")}><FileCode2 size={16} />HTML</button>
           <button onClick={() => previewRef.current && void exportPdf(getExportName(activeTab?.title || "document"), previewRef.current)}><FileDown size={16} />PDF</button>
           <button onClick={() => previewRef.current && void exportPng(getExportName(activeTab?.title || "document"), previewRef.current)}><FileImage size={16} />PNG</button>
-          <button onClick={doCopyMarkdown}><Copy size={16} />{labels.copy}</button>
-          <button onClick={doCopyPreviewImage}><FileImage size={16} />Copy PNG</button>
-          <button onClick={() => void doShare(true)}><Share2 size={16} />{labels.share}</button>
+          <button onClick={doCopyMarkdown}><Copy size={16} />{t("action.copy")}</button>
+          <button onClick={doCopyPreviewImage}><FileImage size={16} />{t("action.copyPng")}</button>
+          <button onClick={() => void doShare(true)}><Share2 size={16} />{t("action.share")}</button>
         </div>
         <div className="toolbar-group compact">
-          <label><input type="checkbox" checked={globalState.syncScroll} onChange={(event) => updateGlobal({ syncScroll: event.target.checked })} />{labels.sync}</label>
-          <label><input type="checkbox" checked={globalState.offlineFirst} onChange={(event) => updateGlobal({ offlineFirst: event.target.checked })} />{labels.offline}</label>
-          <select value={globalState.language} onChange={(event) => updateGlobal({ language: event.target.value })} title="Language">
+          <label><input type="checkbox" checked={globalState.syncScroll} onChange={(event) => updateGlobal({ syncScroll: event.target.checked })} />{t("setting.sync")}</label>
+          <label><input type="checkbox" checked={globalState.offlineFirst} onChange={(event) => updateGlobal({ offlineFirst: event.target.checked })} />{t("setting.offlineFirst")}</label>
+          <select value={globalState.language} onChange={(event) => updateGlobal({ language: event.target.value })} title={t("setting.language")}>
             {Object.entries(LANGUAGE_LABELS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
           </select>
           <button onClick={() => updateGlobal({ direction: globalState.direction === "rtl" ? "ltr" : "rtl" })}><Languages size={16} />{globalState.direction.toUpperCase()}</button>
         </div>
       </div>
 
-      <nav className="tab-strip" aria-label="Documents">
+      <nav className="tab-strip" aria-label={t("status.document")}>
         {tabs.map((tab) => (
           <button key={tab.id} className={tab.id === activeTabId ? "tab active" : "tab"} onClick={() => setActiveTabId(tab.id)} onDoubleClick={() => renameTab(tab.id)}>
             <span>{tab.title}</span>
@@ -597,7 +600,7 @@ function App() {
 
       <main className="workspace" style={{ "--split": `${globalState.splitPercent}%` } as React.CSSProperties}>
         <section className="editor-pane" ref={editorPaneRef}>
-          <div className="pane-title"><FilePlus2 size={16} />{activeTab?.title || "Untitled"}</div>
+          <div className="pane-title"><FilePlus2 size={16} />{activeTab?.title || t("status.untitled")}</div>
           <div className="editor-wrap">
             <pre className="line-numbers" aria-hidden="true">{lineNumbers(text)}</pre>
             <textarea
@@ -608,15 +611,15 @@ function App() {
               onKeyDown={onEditorKeyDown}
               onChange={(event) => updateActiveContent(event.target.value)}
               onBlur={(event) => commitContent(event.target.value)}
-              aria-label="Markdown editor"
+              aria-label={t("view.editor")}
             />
           </div>
         </section>
         <div className="resizer" role="separator" aria-orientation="vertical" tabIndex={0} onPointerDown={beginResize} />
         <section className="preview-pane" ref={previewPaneRef} onScroll={onScrollPreview}>
           <div className="pane-title">
-            <Eye size={16} />Preview
-            {renderState === "rendering" && <span className="render-pill">Rendering</span>}
+            <Eye size={16} />{t("view.preview")}
+            {renderState === "rendering" && <span className="render-pill">{t("status.rendering")}</span>}
             {renderError && <span className="render-pill error">{renderError}</span>}
           </div>
           <article
@@ -629,26 +632,26 @@ function App() {
           <aside className="toc-panel">
             {toc.length > 0 && (
               <>
-                <strong>Outline</strong>
+                <strong>{t("view.outline")}</strong>
                 {toc.map((entry) => (
                   <a key={entry.id} href={`#${entry.id}`} style={{ paddingLeft: `${(entry.level - 1) * 10}px` }}>{entry.text}</a>
                 ))}
               </>
             )}
             <div className="health-panel">
-              <strong><ShieldCheck size={15} /> Health</strong>
+              <strong><ShieldCheck size={15} /> {t("health.title")}</strong>
               <div className={`health-score ${health.score >= 86 ? "strong" : health.score >= 68 ? "good" : "weak"}`}>
                 <span>{health.score}</span>
-                <small>{health.label}</small>
+                <small>{health.score >= 86 ? t("health.strong") : health.score >= 68 ? t("health.good") : t("health.weak")}</small>
               </div>
               <div className="health-signals">
-                <span>{health.signals.headings} headings</span>
-                <span>{health.signals.links} links</span>
-                <span>{health.signals.images} images</span>
-                <span>{health.signals.codeBlocks} code</span>
+                <span>{t("health.headings", { count: health.signals.headings })}</span>
+                <span>{t("health.links", { count: health.signals.links })}</span>
+                <span>{t("health.images", { count: health.signals.images })}</span>
+                <span>{t("health.code", { count: health.signals.codeBlocks })}</span>
               </div>
               <ul>
-                {(health.issues.length ? health.issues : [{ level: "info" as const, message: "No obvious issues found." }]).map((issue) => (
+                {(health.issues.length ? health.issues : [{ level: "info" as const, message: t("health.empty") }]).map((issue) => (
                   <li key={issue.message} className={issue.level}>{issue.message}</li>
                 ))}
               </ul>
@@ -660,34 +663,34 @@ function App() {
       {findOpen && (
         <div className={globalState.findDocked ? "find-panel docked" : "find-panel"}>
           <div className="modal-head">
-            <strong><FileSearch size={16} /> {labels.find} / {labels.replace}</strong>
+            <strong><FileSearch size={16} /> {t("find.title")}</strong>
             <button onClick={() => setFindOpen(false)}>x</button>
           </div>
-          <input value={findOptions.query} placeholder="Find" onChange={(event) => setFindOptions({ ...findOptions, query: event.target.value })} />
-          <input value={findOptions.replacement} placeholder="Replace with" onChange={(event) => setFindOptions({ ...findOptions, replacement: event.target.value })} />
+          <input value={findOptions.query} placeholder={t("find.find")} onChange={(event) => setFindOptions({ ...findOptions, query: event.target.value })} />
+          <input value={findOptions.replacement} placeholder={t("find.replacement")} onChange={(event) => setFindOptions({ ...findOptions, replacement: event.target.value })} />
           <div className="check-grid">
-            <label><input type="checkbox" checked={findOptions.caseSensitive} onChange={(event) => setFindOptions({ ...findOptions, caseSensitive: event.target.checked })} />Case</label>
-            <label><input type="checkbox" checked={findOptions.wholeWord} onChange={(event) => setFindOptions({ ...findOptions, wholeWord: event.target.checked })} />Word</label>
-            <label><input type="checkbox" checked={findOptions.regex} onChange={(event) => setFindOptions({ ...findOptions, regex: event.target.checked })} />Regex</label>
-            <label><input type="checkbox" checked={findOptions.inSelection} onChange={(event) => setFindOptions({ ...findOptions, inSelection: event.target.checked })} />Selection</label>
-            <label><input type="checkbox" checked={findOptions.preserveCase} onChange={(event) => setFindOptions({ ...findOptions, preserveCase: event.target.checked })} />Preserve case</label>
-            <label><input type="checkbox" checked={globalState.findDocked} onChange={(event) => updateGlobal({ findDocked: event.target.checked })} />Dock</label>
+            <label><input type="checkbox" checked={findOptions.caseSensitive} onChange={(event) => setFindOptions({ ...findOptions, caseSensitive: event.target.checked })} />{t("find.case")}</label>
+            <label><input type="checkbox" checked={findOptions.wholeWord} onChange={(event) => setFindOptions({ ...findOptions, wholeWord: event.target.checked })} />{t("find.word")}</label>
+            <label><input type="checkbox" checked={findOptions.regex} onChange={(event) => setFindOptions({ ...findOptions, regex: event.target.checked })} />{t("find.regex")}</label>
+            <label><input type="checkbox" checked={findOptions.inSelection} onChange={(event) => setFindOptions({ ...findOptions, inSelection: event.target.checked })} />{t("find.selection")}</label>
+            <label><input type="checkbox" checked={findOptions.preserveCase} onChange={(event) => setFindOptions({ ...findOptions, preserveCase: event.target.checked })} />{t("find.preserveCase")}</label>
+            <label><input type="checkbox" checked={globalState.findDocked} onChange={(event) => updateGlobal({ findDocked: event.target.checked })} />{t("find.dock")}</label>
           </div>
           <div className="modal-actions">
-            <button onClick={() => cycleMatch(-1)}>Prev</button>
-            <button onClick={() => cycleMatch(1)}>Next</button>
-            <button onClick={replaceCurrent}><Replace size={15} />Current</button>
-            <button onClick={replaceEveryMatch}><Replace size={15} />All</button>
+            <button onClick={() => cycleMatch(-1)}>{t("find.prev")}</button>
+            <button onClick={() => cycleMatch(1)}>{t("find.next")}</button>
+            <button onClick={replaceCurrent}><Replace size={15} />{t("find.current")}</button>
+            <button onClick={replaceEveryMatch}><Replace size={15} />{t("find.all")}</button>
           </div>
-          <small>{matches.length ? `${activeMatch + 1} / ${matches.length}` : "No matches"}</small>
+          <small>{matches.length ? `${activeMatch + 1} / ${matches.length}` : t("find.noMatches")}</small>
         </div>
       )}
 
       {githubOpen && (
-        <Modal title="Import from GitHub" onClose={() => setGithubOpen(false)}>
+        <Modal title={t("github.importTitle")} onClose={() => setGithubOpen(false)}>
           <div className="github-import">
-            <input value={githubUrl} placeholder="https://github.com/owner/repo or tree/blob URL" onChange={(event) => setGithubUrl(event.target.value)} />
-            <button onClick={() => void listGithubFiles()}><Search size={15} />List Markdown files</button>
+            <input value={githubUrl} placeholder={t("github.placeholder")} onChange={(event) => setGithubUrl(event.target.value)} />
+            <button onClick={() => void listGithubFiles()}><Search size={15} />{t("github.listFiles")}</button>
             <div className="github-list">
               {githubFiles.map((file) => (
                 <label key={file.path}>
@@ -706,8 +709,8 @@ function App() {
               ))}
             </div>
             <div className="modal-actions">
-              <button onClick={() => setSelectedGithubPaths(new Set(githubFiles.map((file) => file.path)))}>Select all</button>
-              <button onClick={() => void importGithubSelection()}>Import selected</button>
+              <button onClick={() => setSelectedGithubPaths(new Set(githubFiles.map((file) => file.path)))}>{t("action.selectAll")}</button>
+              <button onClick={() => void importGithubSelection()}>{t("action.importSelected")}</button>
             </div>
           </div>
         </Modal>
@@ -717,14 +720,14 @@ function App() {
         <Modal title="Share URL" onClose={() => setShareUrl("")}>
           <textarea className="share-url" readOnly value={shareUrl} />
           <div className="modal-actions">
-            <button onClick={() => void doShare(false)}>View-only</button>
-            <button onClick={() => void doShare(true)}>Editable</button>
-            <button onClick={() => void navigator.clipboard.writeText(shareUrl)}>Copy</button>
+            <button onClick={() => void doShare(false)}>{t("status.viewOnlyShare")}</button>
+            <button onClick={() => void doShare(true)}>{t("status.editableShare")}</button>
+            <button onClick={() => void navigator.clipboard.writeText(shareUrl)}>{t("action.copy")}</button>
           </div>
         </Modal>
       )}
 
-      {dragging && <div className="drag-overlay">Drop Markdown files to import</div>}
+      {dragging && <div className="drag-overlay">{t("status.dropMarkdown")}</div>}
       {toast && <div className="toast" role="status">{toast}</div>}
     </div>
   );
