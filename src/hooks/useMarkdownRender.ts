@@ -13,10 +13,11 @@ export function useMarkdownRender(activeTab: MarkdownTab | undefined) {
     if (!activeTab) return;
     setState("rendering");
     const requestId = ++requestRef.current;
+    const controller = new AbortController();
     const timer = window.setTimeout(() => {
-      renderWithWorker(activeTab.content, requestId)
+      renderWithWorker(activeTab.content, requestId, controller.signal)
         .then((result) => {
-          if (requestRef.current !== requestId) return;
+          if (controller.signal.aborted || requestRef.current !== requestId) return;
           const nextDocument = createPreviewDocument(result);
           setDocument(nextDocument);
           setToc(result.toc);
@@ -24,10 +25,10 @@ export function useMarkdownRender(activeTab: MarkdownTab | undefined) {
           setError("");
         })
         .catch((renderError) => {
-          if (requestRef.current !== requestId) return;
+          if (controller.signal.aborted || isAbortError(renderError) || requestRef.current !== requestId) return;
           void renderFallback(activeTab.content)
             .then((fallback) => {
-              if (requestRef.current !== requestId) return;
+              if (controller.signal.aborted || requestRef.current !== requestId) return;
               const nextDocument = createPreviewDocument(fallback);
               setDocument(nextDocument);
               setToc(fallback.toc);
@@ -35,13 +36,16 @@ export function useMarkdownRender(activeTab: MarkdownTab | undefined) {
               setError("");
             })
             .catch(() => {
-              if (requestRef.current !== requestId) return;
+              if (controller.signal.aborted || requestRef.current !== requestId) return;
               setState("error");
               setError(renderError instanceof Error ? renderError.message : "Render failed");
             });
         });
     }, getRenderDelay(activeTab.content));
-    return () => window.clearTimeout(timer);
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
   }, [activeTab]);
 
   return { document, toc, state, error };
@@ -52,28 +56,46 @@ async function renderFallback(markdown: string) {
   return renderMarkdownToHtml(markdown, false);
 }
 
-function renderWithWorker(markdown: string, requestId: number): Promise<RenderResult> {
+function renderWithWorker(markdown: string, requestId: number, signal?: AbortSignal): Promise<RenderResult> {
   return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(createAbortError());
+      return;
+    }
     const worker = getWorker();
     let settled = false;
-    const onMessage = (event: MessageEvent) => {
-      if (event.data?.id !== requestId) return;
+    let timeout = 0;
+    const settle = (done: () => void) => {
       if (settled) return;
       settled = true;
       window.clearTimeout(timeout);
       worker.removeEventListener("message", onMessage);
-      if (event.data.ok) resolve(event.data.result as RenderResult);
-      else reject(new Error(event.data.error || "Preview worker failed"));
+      signal?.removeEventListener("abort", onAbort);
+      done();
     };
-    const timeout = window.setTimeout(() => {
-      if (settled) return;
-      settled = true;
-      worker.removeEventListener("message", onMessage);
-      reject(new Error("Preview worker timed out"));
+    const onMessage = (event: MessageEvent) => {
+      if (event.data?.id !== requestId) return;
+      settle(() => {
+        if (event.data.ok) resolve(event.data.result as RenderResult);
+        else reject(new Error(event.data.error || "Preview worker failed"));
+      });
+    };
+    const onAbort = () => settle(() => reject(createAbortError()));
+    timeout = window.setTimeout(() => {
+      settle(() => reject(new Error("Preview worker timed out")));
     }, 6000);
     worker.addEventListener("message", onMessage);
+    signal?.addEventListener("abort", onAbort, { once: true });
     worker.postMessage({ id: requestId, markdown, segmented: true });
   });
+}
+
+function createAbortError() {
+  return new DOMException("Preview render cancelled", "AbortError");
+}
+
+function isAbortError(error: unknown) {
+  return error instanceof DOMException && error.name === "AbortError";
 }
 
 let workerSingleton: Worker | null = null;
