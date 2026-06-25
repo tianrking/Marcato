@@ -54,6 +54,7 @@ import { GitHubImportModal } from "./components/GitHubImportModal";
 import { InsertModalHost } from "./components/InsertModalHost";
 import { MobileMenu } from "./components/MobileMenu";
 import { PreviewPane } from "./components/PreviewPane";
+import { ProfessionalProfilePanel } from "./components/ProfessionalProfilePanel";
 import { ReplacePreviewModal } from "./components/ReplacePreviewModal";
 import { RenameTabModal } from "./components/RenameTabModal";
 import { ShareModal } from "./components/ShareModal";
@@ -70,6 +71,7 @@ import { applyCommand, handleSmartEnter, type MarkdownCommand } from "./lib/edit
 import { getExportName } from "./lib/exportNames";
 import { analyzeDocumentHealth } from "./lib/documentHealth";
 import { i18n } from "./lib/i18n";
+import { analyzeProfessionalProfile } from "./lib/professionalProfiles";
 import { previewDocumentToHtml, type PreviewBlock } from "./lib/previewDocument";
 import { makeTab } from "./lib/storage";
 import { useAppStore } from "./stores/appStore";
@@ -145,6 +147,7 @@ function App() {
   const share = useShare(text, showToast);
   const stats = useMemo(() => getStats(text), [text]);
   const health = useMemo(() => analyzeDocumentHealth(text), [text]);
+  const professionalReport = useMemo(() => analyzeProfessionalProfile(text, globalState.professionalProfile), [text, globalState.professionalProfile]);
   const renderedHtml = useMemo(() => previewDocumentToHtml(previewDocument), [previewDocument]);
   const liveMessage = toast ||
     (pdfExport ? `${t(PDF_EXPORT_LABEL_KEYS[pdfExport.phase], { defaultValue: pdfExport.phase })} ${Math.round(pdfExport.progress * 100)}%` : "") ||
@@ -155,6 +158,7 @@ function App() {
     document.documentElement.dataset.theme = globalState.theme;
     document.documentElement.dataset.accent = globalState.accent;
     document.documentElement.dataset.easterEggs = globalState.easterEggs ? "on" : "off";
+    document.documentElement.dataset.professionalProfile = globalState.professionalProfile;
     document.documentElement.lang = globalState.language === "zh" ? "zh-Hans" : globalState.language === "tw" ? "zh-Hant" : globalState.language;
     document.body.dir = globalState.direction;
     void i18n.changeLanguage(globalState.language);
@@ -548,6 +552,7 @@ function App() {
             findOpen={findReplace.open}
             findOptions={findReplace.options}
             offlineFirst={globalState.offlineFirst}
+            professionalProfile={globalState.professionalProfile}
             selectedBlockId={selectedPreviewBlockId}
             theme={globalState.theme}
             onBlockSelect={selectPreviewBlock}
@@ -594,6 +599,9 @@ function App() {
                 Details
               </button>
             </div>
+            {globalState.professionalProfile !== "standard" && (
+              <ProfessionalProfilePanel report={professionalReport} />
+            )}
           </aside>
         )}
       </main>

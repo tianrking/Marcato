@@ -2,6 +2,7 @@ import type { RefObject } from "react";
 import { Copy, Download, FileCode2, FileDown, FileImage, GitBranch, Languages, Plus, Save, Share2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { LANGUAGE_LABELS } from "../lib/i18n";
+import { PROFESSIONAL_PROFILES } from "../lib/professionalProfiles";
 import type { GlobalState } from "../types";
 
 interface WorkspaceToolbarProps {
@@ -78,6 +79,14 @@ export function WorkspaceToolbar({
           />
           {t("setting.offlineFirst")}
         </label>
+        <select
+          className="profile-select"
+          value={globalState.professionalProfile}
+          onChange={(event) => onGlobalChange({ professionalProfile: event.target.value as GlobalState["professionalProfile"] })}
+          title={t("setting.professionalProfile")}
+        >
+          {Object.values(PROFESSIONAL_PROFILES).map((profile) => <option key={profile.id} value={profile.id}>{profile.shortLabel}</option>)}
+        </select>
         <select
           value={globalState.language}
           onChange={(event) => onGlobalChange({ language: event.target.value })}

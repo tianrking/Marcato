@@ -2,11 +2,13 @@ import { forwardRef, memo, useEffect, useImperativeHandle, useRef } from "react"
 import type { PreviewBlock, PreviewDocument } from "../lib/previewDocument";
 import { applyPreviewFindHighlights, clearPreviewFindHighlights, scrollPreviewHighlightIntoView } from "../lib/previewFind";
 import { setupPreviewLinks } from "../lib/previewLinks";
-import type { FindOptions } from "../types";
+import { profileClassName } from "../lib/professionalProfiles";
+import type { FindOptions, ProfessionalProfile } from "../types";
 
 interface PreviewPaneProps {
   document: PreviewDocument;
   offlineFirst: boolean;
+  professionalProfile: ProfessionalProfile;
   findActiveIndex: number;
   findEditorMatchCount: number;
   findOpen: boolean;
@@ -48,6 +50,7 @@ export const PreviewPane = forwardRef<HTMLElement, PreviewPaneProps>(function Pr
   findOpen,
   findOptions,
   offlineFirst,
+  professionalProfile,
   selectedBlockId,
   theme,
   onBlockSelect,
@@ -98,7 +101,11 @@ export const PreviewPane = forwardRef<HTMLElement, PreviewPaneProps>(function Pr
   }, [findActiveIndex, findEditorMatchCount, findOpen, findOptions, document]);
 
   return (
-    <article ref={articleRef} className="markdown-body preview-article">
+    <article
+      ref={articleRef}
+      className={`markdown-body preview-article ${profileClassName(professionalProfile)}`}
+      data-profile={professionalProfile}
+    >
       {document.mode === "segmented" ? (
         document.blocks.map((block) => (
           <PreviewBlockView

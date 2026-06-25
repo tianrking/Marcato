@@ -52,6 +52,7 @@ const en = {
     offlineFirst: "Offline first",
     language: "Language",
     easterEggs: "Cyber effects",
+    professionalProfile: "Professional profile",
   },
   find: {
     title: "Find / Replace",

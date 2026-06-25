@@ -31,6 +31,7 @@ export function loadGlobalState(): GlobalState {
     ...state,
     accent: normalizeAccent(state.accent),
     easterEggs: typeof state.easterEggs === "boolean" ? state.easterEggs : DEFAULT_GLOBAL_STATE.easterEggs,
+    professionalProfile: normalizeProfessionalProfile(state.professionalProfile),
     language,
     findDocked: findDocked ? findDocked === "1" : Boolean(state.findDocked),
   };
@@ -122,4 +123,10 @@ function normalizeLanguage(value: string) {
 
 function normalizeAccent(value: unknown) {
   return ["blue", "teal", "violet", "rose", "amber"].includes(String(value)) ? String(value) as GlobalState["accent"] : DEFAULT_GLOBAL_STATE.accent;
+}
+
+function normalizeProfessionalProfile(value: unknown) {
+  return ["standard", "wechat", "github", "docusaurus", "vitepress", "mkdocs", "hugo", "jekyll", "astro"].includes(String(value))
+    ? String(value) as GlobalState["professionalProfile"]
+    : DEFAULT_GLOBAL_STATE.professionalProfile;
 }

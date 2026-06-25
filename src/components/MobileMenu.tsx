@@ -19,6 +19,7 @@ import {
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { LANGUAGE_LABELS } from "../lib/i18n";
+import { PROFESSIONAL_PROFILES } from "../lib/professionalProfiles";
 import type { DocumentHealthReport } from "../lib/documentHealth";
 import type { AccentPalette, GlobalState, MarkdownTab, ViewMode } from "../types";
 
@@ -217,9 +218,17 @@ export function MobileMenu({
             {t("setting.offlineFirst")}
           </label>
           <div className="mobile-settings-row">
+            <select
+              value={globalState.professionalProfile}
+              onChange={(event) => onGlobalChange({ professionalProfile: event.target.value as GlobalState["professionalProfile"] })}
+            >
+              {Object.values(PROFESSIONAL_PROFILES).map((profile) => <option key={profile.id} value={profile.id}>{profile.shortLabel}</option>)}
+            </select>
             <select value={globalState.language} onChange={(event) => onGlobalChange({ language: event.target.value })}>
               {Object.entries(LANGUAGE_LABELS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
             </select>
+          </div>
+          <div className="mobile-settings-row">
             <button type="button" onClick={() => onGlobalChange({ direction: globalState.direction === "rtl" ? "ltr" : "rtl" })}>
               <Languages size={16} />{globalState.direction.toUpperCase()}
             </button>

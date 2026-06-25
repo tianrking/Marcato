@@ -17,6 +17,7 @@ export const DEFAULT_GLOBAL_STATE: GlobalState = {
   theme: "light",
   accent: "blue",
   easterEggs: false,
+  professionalProfile: "standard",
   viewMode: "split",
   syncScroll: true,
   splitPercent: 50,

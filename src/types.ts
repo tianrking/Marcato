@@ -1,6 +1,7 @@
 export type ViewMode = "split" | "editor" | "preview";
 export type ThemeMode = "light" | "dark";
 export type AccentPalette = "blue" | "teal" | "violet" | "rose" | "amber";
+export type ProfessionalProfile = "standard" | "wechat" | "github" | "docusaurus" | "vitepress" | "mkdocs" | "hugo" | "jekyll" | "astro";
 
 export interface MarkdownTab {
   id: string;
@@ -17,6 +18,7 @@ export interface GlobalState {
   theme: ThemeMode;
   accent: AccentPalette;
   easterEggs: boolean;
+  professionalProfile: ProfessionalProfile;
   viewMode: ViewMode;
   syncScroll: boolean;
   splitPercent: number;
