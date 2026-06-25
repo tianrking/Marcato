@@ -4,6 +4,7 @@ import {
   AlignCenter,
   AlignLeft,
   AlignRight,
+  BadgeCent,
   BookMarked,
   Bold,
   Braces,
@@ -38,6 +39,7 @@ import { ImageInsertModal } from "./components/ImageInsertModal";
 import { LinkInsertModal } from "./components/LinkInsertModal";
 import { PreviewPane } from "./components/PreviewPane";
 import { ReferenceInsertModal } from "./components/ReferenceInsertModal";
+import { SymbolsInsertModal } from "./components/SymbolsInsertModal";
 import { TableInsertModal } from "./components/TableInsertModal";
 import { WorkspaceToolbar } from "./components/WorkspaceToolbar";
 import { useGlobalShortcuts } from "./hooks/useGlobalShortcuts";
@@ -100,6 +102,7 @@ function App() {
   const [linkSelection, setLinkSelection] = useState<{ end: number; start: number; text: string } | null>(null);
   const [imageSelection, setImageSelection] = useState<{ end: number; start: number; text: string } | null>(null);
   const [referenceSelection, setReferenceSelection] = useState<{ end: number; number: number; start: number } | null>(null);
+  const [symbolsSelection, setSymbolsSelection] = useState<{ end: number; start: number } | null>(null);
   const [toast, setToast] = useState("");
   const [dragging, setDragging] = useState(false);
 
@@ -446,6 +449,29 @@ function App() {
     });
   };
 
+  const openSymbolsModal = () => {
+    const editor = editorRef.current;
+    if (!editor) {
+      setSymbolsSelection({ start: 0, end: 0 });
+      return;
+    }
+    setSymbolsSelection({ start: editor.selectionStart, end: editor.selectionEnd });
+  };
+
+  const insertSymbols = (entities: string[]) => {
+    if (!activeTab || !symbolsSelection || entities.length === 0) return;
+    const insertion = entities.join(" ");
+    const next = activeTab.content.slice(0, symbolsSelection.start) + insertion + activeTab.content.slice(symbolsSelection.end);
+    commitContent(next);
+    requestAnimationFrame(() => {
+      const editor = editorRef.current;
+      if (!editor) return;
+      const caret = symbolsSelection.start + insertion.length;
+      editor.focus();
+      editor.setSelectionRange(caret, caret);
+    });
+  };
+
   const onScrollEditor = () => {
     if (!globalState.syncScroll || syncingRef.current || !editorRef.current || !previewPaneRef.current) return;
     syncingRef.current = true;
@@ -553,6 +579,7 @@ function App() {
         <IconButton title="Link" onClick={openLinkModal}><Link size={16} /></IconButton>
         <IconButton title="Image" onClick={openImageModal}><Image size={16} /></IconButton>
         <IconButton title="Reference" onClick={openReferenceModal}><BookMarked size={16} /></IconButton>
+        <IconButton title="Symbols & HTML entities" onClick={openSymbolsModal}><BadgeCent size={16} /></IconButton>
         <IconButton title="Inline code" onClick={() => runCommand("inlineCode")}><Code2 size={16} /></IconButton>
         <IconButton title="Code block" onClick={() => runCommand("codeBlock")}><Braces size={16} /></IconButton>
         <IconButton title="Table" onClick={() => setTableOpen(true)}><Table2 size={16} /></IconButton>
@@ -697,6 +724,13 @@ function App() {
           initialNumber={referenceSelection.number}
           onClose={() => setReferenceSelection(null)}
           onInsert={insertConfiguredReference}
+        />
+      )}
+
+      {symbolsSelection && (
+        <SymbolsInsertModal
+          onClose={() => setSymbolsSelection(null)}
+          onInsert={insertSymbols}
         />
       )}
 

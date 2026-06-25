@@ -69,7 +69,7 @@ must remain smooth and predictable after initial access.
 | Table insert modal | Done | `index.html` table modal | `src/components/TableInsertModal.tsx` | Rows, columns, and table-wide alignment insert flow implemented. |
 | Reference insert modal | Done | `index.html` reference modal | `src/components/ReferenceInsertModal.tsx`, `src/lib/editorCommands.ts` | Scans used definitions, suggests the next number, inserts inline marker plus definition with optional title. |
 | Emoji picker | Missing | `index.html`, `script.js` | none | Need GitHub emoji fetch/cache, skeleton, search, insert. |
-| Symbols/entities picker | Missing | `script.js` symbol groups | none | Need common symbols/entity insert flow. |
+| Symbols/entities picker | Done | `script.js` symbol groups | `src/components/SymbolsInsertModal.tsx` | Searchable grouped picker with multi-select, ordered entity insertion, and per-entity copy. |
 | Alert insert UI | Partial | `index.html`, `script.js`, `styles.css` | `src/lib/editorCommands.ts` | Basic command exists; modal/grid/preview missing. |
 | Smart enter/list continuation | Needs proof | `script.js` | `src/lib/editorCommands.ts` | Verify task/list/quote continuation and indentation edge cases. |
 | Undo/redo history | Needs proof | `script.js` custom history | `src/stores/appStore.ts` | Verify multi-tab history, restore, and limits. |

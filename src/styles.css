@@ -908,6 +908,81 @@ textarea {
   background: var(--accent-soft);
 }
 
+.symbol-grid {
+  display: grid;
+  gap: 16px;
+  max-height: min(52vh, 440px);
+  overflow: auto;
+  padding: 2px;
+}
+
+.symbol-section {
+  display: grid;
+  gap: 8px;
+}
+
+.symbol-section-title {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.symbol-section-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(138px, 1fr));
+  gap: 10px;
+}
+
+.symbol-item {
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+  min-height: 78px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.symbol-item.is-selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.symbol-item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.symbol-preview {
+  font-size: 27px;
+  line-height: 1;
+}
+
+.symbol-code {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.symbol-copy-btn {
+  min-height: 24px;
+  padding: 3px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+}
+
+.symbol-copy-btn:hover,
+.symbol-copy-btn.is-copied {
+  color: var(--accent);
+  background: var(--button-bg);
+}
+
 .table-preview {
   overflow: auto;
   border: 1px solid var(--line);
