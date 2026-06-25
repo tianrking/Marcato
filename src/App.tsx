@@ -46,31 +46,20 @@ import { ReferenceInsertModal } from "./components/ReferenceInsertModal";
 import { SymbolsInsertModal } from "./components/SymbolsInsertModal";
 import { TableInsertModal } from "./components/TableInsertModal";
 import { WorkspaceToolbar } from "./components/WorkspaceToolbar";
+import { useFindReplace } from "./hooks/useFindReplace";
 import { useGlobalShortcuts } from "./hooks/useGlobalShortcuts";
 import { useMarkdownRender } from "./hooks/useMarkdownRender";
 import { MAX_IMPORT_BYTES, MAX_TABS } from "./lib/constants";
 import { applyCommand, buildMarkdownAlert, buildMarkdownImage, buildMarkdownLink, buildMarkdownReference, buildMarkdownTable, handleSmartEnter, insertText, suggestMarkdownReferenceNumber, type MarkdownAlertType, type MarkdownCommand, type TableAlignment } from "./lib/editorCommands";
 import { copyImage, exportHtml, exportMarkdown, exportPdf, exportPng, getExportName } from "./lib/exporters";
 import { analyzeDocumentHealth } from "./lib/documentHealth";
-import { buildDiffPreview, findMatches, replaceAll, replaceOne } from "./lib/findReplace";
 import { fetchMarkdownFile, importFromGitHubUrl } from "./lib/githubImport";
 import { i18n } from "./lib/i18n";
 import { previewDocumentToHtml, type PreviewBlock } from "./lib/previewDocument";
 import { buildShareUrl, isShareUrlTooLong } from "./lib/share";
 import { makeTab } from "./lib/storage";
 import { useAppStore } from "./stores/appStore";
-import type { FindOptions, GitHubMarkdownFile, MarkdownTab } from "./types";
-
-const INITIAL_FIND: FindOptions = {
-  query: "",
-  replacement: "",
-  caseSensitive: false,
-  wholeWord: false,
-  regex: false,
-  inSelection: false,
-  preserveCase: false,
-  scope: "document",
-};
+import type { GitHubMarkdownFile, MarkdownTab } from "./types";
 
 function App() {
   const { t } = useTranslation();
@@ -90,9 +79,6 @@ function App() {
   const undo = useAppStore((state) => state.undo);
   const redo = useAppStore((state) => state.redo);
   const [selectedPreviewBlockId, setSelectedPreviewBlockId] = useState("");
-  const [findOpen, setFindOpen] = useState(false);
-  const [findOptions, setFindOptions] = useState<FindOptions>(INITIAL_FIND);
-  const [activeMatch, setActiveMatch] = useState(0);
   const [shareUrl, setShareUrl] = useState("");
   const [shareMode, setShareMode] = useState<"view" | "edit">("view");
   const [githubOpen, setGithubOpen] = useState(false);
@@ -123,7 +109,8 @@ function App() {
   );
   const { document: previewDocument, toc, state: renderState, error: renderError } = useMarkdownRender(activeTab);
   const text = activeTab?.content || "";
-  const matches = useMemo(() => findMatches(text, findOptions, getCurrentSelection(editorRef.current)), [text, findOptions]);
+  const commitContent = useCallback((content: string) => updateActiveContent(content, true), [updateActiveContent]);
+  const findReplace = useFindReplace(text, editorRef, commitContent);
   const stats = useMemo(() => getStats(text), [text]);
   const health = useMemo(() => analyzeDocumentHealth(text), [text]);
   const renderedHtml = useMemo(() => previewDocumentToHtml(previewDocument), [previewDocument]);
@@ -144,12 +131,6 @@ function App() {
       if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
     };
   }, []);
-
-  useEffect(() => {
-    if (activeMatch >= matches.length) setActiveMatch(Math.max(0, matches.length - 1));
-  }, [activeMatch, matches.length]);
-
-  const commitContent = useCallback((content: string) => updateActiveContent(content, true), [updateActiveContent]);
 
   const runCommand = (command: MarkdownCommand) => {
     const editor = editorRef.current;
@@ -188,7 +169,7 @@ function App() {
     editorRef,
     onCloseTab: closeTab,
     onNewTab: () => newTab(),
-    onOpenFind: () => setFindOpen(true),
+    onOpenFind: () => findReplace.setOpen(true),
     onRedo: redo,
     onSave: () => exportMarkdown(getExportName(activeTab?.title || "document"), text),
     onToggleSyncScroll: () => updateGlobal({ syncScroll: !globalState.syncScroll }),
@@ -318,29 +299,6 @@ function App() {
     const lineHeight = Number.parseFloat(window.getComputedStyle(editor).lineHeight) || 22;
     editor.scrollTop = Math.max(0, (line - 1) * lineHeight - 80);
   }, [text]);
-
-  const cycleMatch = (direction: 1 | -1) => {
-    if (!matches.length) return;
-    const next = (activeMatch + direction + matches.length) % matches.length;
-    setActiveMatch(next);
-    const match = matches[next];
-    editorRef.current?.focus();
-    editorRef.current?.setSelectionRange(match.start, match.end);
-  };
-
-  const replaceCurrent = () => {
-    const match = matches[activeMatch];
-    if (!match) return;
-    commitContent(replaceOne(text, match, findOptions));
-  };
-
-  const replaceEveryMatch = () => {
-    if (!matches.length) return;
-    const preview = buildDiffPreview(text, matches, findOptions);
-    if (window.confirm(`${t("confirm.replaceMatches", { count: matches.length })}\n\n${preview}`)) {
-      commitContent(replaceAll(text, matches, findOptions));
-    }
-  };
 
   const insertConfiguredTable = (options: { alignment: TableAlignment; columns: number; rows: number }) => {
     const editor = editorRef.current;
@@ -615,7 +573,7 @@ function App() {
         <IconButton title="Table" onClick={() => setTableOpen(true)}><Table2 size={16} /></IconButton>
         <IconButton title="Math" onClick={() => runCommand("math")}><Sigma size={16} /></IconButton>
         <IconButton title="Mermaid" onClick={() => runCommand("mermaid")}><Play size={16} /></IconButton>
-        <IconButton title="Find and replace" onClick={() => setFindOpen(true)}><Search size={16} /></IconButton>
+        <IconButton title="Find and replace" onClick={() => findReplace.setOpen(true)}><Search size={16} /></IconButton>
         <IconButton title="Clear formatting" onClick={() => runCommand("clear")}><RefreshCw size={16} /></IconButton>
         <IconButton title="Delete current document" onClick={() => commitContent("")}><Trash2 size={16} /></IconButton>
         <IconButton title="Left align" onClick={() => insertAlignment("left")}><AlignLeft size={16} /></IconButton>
@@ -650,10 +608,10 @@ function App() {
           <PreviewPane
             ref={previewRef}
             document={previewDocument}
-            findActiveIndex={activeMatch}
-            findEditorMatchCount={matches.length}
-            findOpen={findOpen}
-            findOptions={findOptions}
+            findActiveIndex={findReplace.activeMatch}
+            findEditorMatchCount={findReplace.matches.length}
+            findOpen={findReplace.open}
+            findOptions={findReplace.options}
             offlineFirst={globalState.offlineFirst}
             selectedBlockId={selectedPreviewBlockId}
             theme={globalState.theme}
@@ -702,18 +660,18 @@ function App() {
         )}
       </main>
 
-      {findOpen && (
+      {findReplace.open && (
         <FindReplacePanel
-          activeMatch={activeMatch}
+          activeMatch={findReplace.activeMatch}
           docked={globalState.findDocked}
-          matches={matches}
-          options={findOptions}
-          onClose={() => setFindOpen(false)}
+          matches={findReplace.matches}
+          options={findReplace.options}
+          onClose={() => findReplace.setOpen(false)}
           onDockedChange={(findDocked) => updateGlobal({ findDocked })}
-          onOptionsChange={setFindOptions}
-          onReplaceAll={replaceEveryMatch}
-          onReplaceCurrent={replaceCurrent}
-          onStep={cycleMatch}
+          onOptionsChange={findReplace.setOptions}
+          onReplaceAll={findReplace.replaceEveryMatch}
+          onReplaceCurrent={findReplace.replaceCurrent}
+          onStep={findReplace.cycleMatch}
         />
       )}
 
@@ -845,11 +803,6 @@ function splitLinesWithBreaks(text: string) {
 function lineBreakLength(line: string) {
   const match = line.match(/\r\n$|\r$|\n$/);
   return match?.[0].length || 0;
-}
-
-function getCurrentSelection(editor: HTMLTextAreaElement | null) {
-  if (!editor) return undefined;
-  return { start: editor.selectionStart, end: editor.selectionEnd };
 }
 
 function hasBinaryBytes(text: string) {
