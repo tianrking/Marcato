@@ -1,8 +1,6 @@
 import { deflate, inflate } from "pako";
 import { SHARE_URL_SOFT_LIMIT } from "./constants";
 
-const CANONICAL_SHARE_BASE = "https://markdownviewer.pages.dev/";
-
 export function encodeShare(markdown: string) {
   const bytes = new TextEncoder().encode(markdown);
   const compressed = deflate(bytes);
@@ -39,12 +37,8 @@ export function readShareFromLocation() {
 }
 
 function getShareBaseUrl() {
-  if (isLocalBase()) return CANONICAL_SHARE_BASE;
-  return `${window.location.origin}${window.location.pathname || "/"}`;
-}
-
-function isLocalBase() {
-  return ["", "null"].includes(window.location.origin) || /^https?:\/\/(?:localhost|127\.0\.0\.1)/.test(window.location.origin) || "Neutralino" in window;
+  if (window.location.origin && window.location.origin !== "null") return `${window.location.origin}${window.location.pathname || "/"}`;
+  return window.location.href.split(/[?#]/)[0];
 }
 
 function bytesToBase64Url(bytes: Uint8Array) {
