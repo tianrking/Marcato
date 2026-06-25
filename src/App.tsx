@@ -68,6 +68,7 @@ import { useMarkdownRender } from "./hooks/useMarkdownRender";
 import { useShare } from "./hooks/useShare";
 import { MAX_IMPORT_BYTES, MAX_TABS } from "./lib/constants";
 import { applyCommand, handleSmartEnter, type MarkdownCommand } from "./lib/editorCommands";
+import { exportHtml, exportMarkdown } from "./lib/downloads";
 import { getExportName } from "./lib/exportNames";
 import { analyzeDocumentHealth } from "./lib/documentHealth";
 import { i18n } from "./lib/i18n";
@@ -89,6 +90,18 @@ interface ConfirmAction {
   message: string;
   onConfirm: () => void;
   title: string;
+}
+
+type HeavyExporters = typeof import("./lib/exporters");
+
+let heavyExportersPromise: Promise<HeavyExporters> | null = null;
+
+function loadHeavyExporters() {
+  heavyExportersPromise ||= import("./lib/exporters").catch((error) => {
+    heavyExportersPromise = null;
+    throw error;
+  });
+  return heavyExportersPromise;
 }
 
 const PDF_EXPORT_LABEL_KEYS: Record<PdfExportState["phase"], string> = {
@@ -228,7 +241,7 @@ function App() {
     onOpenFind: () => findReplace.setOpen(true),
     onRedo: redo,
     onSave: () => {
-      void import("./lib/exporters").then(({ exportMarkdown }) => exportMarkdown(getExportName(activeTab?.title || "document"), text));
+      exportMarkdown(getExportName(activeTab?.title || "document"), text);
     },
     onToggleSyncScroll: () => updateGlobal({ syncScroll: !globalState.syncScroll }),
     onUndo: undo,
@@ -282,32 +295,38 @@ function App() {
   };
 
   const exportMarkdownFile = async () => {
-    const { exportMarkdown } = await import("./lib/exporters");
     exportMarkdown(getExportName(activeTab?.title || "document"), text);
   };
 
   const exportHtmlFile = async () => {
-    const { exportHtml } = await import("./lib/exporters");
     exportHtml(getExportName(activeTab?.title || "document"), renderedHtml, activeTab?.title || t("status.document"));
   };
 
   const exportPreviewPng = async () => {
     if (!previewRef.current) return;
-    const { exportPng } = await import("./lib/exporters");
-    await exportPng(getExportName(activeTab?.title || "document"), previewRef.current);
+    try {
+      const { exportPng } = await loadHeavyExporters();
+      await exportPng(getExportName(activeTab?.title || "document"), previewRef.current);
+    } catch {
+      showToast(t("toast.exportFailed", { defaultValue: "Export failed. Please reload and try again." }));
+    }
   };
 
   const doCopyPreviewImage = async () => {
     if (!previewRef.current) return;
-    const { copyImage } = await import("./lib/exporters");
-    const result = await copyImage(previewRef.current, getExportName(activeTab?.title || "document"));
-    showToast(
-      result === "copied"
-        ? t("toast.previewImageCopied")
-        : result === "downloaded"
-          ? t("toast.previewImageDownloaded", { defaultValue: "Clipboard unavailable, PNG downloaded." })
-          : t("toast.clipboardImageUnavailable"),
-    );
+    try {
+      const { copyImage } = await loadHeavyExporters();
+      const result = await copyImage(previewRef.current, getExportName(activeTab?.title || "document"));
+      showToast(
+        result === "copied"
+          ? t("toast.previewImageCopied")
+          : result === "downloaded"
+            ? t("toast.previewImageDownloaded", { defaultValue: "Clipboard unavailable, PNG downloaded." })
+            : t("toast.clipboardImageUnavailable"),
+      );
+    } catch {
+      showToast(t("toast.exportFailed", { defaultValue: "Export failed. Please reload and try again." }));
+    }
   };
 
   const doExportPdf = async () => {
@@ -316,7 +335,7 @@ function App() {
     pdfAbortRef.current = controller;
     setPdfExport({ phase: "preparing", progress: 0.04 });
     try {
-      const { exportPdf } = await import("./lib/exporters");
+      const { exportPdf } = await loadHeavyExporters();
       await exportPdf(getExportName(activeTab?.title || "document"), previewRef.current, {
         signal: controller.signal,
         onProgress: ({ phase, progress }) => setPdfExport({ phase, progress }),

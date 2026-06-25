@@ -1,5 +1,5 @@
-import { saveAs } from "file-saver";
-import { copyPngBlobToClipboard, downloadBlob } from "./clipboardImages";
+import { copyPngBlobToClipboard } from "./clipboardImages";
+import { downloadBlob } from "./downloads";
 
 interface DiagramActionOptions {
   registerCleanup?: (node: HTMLElement, cleanup: () => void) => void;
@@ -68,21 +68,18 @@ async function copyDiagram(surface: HTMLElement) {
   } catch {
     // Fall back to downloading the diagram source.
   }
-  saveAs(
-    new Blob([text], { type: svg ? "image/svg+xml;charset=utf-8" : "text/plain;charset=utf-8" }),
-    `diagram-${Date.now()}${svg ? ".svg" : ".txt"}`,
-  );
+  downloadBlob(new Blob([text], { type: svg ? "image/svg+xml;charset=utf-8" : "text/plain;charset=utf-8" }), `diagram-${Date.now()}${svg ? ".svg" : ".txt"}`);
 }
 
 function downloadSvg(surface: HTMLElement) {
   const svg = surface.querySelector("svg");
   const text = svg ? new XMLSerializer().serializeToString(svg) : surface.innerHTML;
-  saveAs(new Blob([text], { type: "image/svg+xml;charset=utf-8" }), `diagram-${Date.now()}.svg`);
+  downloadBlob(new Blob([text], { type: "image/svg+xml;charset=utf-8" }), `diagram-${Date.now()}.svg`);
 }
 
 async function downloadPng(surface: HTMLElement) {
   const blob = await renderSurfacePng(surface);
-  if (blob) saveAs(blob, `diagram-${Date.now()}.png`);
+  if (blob) downloadBlob(blob, `diagram-${Date.now()}.png`);
 }
 
 async function renderSurfacePng(surface: HTMLElement) {

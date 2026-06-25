@@ -94,6 +94,7 @@ const en = {
     pdfSaved: "PDF exported.",
     pdfCancelled: "PDF export cancelled.",
     pdfFailed: "PDF export failed. Please try again.",
+    exportFailed: "Export failed. Please reload and try again.",
   },
   error: {
     githubImportFailed: "GitHub import failed",

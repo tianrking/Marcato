@@ -1,11 +1,12 @@
-import { saveAs } from "file-saver";
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
-import { copyPngBlobToClipboard, downloadBlob } from "./clipboardImages";
+import { copyPngBlobToClipboard } from "./clipboardImages";
+import { downloadBlob, ensureExtension, exportHtml, exportMarkdown } from "./downloads";
 import { getExportName } from "./exportNames";
 import { A4_PDF_CONFIG, estimatePdfPageCount, getPageHeightPx, preparePdfLayout } from "./pdfPagination";
 
 export { getExportName };
+export { exportHtml, exportMarkdown };
 export type PdfExportPhase = "preparing" | "rendering" | "paginating" | "saving";
 
 export interface PdfExportProgress {
@@ -18,20 +19,11 @@ export interface PdfExportOptions {
   onProgress?: (progress: PdfExportProgress) => void;
 }
 
-export function exportMarkdown(filename: string, content: string) {
-  saveAs(new Blob([content], { type: "text/markdown;charset=utf-8" }), ensureExtension(filename, ".md"));
-}
-
-export function exportHtml(filename: string, html: string, title: string) {
-  const doc = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(title)}</title><style>${exportCss()}</style></head><body><article class="markdown-body">${html}</article></body></html>`;
-  saveAs(new Blob([doc], { type: "text/html;charset=utf-8" }), ensureExtension(filename, ".html"));
-}
-
 export async function exportPng(filename: string, element: HTMLElement) {
   const canvas = await html2canvas(element, { backgroundColor: getComputedStyle(document.body).backgroundColor, scale: 2, useCORS: true });
-  canvas.toBlob((blob) => {
-    if (blob) saveAs(blob, ensureExtension(filename, ".png"));
-  }, "image/png");
+  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
+  if (!blob) throw new Error("PNG export failed: canvas did not produce a blob.");
+  downloadBlob(blob, ensureExtension(filename, ".png"));
 }
 
 export async function exportPdf(filename: string, element: HTMLElement, options: PdfExportOptions = {}) {
@@ -84,7 +76,8 @@ export async function exportPdf(filename: string, element: HTMLElement, options:
 
     throwIfAborted(options.signal);
     reportPdfProgress(options, "saving", 0.96);
-    pdf.save(ensureExtension(filename, ".pdf"));
+    const blob = pdf.output("blob");
+    downloadBlob(blob, ensureExtension(filename, ".pdf"));
     reportPdfProgress(options, "saving", 1);
   } finally {
     delete document.documentElement.dataset.pdfRendering;
@@ -172,16 +165,4 @@ export async function copyImage(element: HTMLElement, filename = "preview.png"):
   if (await copyPngBlobToClipboard(blob)) return "copied";
   downloadBlob(blob, ensureExtension(filename, ".png"));
   return "downloaded";
-}
-
-function ensureExtension(filename: string, extension: string) {
-  return filename.toLowerCase().endsWith(extension) ? filename : `${filename}${extension}`;
-}
-
-function escapeHtml(value: string) {
-  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
-
-function exportCss() {
-  return `body{margin:0;background:#fff;color:#24292f;font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.markdown-body{box-sizing:border-box;max-width:920px;margin:0 auto;padding:48px}pre{background:#f6f8fa;padding:16px;border-radius:6px;overflow:auto}.diagram-viewer,.stl-container,.map-summary{border:1px solid #d0d7de;border-radius:8px;padding:12px;margin:16px 0}`;
 }

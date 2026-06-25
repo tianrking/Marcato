@@ -94,6 +94,7 @@ export async function withApp(testFn, options = {}) {
   const server = await startAppServer();
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({
+    acceptDownloads: true,
     locale: "en-US",
     viewport: options.viewport || { width: 1366, height: 900 },
   });
