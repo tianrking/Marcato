@@ -36,6 +36,7 @@ import { IconButton, Modal } from "./components/Common";
 import { GitHubImportModal } from "./components/GitHubImportModal";
 import { PreviewPane } from "./components/PreviewPane";
 import { WorkspaceToolbar } from "./components/WorkspaceToolbar";
+import { useGlobalShortcuts } from "./hooks/useGlobalShortcuts";
 import { MAX_IMPORT_BYTES, MAX_TABS, SHARE_URL_SOFT_LIMIT } from "./lib/constants";
 import { applyCommand, handleSmartEnter, type MarkdownCommand } from "./lib/editorCommands";
 import { copyImage, exportHtml, exportMarkdown, exportPdf, exportPng, getExportName } from "./lib/exporters";
@@ -169,49 +170,6 @@ function App() {
     };
   }, [renderedHtml, globalState.theme, globalState.offlineFirst]);
 
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      const isMac = navigator.platform.toLowerCase().includes("mac");
-      const mod = isMac ? event.metaKey : event.ctrlKey;
-      if (!mod && !(event.altKey && event.shiftKey)) return;
-      if (mod && event.key.toLowerCase() === "s") {
-        event.preventDefault();
-        exportMarkdown(getExportName(activeTab?.title || "document"), text);
-      }
-      if (mod && event.key.toLowerCase() === "f") {
-        event.preventDefault();
-        setFindOpen(true);
-      }
-      if (mod && event.key.toLowerCase() === "h") {
-        event.preventDefault();
-        setFindOpen(true);
-      }
-      if ((mod && event.key.toLowerCase() === "t") || (event.altKey && event.shiftKey && event.key.toLowerCase() === "t")) {
-        event.preventDefault();
-        newTab();
-      }
-      if ((mod && event.key.toLowerCase() === "w") || (event.altKey && event.shiftKey && event.key.toLowerCase() === "w")) {
-        event.preventDefault();
-        closeTab(activeTabId);
-      }
-      if (mod && event.shiftKey && event.key.toLowerCase() === "s") {
-        event.preventDefault();
-        updateGlobal({ syncScroll: !globalState.syncScroll });
-      }
-      if (mod && event.key.toLowerCase() === "z" && editorRef.current === document.activeElement) {
-        event.preventDefault();
-        if (event.shiftKey) redo();
-        else undo();
-      }
-      if (mod && event.key.toLowerCase() === "y" && editorRef.current === document.activeElement) {
-        event.preventDefault();
-        redo();
-      }
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [activeTabId, globalState.syncScroll, text, activeTab?.title]);
-
   const commitContent = useCallback((content: string) => updateActiveContent(content, true), [updateActiveContent]);
 
   const runCommand = (command: MarkdownCommand) => {
@@ -245,6 +203,18 @@ function App() {
     const tab = duplicateStoreTab(id);
     if (!tab) showToast(`Tab limit is ${MAX_TABS}.`);
   };
+
+  useGlobalShortcuts({
+    activeTabId,
+    editorRef,
+    onCloseTab: closeTab,
+    onNewTab: () => newTab(),
+    onOpenFind: () => setFindOpen(true),
+    onRedo: redo,
+    onSave: () => exportMarkdown(getExportName(activeTab?.title || "document"), text),
+    onToggleSyncScroll: () => updateGlobal({ syncScroll: !globalState.syncScroll }),
+    onUndo: undo,
+  });
 
   const onEditorKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === "Tab") {
