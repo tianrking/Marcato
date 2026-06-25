@@ -85,6 +85,7 @@ const en = {
   toast: {
     markdownCopied: "Markdown copied.",
     previewImageCopied: "Preview image copied.",
+    previewImageDownloaded: "Clipboard unavailable, PNG downloaded.",
     clipboardImageUnavailable: "Clipboard image copy is unavailable.",
     shareCopied: "Share URL copied.",
     shareTooLong: "Share URL generated, but it is too long for reliable clipboard use.",

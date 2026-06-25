@@ -5,6 +5,7 @@ import L from "leaflet";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
+import { copyPngBlobToClipboard, downloadBlob } from "./clipboardImages";
 import { setupDiagramActions } from "./diagramActions";
 import { getCommonGitHubEmoji } from "./githubEmojis";
 import { setupPreviewLinks } from "./previewLinks";
@@ -349,7 +350,21 @@ function setupStlViewer(container: HTMLElement, code: string, theme: "light" | "
   });
   const png = makeStlButton("PNG", () => {
     renderer.domElement.toBlob((blob) => {
-      if (blob) void navigator.clipboard?.write?.([new ClipboardItem({ [blob.type]: blob })]);
+      if (!blob) return;
+      const previousText = png.textContent || "PNG";
+      png.disabled = true;
+      void copyPngBlobToClipboard(blob).then((copied) => {
+        if (copied) {
+          png.textContent = "Copied";
+        } else {
+          downloadBlob(blob, "marcato-stl.png");
+          png.textContent = "Saved";
+        }
+        window.setTimeout(() => {
+          png.textContent = previousText;
+          png.disabled = false;
+        }, 1200);
+      });
     }, "image/png");
   });
   const open = makeStlButton("Open", () => openStlViewerModal(code, theme));

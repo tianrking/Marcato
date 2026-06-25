@@ -293,8 +293,14 @@ function App() {
   const doCopyPreviewImage = async () => {
     if (!previewRef.current) return;
     const { copyImage } = await import("./lib/exporters");
-    const ok = await copyImage(previewRef.current);
-    showToast(ok ? t("toast.previewImageCopied") : t("toast.clipboardImageUnavailable"));
+    const result = await copyImage(previewRef.current, getExportName(activeTab?.title || "document"));
+    showToast(
+      result === "copied"
+        ? t("toast.previewImageCopied")
+        : result === "downloaded"
+          ? t("toast.previewImageDownloaded", { defaultValue: "Clipboard unavailable, PNG downloaded." })
+          : t("toast.clipboardImageUnavailable"),
+    );
   };
 
   const doExportPdf = async () => {

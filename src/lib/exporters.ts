@@ -1,6 +1,7 @@
 import { saveAs } from "file-saver";
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
+import { copyPngBlobToClipboard, downloadBlob } from "./clipboardImages";
 import { getExportName } from "./exportNames";
 import { A4_PDF_CONFIG, estimatePdfPageCount, getPageHeightPx, preparePdfLayout } from "./pdfPagination";
 
@@ -162,12 +163,15 @@ function pdfRuntimeCss() {
   `;
 }
 
-export async function copyImage(element: HTMLElement) {
+export type CopyImageResult = "copied" | "downloaded" | "unavailable";
+
+export async function copyImage(element: HTMLElement, filename = "preview.png"): Promise<CopyImageResult> {
   const canvas = await html2canvas(element, { backgroundColor: getComputedStyle(document.body).backgroundColor, scale: 2, useCORS: true });
   const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
-  if (!blob || !navigator.clipboard || !("write" in navigator.clipboard)) return false;
-  await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
-  return true;
+  if (!blob) return "unavailable";
+  if (await copyPngBlobToClipboard(blob)) return "copied";
+  downloadBlob(blob, ensureExtension(filename, ".png"));
+  return "downloaded";
 }
 
 function ensureExtension(filename: string, extension: string) {
