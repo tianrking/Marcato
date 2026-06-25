@@ -11,7 +11,7 @@ import { setupPreviewLinks } from "./previewLinks";
 import { sanitizeRemoteDiagramSvg } from "./sanitizer";
 import type { TopLevelSpec } from "vega-lite";
 
-let mermaidReady = false;
+let mermaidTheme: "default" | "dark" | null = null;
 const previewCleanups = new Map<HTMLElement, () => void>();
 let graphvizInstance: Promise<import("@viz-js/viz").Viz> | null = null;
 const remoteSvgCache = new Map<string, string>();
@@ -132,21 +132,23 @@ async function renderEmojiShortcodes(root: HTMLElement, signal?: AbortSignal) {
 }
 
 async function renderMermaid(root: HTMLElement, theme: "light" | "dark", signal?: AbortSignal) {
-  if (!mermaidReady) {
-    mermaid.initialize({ startOnLoad: false, securityLevel: "strict", theme: theme === "dark" ? "dark" : "default" });
-    mermaidReady = true;
+  const nextTheme = theme === "dark" ? "dark" : "default";
+  if (mermaidTheme !== nextTheme) {
+    mermaid.initialize({ startOnLoad: false, securityLevel: "strict", theme: nextTheme });
+    mermaidTheme = nextTheme;
   }
   const nodes = [...root.querySelectorAll<HTMLElement>('.diagram-viewer[data-diagram-engine="mermaid"] .diagram-surface')];
   for (const node of nodes) {
     if (isAborted(signal, root)) return;
-    if (node.dataset.rendered === "1") continue;
+    if (node.dataset.rendered === "1" && node.dataset.mermaidTheme === nextTheme) continue;
     const code = decodeURIComponent(node.dataset.originalCode || "");
     const id = `mermaid-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     try {
       const { svg } = await mermaid.render(id, code);
       if (isAborted(signal, root) || !node.isConnected) return;
-      node.innerHTML = svg;
+      node.innerHTML = sanitizeRemoteDiagramSvg(svg);
       node.dataset.rendered = "1";
+      node.dataset.mermaidTheme = nextTheme;
       markReady(node.closest<HTMLElement>(".diagram-viewer"));
     } catch (error) {
       markError(node.closest<HTMLElement>(".diagram-viewer"), error);
