@@ -47,13 +47,20 @@ export function replaceAll(text: string, matches: FindMatch[], options: FindOpti
 }
 
 export function buildDiffPreview(text: string, matches: FindMatch[], options: FindOptions) {
-  if (matches.length === 0) return "";
-  const first = matches[0];
-  const before = text.slice(Math.max(0, first.start - 80), first.start);
-  const current = text.slice(first.start, first.end);
-  const after = text.slice(first.end, Math.min(text.length, first.end + 80));
-  const replacement = applyReplacementCase(current, options.replacement, options.preserveCase);
-  return `${before}[-${current}-][+${replacement}+]${after}`;
+  if (matches.length === 0) return [];
+  return matches.slice(0, 6).map((match, index) => {
+    const before = text.slice(Math.max(0, match.start - 72), match.start);
+    const current = text.slice(match.start, match.end);
+    const after = text.slice(match.end, Math.min(text.length, match.end + 72));
+    const replacement = applyReplacementCase(current, options.replacement, options.preserveCase);
+    return {
+      after,
+      before,
+      index: index + 1,
+      replacement,
+      text: current,
+    };
+  });
 }
 
 function buildPattern(options: FindOptions) {

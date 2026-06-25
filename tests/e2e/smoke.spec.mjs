@@ -42,8 +42,14 @@ await withApp(async ({ consoleMessages, context, page, server }) => {
   await page.getByRole("button", { name: "Find and replace" }).click();
   await page.locator(".find-panel").waitFor({ state: "visible" });
   await page.locator('.find-panel input[placeholder="Find"]').fill("Smoke");
+  await page.locator('.find-panel input[placeholder="Replace with"]').fill("Signal");
   await page.getByRole("button", { name: "Next" }).click();
   await page.locator(".preview-find-highlight.active").first().waitFor({ state: "visible" });
+  await page.locator(".find-panel").getByRole("button", { name: "All", exact: true }).click();
+  const replacePreview = page.getByRole("dialog", { name: "Replace all preview" });
+  await replacePreview.waitFor({ state: "visible" });
+  await replacePreview.getByRole("button", { name: "Cancel" }).click();
+  expect((await page.locator(".editor-pane textarea").inputValue()).includes("# Smoke Fixture"), "Canceling replace preview should keep the document.");
   await page.locator(".find-panel").getByRole("button", { name: "x", exact: true }).click();
   await page.locator(".find-panel").waitFor({ state: "hidden" });
 

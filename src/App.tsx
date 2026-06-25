@@ -52,6 +52,7 @@ import { GitHubImportModal } from "./components/GitHubImportModal";
 import { InsertModalHost } from "./components/InsertModalHost";
 import { MobileMenu } from "./components/MobileMenu";
 import { PreviewPane } from "./components/PreviewPane";
+import { ReplacePreviewModal } from "./components/ReplacePreviewModal";
 import { ShareModal } from "./components/ShareModal";
 import { TabStrip } from "./components/TabStrip";
 import { WorkspaceToolbar } from "./components/WorkspaceToolbar";
@@ -582,6 +583,7 @@ function App() {
         <FindReplacePanel
           activeMatch={findReplace.activeMatch}
           docked={globalState.findDocked}
+          findHistory={findReplace.findHistory}
           matches={findReplace.matches}
           options={findReplace.options}
           onClose={() => findReplace.setOpen(false)}
@@ -590,6 +592,7 @@ function App() {
           onReplaceAll={findReplace.replaceEveryMatch}
           onReplaceCurrent={findReplace.replaceCurrent}
           onStep={findReplace.cycleMatch}
+          replaceHistory={findReplace.replaceHistory}
         />
       )}
 
@@ -622,6 +625,15 @@ function App() {
       <InsertModalHost {...insertModals.hostProps} />
 
       <ShareModal mode={share.mode} onClose={share.close} onCopy={share.copy} onModeChange={share.setModeUrl} tooLong={share.tooLong} url={share.url} />
+
+      {findReplace.replacePreview && (
+        <ReplacePreviewModal
+          count={findReplace.matches.length}
+          items={findReplace.replacePreview}
+          onCancel={findReplace.cancelReplacePreview}
+          onConfirm={findReplace.confirmReplaceEveryMatch}
+        />
+      )}
 
       {confirmAction && (
         <ConfirmModal

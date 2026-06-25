@@ -1165,6 +1165,53 @@ button:focus-visible {
   color: var(--danger);
 }
 
+.replace-preview-modal {
+  display: grid;
+  gap: 12px;
+  width: min(720px, 86vw);
+}
+
+.replace-preview-modal > p {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--muted);
+}
+
+.replace-preview-list {
+  display: grid;
+  gap: 8px;
+  max-height: min(48vh, 420px);
+  overflow: auto;
+}
+
+.replace-preview-list pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--code-bg);
+}
+
+.replace-preview-list del,
+.replace-preview-list ins {
+  padding: 1px 4px;
+  border-radius: 4px;
+  text-decoration: none;
+}
+
+.replace-preview-list del {
+  background: color-mix(in srgb, var(--danger) 18%, transparent);
+  color: var(--danger);
+}
+
+.replace-preview-list ins {
+  background: color-mix(in srgb, var(--accent-2) 18%, transparent);
+  color: var(--accent-2);
+}
+
 .insert-form {
   display: grid;
   gap: 12px;

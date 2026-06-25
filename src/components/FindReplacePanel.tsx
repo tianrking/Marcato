@@ -1,10 +1,12 @@
 import { FileSearch, Replace } from "lucide-react";
+import { useId } from "react";
 import { useTranslation } from "react-i18next";
 import type { FindMatch, FindOptions, FindScope } from "../types";
 
 interface FindReplacePanelProps {
   activeMatch: number;
   docked: boolean;
+  findHistory: string[];
   matches: FindMatch[];
   options: FindOptions;
   onClose: () => void;
@@ -13,6 +15,7 @@ interface FindReplacePanelProps {
   onReplaceAll: () => void;
   onReplaceCurrent: () => void;
   onStep: (direction: 1 | -1) => void;
+  replaceHistory: string[];
 }
 
 const FIND_SCOPES: Array<{ value: FindScope; label: string }> = [
@@ -26,6 +29,7 @@ const FIND_SCOPES: Array<{ value: FindScope; label: string }> = [
 export function FindReplacePanel({
   activeMatch,
   docked,
+  findHistory,
   matches,
   options,
   onClose,
@@ -34,8 +38,11 @@ export function FindReplacePanel({
   onReplaceAll,
   onReplaceCurrent,
   onStep,
+  replaceHistory,
 }: FindReplacePanelProps) {
   const { t } = useTranslation();
+  const findListId = useId();
+  const replaceListId = useId();
   const update = (patch: Partial<FindOptions>) => onOptionsChange({ ...options, ...patch });
 
   return (
@@ -44,8 +51,14 @@ export function FindReplacePanel({
         <strong><FileSearch size={16} /> {t("find.title")}</strong>
         <button onClick={onClose}>x</button>
       </div>
-      <input value={options.query} placeholder={t("find.find")} onChange={(event) => update({ query: event.target.value })} />
-      <input value={options.replacement} placeholder={t("find.replacement")} onChange={(event) => update({ replacement: event.target.value })} />
+      <input list={findListId} value={options.query} placeholder={t("find.find")} onChange={(event) => update({ query: event.target.value })} />
+      <datalist id={findListId}>
+        {findHistory.map((item) => <option key={item} value={item} />)}
+      </datalist>
+      <input list={replaceListId} value={options.replacement} placeholder={t("find.replacement")} onChange={(event) => update({ replacement: event.target.value })} />
+      <datalist id={replaceListId}>
+        {replaceHistory.map((item) => <option key={item} value={item} />)}
+      </datalist>
       <label className="find-scope">
         <span>{t("find.scope", { defaultValue: "Scope" })}</span>
         <select
