@@ -75,7 +75,6 @@ export async function preparePdfLayout(source: HTMLElement, config = A4_PDF_CONF
     throwIfAborted(options.signal);
     await nextFrame();
     throwIfAborted(options.signal);
-    fitWideBlocks(clone);
     applyPageBreakCascade(clone, config, 10);
     throwIfAborted(options.signal);
     await nextFrame();
@@ -102,6 +101,7 @@ function applyPageBreakCascade(container: HTMLElement, config: PdfPageConfig, ma
   for (let iteration = 0; iteration < maxIterations; iteration += 1) {
     resetPagination(container);
     const pageHeightPx = getPageHeightPx(container, config);
+    fitWideBlocks(container);
     splitOversizedTables(container, pageHeightPx);
 
     const elements = collectFlowElements(container);
@@ -289,25 +289,38 @@ function scaleElementToPage(element: HTMLElement, scale: number) {
   element.style.width = `${rect.width / scale}px`;
   element.style.height = `${rect.height * scale}px`;
   element.style.overflow = "hidden";
+  element.dataset.pdfScale = scale.toFixed(3);
 }
 
 function resetPagination(container: HTMLElement) {
   container.querySelectorAll(`.${PAGE_BREAK_SPACER_CLASS},.${TABLE_SPACER_CLASS}`).forEach((node) => node.remove());
-  container.querySelectorAll<HTMLElement>("[style*='scale(']").forEach((node) => {
+  container.querySelectorAll<HTMLElement>("[data-pdf-scale]").forEach((node) => {
     node.style.transform = "";
     node.style.transformOrigin = "";
     node.style.height = "";
     node.style.width = "";
     node.style.overflow = "";
+    node.style.maxWidth = "";
+    delete node.dataset.pdfScale;
   });
 }
 
 function fitWideBlocks(container: HTMLElement) {
-  container.querySelectorAll<HTMLElement>("pre, table, .diagram-viewer, .leaflet-map-canvas").forEach((element) => {
-    if (element.scrollWidth > element.clientWidth + 1) {
-      element.style.width = `${Math.ceil(element.scrollWidth)}px`;
-      element.style.maxWidth = "none";
-    }
+  const availableWidth = container.getBoundingClientRect().width;
+  container.querySelectorAll<HTMLElement>("img, svg, canvas, pre, table, .diagram-viewer, .leaflet-map-canvas").forEach((element) => {
+    if (element.closest("table") && element.tagName.toLowerCase() !== "table") return;
+    const rect = element.getBoundingClientRect();
+    const naturalWidth = element instanceof HTMLImageElement ? element.naturalWidth : 0;
+    const contentWidth = Math.max(rect.width, element.scrollWidth, naturalWidth);
+    if (contentWidth <= availableWidth + 1 || rect.height < 1) return;
+    const scale = Math.min(1, availableWidth / contentWidth);
+    element.style.width = `${Math.ceil(contentWidth)}px`;
+    element.style.maxWidth = "none";
+    element.style.transform = `scale(${scale})`;
+    element.style.transformOrigin = "top left";
+    element.style.height = `${rect.height * scale}px`;
+    element.style.overflow = "hidden";
+    element.dataset.pdfScale = scale.toFixed(3);
   });
 }
 

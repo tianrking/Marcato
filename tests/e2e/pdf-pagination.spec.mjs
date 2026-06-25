@@ -2,11 +2,22 @@ import {
   expect,
   expectNoBrowserErrors,
   setMarkdown,
+  takeElementScreenshot,
   takeScreenshot,
   waitForPreviewText,
   withApp,
   writeJsonArtifact,
 } from "./support.mjs";
+
+const wideImageSvg = encodeURIComponent(`
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="420" viewBox="0 0 1800 420">
+  <rect width="1800" height="420" fill="#ffffff"/>
+  <rect x="24" y="24" width="1752" height="372" rx="20" fill="#f6f8fa" stroke="#2563eb" stroke-width="8"/>
+  <text x="60" y="130" font-family="Arial, sans-serif" font-size="64" font-weight="700" fill="#172033">Wide PDF image fixture</text>
+  <text x="60" y="230" font-family="Arial, sans-serif" font-size="42" fill="#0f766e">This image is intentionally wider than A4 content.</text>
+  <path d="M60 320 C 360 220, 600 390, 900 292 S 1380 232, 1740 304" fill="none" stroke="#dc2626" stroke-width="12"/>
+</svg>
+`);
 
 const tableRows = Array.from({ length: 96 }, (_, index) => {
   const row = index + 1;
@@ -20,6 +31,8 @@ ${Array.from({ length: 10 }, (_, index) => `Intro paragraph ${index + 1}. ${"Thi
 ## Heading Near A Page Boundary
 
 This heading should be moved as a unit instead of being split by a page break.
+
+![Wide PDF visual fixture](data:image/svg+xml,${wideImageSvg})
 
 | Item | Description | Kind |
 |---|---|---|
@@ -40,11 +53,13 @@ $$
 $$
 
 \`\`\`mermaid
-sequenceDiagram
-  participant User
-  participant Preview
-  User->>Preview: Export PDF
-  Preview-->>User: Paginated document
+flowchart LR
+  A[Author] --> B[Preview]
+  B --> C[PDF layout]
+  C --> D[Wide diagram fitting]
+  D --> E[Pagination]
+  E --> F[Download]
+  F --> G[Review fixture screenshot]
 \`\`\`
 `;
 
@@ -53,6 +68,7 @@ const startedAt = Date.now();
 await withApp(async ({ consoleMessages, page, server }) => {
   await setMarkdown(page, fixture);
   await waitForPreviewText(page, "PDF Pagination Fixture");
+  await page.locator('img[alt="Wide PDF visual fixture"]').first().waitFor({ state: "visible", timeout: 10_000 });
   await page.locator(".katex").first().waitFor({ state: "visible", timeout: 10_000 });
   await page.locator('.diagram-viewer[data-diagram-engine="mermaid"] svg').first().waitFor({ state: "visible", timeout: 20_000 });
 
@@ -61,51 +77,83 @@ await withApp(async ({ consoleMessages, page, server }) => {
     const source = document.querySelector(".preview-article");
     if (!(source instanceof HTMLElement)) throw new Error("Preview article not found.");
     const clone = await preparePdfLayout(source, A4_PDF_CONFIG);
-    try {
-      const containerRect = clone.getBoundingClientRect();
-      const pageHeightPx = getPageHeightPx(clone, A4_PDF_CONFIG);
-      const totalHeight = containerRect.height;
-      const boundaries = [];
-      for (let boundary = pageHeightPx; boundary < totalHeight; boundary += pageHeightPx) boundaries.push(boundary);
+    clone.id = "pdf-layout-fixture-capture";
+    clone.style.position = "absolute";
+    clone.style.left = "0";
+    clone.style.top = "0";
+    clone.style.zIndex = "200";
+    clone.style.pointerEvents = "none";
 
-      const crossesBoundary = (element) => {
-        const rect = element.getBoundingClientRect();
-        const top = rect.top - containerRect.top;
-        const bottom = rect.bottom - containerRect.top;
-        return boundaries.some((boundary) => top < boundary - 1 && bottom > boundary + 1);
-      };
+    const containerRect = clone.getBoundingClientRect();
+    const pageHeightPx = getPageHeightPx(clone, A4_PDF_CONFIG);
+    const totalHeight = containerRect.height;
+    const boundaries = [];
+    for (let boundary = pageHeightPx; boundary < totalHeight; boundary += pageHeightPx) boundaries.push(boundary);
 
-      const tables = Array.from(clone.querySelectorAll("table"));
-      const wideBlocks = Array.from(clone.querySelectorAll("pre, table, .diagram-viewer, .leaflet-map-canvas"))
-        .filter((element) => element.scrollWidth > element.clientWidth + 2);
-      const rowsCrossing = Array.from(clone.querySelectorAll("tbody tr")).filter(crossesBoundary);
+    const crossesBoundary = (element) => {
+      const rect = element.getBoundingClientRect();
+      const top = rect.top - containerRect.top;
+      const bottom = rect.bottom - containerRect.top;
+      return boundaries.some((boundary) => top < boundary - 1 && bottom > boundary + 1);
+    };
 
+    const visualElements = Array.from(clone.querySelectorAll("img, svg, canvas, pre, table, .diagram-viewer, .leaflet-map-canvas"))
+      .filter((element) => !(element.closest("table") && element.tagName.toLowerCase() !== "table"));
+    const visualOverflow = visualElements.filter((element) => {
+      const rect = element.getBoundingClientRect();
+      return rect.left < containerRect.left - 2 || rect.right > containerRect.right + 2;
+    });
+    const visualOverflowDetails = visualOverflow.map((element) => {
+      const rect = element.getBoundingClientRect();
       return {
-        estimatedPages: Math.max(1, Math.ceil(totalHeight / pageHeightPx)),
-        height: Math.round(totalHeight),
-        pageHeightPx: Math.round(pageHeightPx),
-        pageBreakSpacers: clone.querySelectorAll(".pdf-page-break-spacer").length,
-        tableBreakSpacers: clone.querySelectorAll(".pdf-table-page-break-spacer").length,
-        splitTables: clone.querySelectorAll("table[data-pdf-split-part='true']").length,
-        tablesWithHead: tables.filter((table) => table.querySelector("thead")).length,
-        rowspanCells: clone.querySelectorAll("[rowspan]").length,
-        colspanCells: clone.querySelectorAll("[colspan]").length,
-        crossingHeadings: Array.from(clone.querySelectorAll("h1,h2,h3,h4,h5,h6")).filter(crossesBoundary).length,
-        crossingRows: rowsCrossing.length,
-        wideBlocks: wideBlocks.length,
+        tag: element.tagName.toLowerCase(),
+        className: element.className || "",
+        left: Math.round(rect.left - containerRect.left),
+        right: Math.round(rect.right - containerRect.left),
+        width: Math.round(rect.width),
       };
-    } finally {
-      clone.remove();
+    });
+    const tables = Array.from(clone.querySelectorAll("table"));
+    const wideBlocks = Array.from(clone.querySelectorAll("pre, table, .diagram-viewer, .leaflet-map-canvas"))
+      .filter((element) => element.scrollWidth > element.clientWidth + 2);
+    const rowsCrossing = Array.from(clone.querySelectorAll("tbody tr")).filter(crossesBoundary);
+
+    return {
+      estimatedPages: Math.max(1, Math.ceil(totalHeight / pageHeightPx)),
+      height: Math.round(totalHeight),
+      pageHeightPx: Math.round(pageHeightPx),
+      pageBreakSpacers: clone.querySelectorAll(".pdf-page-break-spacer").length,
+      tableBreakSpacers: clone.querySelectorAll(".pdf-table-page-break-spacer").length,
+      splitTables: clone.querySelectorAll("table[data-pdf-split-part='true']").length,
+      tablesWithHead: tables.filter((table) => table.querySelector("thead")).length,
+      repeatedHeaderTexts: Array.from(clone.querySelectorAll("table[data-pdf-split-part='true'] thead")).map((thead) => thead.textContent?.replace(/\s+/g, " ").trim()),
+      rowspanCells: clone.querySelectorAll("[rowspan]").length,
+      colspanCells: clone.querySelectorAll("[colspan]").length,
+      imageCount: clone.querySelectorAll("img").length,
+      scaledBlocks: clone.querySelectorAll("[data-pdf-scale]").length,
+      scaledImages: clone.querySelectorAll("img[data-pdf-scale]").length,
+      crossingHeadings: Array.from(clone.querySelectorAll("h1,h2,h3,h4,h5,h6")).filter(crossesBoundary).length,
+      crossingRows: rowsCrossing.length,
+      visualOverflow: visualOverflow.length,
+      visualOverflowDetails,
+      wideBlocks: wideBlocks.length,
     }
   });
 
   expect(metrics.estimatedPages >= 3, `Expected a multi-page fixture. Metrics: ${JSON.stringify(metrics)}`);
   expect(metrics.splitTables >= 1, `Expected the long table to be split. Metrics: ${JSON.stringify(metrics)}`);
   expect(metrics.tablesWithHead >= 2, `Expected repeated table headers after splitting. Metrics: ${JSON.stringify(metrics)}`);
+  expect(metrics.repeatedHeaderTexts.some((text) => text?.includes("Item Description Kind")), `Expected split tables to repeat the Markdown table head. Metrics: ${JSON.stringify(metrics)}`);
   expect(metrics.rowspanCells >= 1, `Expected rowspan cells to survive export clone. Metrics: ${JSON.stringify(metrics)}`);
   expect(metrics.colspanCells >= 1, `Expected colspan cells to survive export clone. Metrics: ${JSON.stringify(metrics)}`);
+  expect(metrics.imageCount >= 1, `Expected PDF fixture image to survive export clone. Metrics: ${JSON.stringify(metrics)}`);
+  expect(metrics.scaledBlocks >= 1, `Expected at least one wide PDF visual to be scaled. Metrics: ${JSON.stringify(metrics)}`);
+  expect(metrics.scaledImages >= 1, `Expected the wide image to be scaled. Metrics: ${JSON.stringify(metrics)}`);
   expect(metrics.crossingHeadings === 0, `Headings must not cross page boundaries. Metrics: ${JSON.stringify(metrics)}`);
+  expect(metrics.visualOverflow === 0, `PDF visuals should stay inside content width. Metrics: ${JSON.stringify(metrics)}`);
   expect(metrics.wideBlocks === 0, `Wide PDF blocks should be fitted before export. Metrics: ${JSON.stringify(metrics)}`);
+  await takeElementScreenshot(page.locator("#pdf-layout-fixture-capture"), "pdf-layout-fixture.png");
+  await page.evaluate(() => document.getElementById("pdf-layout-fixture-capture")?.remove());
 
   const abortResult = await page.evaluate(async () => {
     const { exportPdf } = await import("/src/lib/exporters.ts");

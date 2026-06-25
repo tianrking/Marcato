@@ -26,6 +26,11 @@ export async function takeScreenshot(page, name) {
   await page.screenshot({ path: path.join(dir, name), fullPage: true });
 }
 
+export async function takeElementScreenshot(locator, name) {
+  const dir = await ensureArtifactDir("screenshots");
+  await locator.screenshot({ path: path.join(dir, name) });
+}
+
 export function expectNoBrowserErrors(consoleMessages) {
   const errors = consoleMessages.filter((message) => message.startsWith("error:") || message.startsWith("pageerror:"));
   expect(errors.length === 0, `Browser errors were reported:\n${errors.join("\n")}`);

@@ -788,6 +788,18 @@ textarea {
   border-collapse: collapse;
 }
 
+.pdf-export .diagram-viewer {
+  margin-left: 0;
+  margin-right: 0;
+}
+
+.pdf-export img,
+.pdf-export svg,
+.pdf-export canvas {
+  max-width: 100%;
+  height: auto;
+}
+
 .pdf-export table tr {
   background-color: transparent !important;
 }
