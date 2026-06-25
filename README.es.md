@@ -4,6 +4,8 @@
 
 [English](README.md) | [简体中文](README.zh-CN.md) | [Español](README.es.md)
 
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Ftianrking%2FMarcato&project-name=marcato&repository-name=Marcato)
+
 ![React](https://img.shields.io/badge/React-19-61dafb?style=for-the-badge&logo=react&logoColor=061923)
 ![TypeScript](https://img.shields.io/badge/TypeScript-6-3178c6?style=for-the-badge&logo=typescript&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-8-646cff?style=for-the-badge&logo=vite&logoColor=white)
@@ -89,6 +91,10 @@ Suites disponibles:
 - `test:pdf`: tablas largas, saltos de pagina, diagramas, matematicas, progreso y cancelacion.
 - `test:perf`: documentos grandes y prueba de carga bajo demanda para renderizado rico.
 - `test:diagrams`: Markmap/WaveDrom locales, PlantUML/D2 remotos, normalizacion, retry y sanitizacion SVG.
+
+## Deploy
+
+Marcato es una app 100% cliente y se puede desplegar directamente en Vercel con el boton superior. `vercel.json` fija Node 20 y mantiene `sw.js` / Workbox con `Cache-Control: no-cache` para que las actualizaciones PWA lleguen sin friccion.
 
 ## Homenaje
 

@@ -4,6 +4,8 @@
 
 [English](README.md) | [简体中文](README.zh-CN.md) | [Español](README.es.md)
 
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Ftianrking%2FMarcato&project-name=marcato&repository-name=Marcato)
+
 ![React](https://img.shields.io/badge/React-19-61dafb?style=for-the-badge&logo=react&logoColor=061923)
 ![TypeScript](https://img.shields.io/badge/TypeScript-6-3178c6?style=for-the-badge&logo=typescript&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-8-646cff?style=for-the-badge&logo=vite&logoColor=white)
@@ -89,6 +91,10 @@ npm test
 - `test:pdf`：长表、分页、图表、数学、导出进度和取消。
 - `test:perf`：大文档和富渲染按需加载。
 - `test:diagrams`：本地 Markmap/WaveDrom，以及远程 PlantUML/D2 清洗、重试和安全校验。
+
+## 部署
+
+Marcato 是纯前端应用，可以直接用上方的 Vercel 按钮一键部署。仓库里的 `vercel.json` 固定 Node 20，并让 `sw.js` / Workbox 使用 `Cache-Control: no-cache`，方便 PWA 更新及时生效。
 
 ## 致敬
 

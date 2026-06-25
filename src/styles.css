@@ -1,30 +1,44 @@
 :root {
   color-scheme: light;
-  --bg: #f7f8fb;
+  --bg: #f5f8fc;
   --panel: #ffffff;
-  --panel-2: #f1f5f9;
+  --panel-2: #eef4f8;
+  --panel-glass: rgba(255, 255, 255, 0.82);
+  --button-bg: #f9fbff;
   --text: #172033;
   --muted: #64748b;
-  --line: #d7dee9;
+  --line: #d8e1eb;
   --accent: #2563eb;
   --accent-2: #0f766e;
+  --accent-3: #d97706;
+  --accent-soft: color-mix(in srgb, var(--accent) 11%, transparent);
+  --accent-2-soft: color-mix(in srgb, var(--accent-2) 12%, transparent);
   --danger: #dc2626;
-  --shadow: 0 14px 36px rgba(15, 23, 42, 0.12);
+  --focus-ring: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+  --shadow: 0 18px 42px rgba(15, 23, 42, 0.13);
+  --shadow-soft: 0 8px 22px rgba(37, 99, 235, 0.12);
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --bg: #111318;
-  --panel: #181b22;
-  --panel-2: #20242d;
+  --bg: #0f131a;
+  --panel: #171c24;
+  --panel-2: #202832;
+  --panel-glass: rgba(23, 28, 36, 0.84);
+  --button-bg: #1d2530;
   --text: #e6edf3;
   --muted: #9aa7b7;
-  --line: #303744;
+  --line: #334052;
   --accent: #60a5fa;
   --accent-2: #2dd4bf;
+  --accent-3: #fbbf24;
+  --accent-soft: color-mix(in srgb, var(--accent) 16%, transparent);
+  --accent-2-soft: color-mix(in srgb, var(--accent-2) 14%, transparent);
   --danger: #f87171;
+  --focus-ring: 0 0 0 3px color-mix(in srgb, var(--accent) 28%, transparent);
   --shadow: 0 16px 40px rgba(0, 0, 0, 0.42);
+  --shadow-soft: 0 10px 28px rgba(45, 212, 191, 0.12);
 }
 
 * {
@@ -34,8 +48,25 @@
 body {
   margin: 0;
   min-width: 320px;
-  background: var(--bg);
+  background-color: var(--bg);
+  background-image:
+    linear-gradient(135deg, color-mix(in srgb, var(--accent) 10%, transparent), transparent 34%),
+    linear-gradient(225deg, color-mix(in srgb, var(--accent-2) 10%, transparent), transparent 32%),
+    linear-gradient(var(--line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line) 1px, transparent 1px);
+  background-position: top left, top right, center;
+  background-size: 100% 360px, 100% 360px, 32px 32px, 32px 32px;
   color: var(--text);
+}
+
+html {
+  scrollbar-color: color-mix(in srgb, var(--accent) 42%, var(--line)) transparent;
+  scrollbar-width: thin;
+}
+
+::selection {
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent-2) 26%, transparent);
 }
 
 button,
@@ -47,7 +78,7 @@ textarea {
 
 button {
   border: 1px solid var(--line);
-  background: var(--panel);
+  background: linear-gradient(180deg, var(--panel), var(--button-bg));
   color: var(--text);
   border-radius: 7px;
   min-height: 34px;
@@ -57,10 +88,27 @@ button {
   justify-content: center;
   gap: 6px;
   cursor: pointer;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease,
+    color 150ms ease,
+    background 150ms ease,
+    transform 150ms ease;
 }
 
-button:hover {
+button:hover:not(:disabled) {
   border-color: var(--accent);
+  box-shadow: var(--shadow-soft);
+  transform: translateY(-1px);
+}
+
+button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.56;
 }
 
 input,
@@ -70,23 +118,60 @@ textarea {
   border-radius: 7px;
   color: var(--text);
   background: var(--panel);
+  transition: border-color 150ms ease, box-shadow 150ms ease, background 150ms ease;
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+button:focus-visible {
+  outline: 0;
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring);
 }
 
 .app-shell {
+  position: relative;
+  isolation: isolate;
   height: 100vh;
   display: grid;
   grid-template-rows: auto auto auto auto 1fr;
   overflow: hidden;
 }
 
+.app-shell::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent) 8%, transparent), transparent),
+    radial-gradient(circle at 50% -10%, color-mix(in srgb, var(--accent-2) 12%, transparent), transparent 42%);
+  opacity: 0.72;
+}
+
 .app-header {
+  position: relative;
   height: 66px;
   padding: 10px 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   border-bottom: 1px solid var(--line);
-  background: var(--panel);
+  background: var(--panel-glass);
+  box-shadow: 0 1px 0 color-mix(in srgb, #fff 38%, transparent);
+}
+
+.app-header::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent), var(--accent-2), transparent);
+  opacity: 0.55;
 }
 
 .brand {
@@ -101,12 +186,18 @@ textarea {
   height: 40px;
   border-radius: 8px;
   object-fit: cover;
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line));
+  box-shadow: 0 0 0 4px var(--accent-soft), 0 10px 22px rgba(15, 23, 42, 0.12);
 }
 
 .brand h1 {
   margin: 0;
   font-size: 18px;
   letter-spacing: 0;
+  background: linear-gradient(90deg, var(--text), var(--accent), var(--accent-2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .brand p {
@@ -128,7 +219,7 @@ textarea {
   min-height: 50px;
   padding: 8px 12px;
   border-bottom: 1px solid var(--line);
-  background: var(--panel);
+  background: color-mix(in srgb, var(--panel-glass) 88%, var(--panel-2));
   overflow-x: auto;
 }
 
@@ -156,6 +247,8 @@ textarea {
   border: 1px solid var(--line);
   border-radius: 8px;
   overflow: hidden;
+  background: var(--button-bg);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, #fff 28%, transparent);
 }
 
 .segmented button {
@@ -167,8 +260,9 @@ textarea {
 }
 
 .segmented button.active {
-  background: var(--accent);
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
   color: #fff;
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.24);
 }
 
 .icon-button {
@@ -183,7 +277,9 @@ textarea {
   padding: 7px 10px;
   overflow-x: auto;
   border-bottom: 1px solid var(--line);
-  background: var(--panel-2);
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--accent) 5%, transparent), transparent 34%),
+    var(--panel-2);
 }
 
 .tab {
@@ -191,12 +287,25 @@ textarea {
   max-width: 240px;
   justify-content: flex-start;
   gap: 8px;
-  background: var(--panel);
+  background: color-mix(in srgb, var(--panel) 88%, var(--panel-2));
+  position: relative;
+  overflow: hidden;
 }
 
 .tab.active {
   border-color: var(--accent);
-  box-shadow: inset 0 -2px 0 var(--accent);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--accent) 11%, transparent), color-mix(in srgb, var(--accent-2) 9%, transparent)),
+    var(--panel);
+  box-shadow: inset 0 -2px 0 var(--accent), var(--shadow-soft);
+}
+
+.tab.active::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: linear-gradient(var(--accent), var(--accent-2));
 }
 
 .tab span {
@@ -223,7 +332,7 @@ textarea {
   padding: 6px 10px;
   overflow-x: auto;
   border-bottom: 1px solid var(--line);
-  background: var(--panel);
+  background: var(--panel-glass);
 }
 
 .workspace {
@@ -261,6 +370,7 @@ textarea {
   min-height: 0;
   background: var(--panel);
   overflow: hidden;
+  box-shadow: inset 0 1px 0 color-mix(in srgb, #fff 16%, transparent);
 }
 
 .preview-pane {
@@ -275,7 +385,10 @@ textarea {
   gap: 8px;
   border-bottom: 1px solid var(--line);
   color: var(--muted);
-  background: var(--panel);
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--accent) 5%, transparent), transparent 46%),
+    var(--panel);
+  font-weight: 650;
 }
 
 .editor-wrap {
@@ -291,7 +404,9 @@ textarea {
   overflow: hidden;
   border-right: 1px solid var(--line);
   color: var(--muted);
-  background: var(--panel-2);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--accent) 5%, transparent), transparent),
+    var(--panel-2);
   text-align: right;
   font: 13px/1.55 ui-monospace, SFMono-Regular, Consolas, monospace;
   user-select: none;
@@ -306,16 +421,33 @@ textarea {
   outline: none;
   padding: 14px 16px 40px;
   color: var(--text);
-  background: var(--panel);
+  background:
+    linear-gradient(90deg, transparent 0, transparent 54px, color-mix(in srgb, var(--accent) 4%, transparent) 54px, transparent 56px),
+    var(--panel);
   font: 14px/1.55 ui-monospace, SFMono-Regular, Consolas, monospace;
   tab-size: 2;
 }
 
+.editor-wrap:focus-within .line-numbers {
+  color: color-mix(in srgb, var(--accent) 72%, var(--muted));
+}
+
+.editor-wrap:focus-within textarea {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
 .resizer {
-  background: var(--panel-2);
+  background:
+    linear-gradient(180deg, transparent, color-mix(in srgb, var(--accent) 20%, transparent), color-mix(in srgb, var(--accent-2) 20%, transparent), transparent),
+    var(--panel-2);
   border-left: 1px solid var(--line);
   border-right: 1px solid var(--line);
   cursor: col-resize;
+  transition: background 160ms ease, box-shadow 160ms ease;
+}
+
+.resizer:hover {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 24%, transparent);
 }
 
 .preview-article {
@@ -342,6 +474,9 @@ textarea {
   padding: 14px;
   border-left: 1px solid var(--line);
   overflow: auto;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--accent-2) 5%, transparent), transparent 220px),
+    var(--panel);
 }
 
 .toc-panel strong {
@@ -358,6 +493,15 @@ textarea {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  border-radius: 6px;
+  padding-right: 6px;
+  transition: color 150ms ease, background 150ms ease, transform 150ms ease;
+}
+
+.toc-panel a:hover {
+  color: var(--accent);
+  background: var(--accent-soft);
+  transform: translateX(2px);
 }
 
 .health-panel {
@@ -414,7 +558,7 @@ textarea {
   border: 1px solid var(--line);
   border-radius: 999px;
   color: var(--muted);
-  background: var(--panel-2);
+  background: linear-gradient(180deg, var(--panel), var(--panel-2));
   font-size: 12px;
 }
 
@@ -473,6 +617,8 @@ textarea {
   border-radius: 999px;
   padding: 2px 8px;
   font-size: 12px;
+  background: var(--accent-soft);
+  color: color-mix(in srgb, var(--accent) 78%, var(--text));
 }
 
 .render-pill.error {
@@ -490,12 +636,13 @@ textarea {
   padding: 0 10px;
   border-left: 3px solid transparent;
   border-radius: 6px;
-  transition: background 160ms ease, border-color 160ms ease;
+  transition: background 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
 }
 
 .preview-block.is-selected {
   border-left-color: var(--accent);
   background: color-mix(in srgb, var(--accent) 8%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 12%, transparent);
 }
 
 .diagram-viewer,
@@ -506,12 +653,14 @@ textarea {
   border-radius: 8px;
   background: var(--panel-2);
   overflow: hidden;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
 }
 
 .diagram-viewer figcaption {
   padding: 9px 12px;
   color: var(--muted);
   border-bottom: 1px solid var(--line);
+  background: var(--panel);
 }
 
 .diagram-toolbar {
@@ -519,6 +668,7 @@ textarea {
   gap: 6px;
   padding: 8px 10px;
   border-bottom: 1px solid var(--line);
+  background: var(--panel);
 }
 
 .diagram-surface {
@@ -576,6 +726,7 @@ textarea {
   min-height: 28px;
   padding: 0 8px;
   font-size: 12px;
+  border-radius: 999px;
 }
 
 .math-block {
@@ -648,7 +799,7 @@ textarea {
   padding: 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: var(--panel);
+  background: var(--panel-glass);
   box-shadow: var(--shadow);
 }
 
@@ -707,7 +858,9 @@ textarea {
   z-index: 40;
   display: grid;
   place-items: center;
-  background: rgba(15, 23, 42, 0.52);
+  background:
+    linear-gradient(135deg, rgba(37, 99, 235, 0.18), rgba(15, 118, 110, 0.16)),
+    rgba(15, 23, 42, 0.52);
 }
 
 .modal,
@@ -718,7 +871,7 @@ textarea {
   padding: 14px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: var(--panel);
+  background: var(--panel-glass);
   box-shadow: var(--shadow);
 }
 
@@ -741,7 +894,11 @@ textarea {
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: var(--panel-2);
+  background:
+    linear-gradient(var(--line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line) 1px, transparent 1px),
+    var(--panel-2);
+  background-size: 42px 42px;
   cursor: grab;
   touch-action: none;
 }
@@ -765,6 +922,27 @@ textarea {
   box-sizing: border-box;
   background: #ffffff;
   color: #24292f;
+}
+
+.pdf-export,
+.pdf-export * {
+  animation: none !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  filter: none !important;
+  text-shadow: none !important;
+  transition: none !important;
+}
+
+:root[data-pdf-rendering="true"] body,
+:root[data-pdf-rendering="true"] .preview-article,
+:root[data-pdf-rendering="true"] .preview-article * {
+  animation: none !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  filter: none !important;
+  text-shadow: none !important;
+  transition: none !important;
 }
 
 .pdf-export .diagram-toolbar,
@@ -951,13 +1129,22 @@ textarea {
   padding: 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: var(--panel);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--accent) 4%, transparent), transparent),
+    var(--panel);
   cursor: pointer;
+  transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
 }
 
 .emoji-item.is-selected {
   border-color: var(--accent);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.emoji-item:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--accent) 62%, var(--line));
+  box-shadow: var(--shadow-soft);
 }
 
 .emoji-item:focus-visible {
@@ -1072,6 +1259,7 @@ textarea {
   background: var(--panel);
   border-radius: 8px;
   cursor: pointer;
+  transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
 }
 
 .symbol-item.is-selected {
@@ -1082,6 +1270,12 @@ textarea {
 .symbol-item:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+.symbol-item:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--accent-2) 62%, var(--line));
+  box-shadow: var(--shadow-soft);
 }
 
 .symbol-preview {
@@ -1130,11 +1324,17 @@ textarea {
   padding: 0;
   border: 1px solid var(--line);
   background: transparent;
+  transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
 }
 
 .alert-option.is-selected {
   border-color: var(--accent);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.alert-option:hover {
+  transform: translateY(-1px);
+  border-color: var(--accent);
 }
 
 .markdown-alert {
@@ -1322,10 +1522,12 @@ textarea {
   border-bottom: 1px solid var(--line);
   color: var(--muted);
   font-size: 13px;
+  transition: background 150ms ease, color 150ms ease;
 }
 
 .github-tree-row:hover {
-  background: var(--panel-2);
+  background: var(--accent-soft);
+  color: var(--text);
 }
 
 .github-tree-row.directory {
@@ -1423,6 +1625,8 @@ textarea {
   border: 3px dashed rgba(255, 255, 255, 0.72);
   margin: 24px;
   inset: 0;
+  border-radius: 18px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18), 0 24px 80px rgba(15, 23, 42, 0.42);
 }
 
 .toast {
@@ -1433,7 +1637,9 @@ textarea {
   padding: 10px 14px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: var(--panel);
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--accent-2) 12%, transparent), transparent),
+    var(--panel-glass);
   box-shadow: var(--shadow);
 }
 
@@ -1448,7 +1654,7 @@ textarea {
   gap: 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: var(--panel);
+  background: var(--panel-glass);
   box-shadow: var(--shadow);
 }
 
@@ -1529,5 +1735,24 @@ textarea {
   .workspace-toolbar button,
   .toolbar-group.compact label {
     font-size: 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  button:hover:not(:disabled),
+  .emoji-item:hover,
+  .symbol-item:hover,
+  .alert-option:hover,
+  .toc-panel a:hover {
+    transform: none;
   }
 }

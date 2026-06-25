@@ -4,6 +4,8 @@
 
 [English](README.md) | [简体中文](README.zh-CN.md) | [Español](README.es.md)
 
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Ftianrking%2FMarcato&project-name=marcato&repository-name=Marcato)
+
 ![React](https://img.shields.io/badge/React-19-61dafb?style=for-the-badge&logo=react&logoColor=061923)
 ![TypeScript](https://img.shields.io/badge/TypeScript-6-3178c6?style=for-the-badge&logo=typescript&logoColor=white)
 ![Vite](https://img.shields.io/badge/Vite-8-646cff?style=for-the-badge&logo=vite&logoColor=white)
@@ -116,7 +118,7 @@ npm run preview
 
 ## Deployment Notes
 
-Marcato is a client-side app. The Vercel configuration pins Node 20 and keeps `sw.js` / Workbox update-friendly with `Cache-Control: no-cache`. Runtime network access is only needed for GitHub import, remote diagram services, external map tiles, or external images referenced by the document.
+Marcato is a client-side app and can be deployed directly to Vercel with the button above. The Vercel configuration pins Node 20 and keeps `sw.js` / Workbox update-friendly with `Cache-Control: no-cache`. Runtime network access is only needed for GitHub import, remote diagram services, external map tiles, or external images referenced by the document.
 
 ## Tribute
 

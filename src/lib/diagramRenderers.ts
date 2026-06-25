@@ -6,7 +6,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
 import { setupDiagramActions } from "./diagramActions";
-import { loadGitHubEmojis } from "./githubEmojis";
+import { getCommonGitHubEmoji } from "./githubEmojis";
 import { setupPreviewLinks } from "./previewLinks";
 import { sanitizeRemoteDiagramSvg } from "./sanitizer";
 import type { TopLevelSpec } from "vega-lite";
@@ -87,14 +87,7 @@ function renderMath(root: HTMLElement) {
 
 async function renderEmojiShortcodes(root: HTMLElement, signal?: AbortSignal) {
   if (!root.textContent?.includes(":")) return;
-  let emojis: Map<string, string>;
-  try {
-    const entries = await loadGitHubEmojis();
-    emojis = new Map(entries.map((entry) => [entry.name, entry.url]));
-  } catch {
-    return;
-  }
-  if (isAborted(signal, root) || emojis.size === 0) return;
+  if (isAborted(signal, root)) return;
 
   const nodes: Text[] = [];
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
@@ -116,18 +109,18 @@ async function renderEmojiShortcodes(root: HTMLElement, signal?: AbortSignal) {
     let changed = false;
     const fragment = document.createDocumentFragment();
     while ((match = shortcodePattern.exec(text)) !== null) {
-      const url = emojis.get(match[1].toLowerCase());
-      if (!url) continue;
+      const emoji = getCommonGitHubEmoji(match[1]);
+      if (!emoji) continue;
       const before = text.slice(lastIndex, match.index);
       if (before) fragment.appendChild(document.createTextNode(before));
       const shortcode = match[0];
-      const image = document.createElement("img");
-      image.className = "preview-emoji";
-      image.src = url;
-      image.alt = shortcode;
-      image.title = shortcode;
-      image.loading = "lazy";
-      fragment.appendChild(image);
+      const span = document.createElement("span");
+      span.className = "preview-emoji";
+      span.setAttribute("role", "img");
+      span.setAttribute("aria-label", shortcode);
+      span.title = shortcode;
+      span.textContent = emoji;
+      fragment.appendChild(span);
       lastIndex = match.index + shortcode.length;
       changed = true;
     }

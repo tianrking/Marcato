@@ -34,9 +34,13 @@ export async function exportPng(filename: string, element: HTMLElement) {
 }
 
 export async function exportPdf(filename: string, element: HTMLElement, options: PdfExportOptions = {}) {
-  reportPdfProgress(options, "preparing", 0.08);
-  const exportElement = await preparePdfLayout(element, A4_PDF_CONFIG, { signal: options.signal });
+  document.documentElement.dataset.pdfRendering = "true";
+  const runtimeStyle = installPdfRuntimeStyle();
+  let exportElement: HTMLElement | null = null;
   try {
+    reportPdfProgress(options, "preparing", 0.08);
+    await nextAnimationFrame();
+    exportElement = await preparePdfLayout(element, A4_PDF_CONFIG, { signal: options.signal });
     throwIfAborted(options.signal);
     reportPdfProgress(options, "rendering", 0.34);
     throwIfAborted(options.signal);
@@ -46,6 +50,7 @@ export async function exportPdf(filename: string, element: HTMLElement, options:
       useCORS: true,
       allowTaint: false,
       logging: false,
+      onclone: injectPdfCanvasStyles,
       windowWidth: Math.ceil(exportElement.getBoundingClientRect().width),
       windowHeight: Math.ceil(exportElement.getBoundingClientRect().height),
     });
@@ -81,7 +86,9 @@ export async function exportPdf(filename: string, element: HTMLElement, options:
     pdf.save(ensureExtension(filename, ".pdf"));
     reportPdfProgress(options, "saving", 1);
   } finally {
-    exportElement.remove();
+    delete document.documentElement.dataset.pdfRendering;
+    runtimeStyle.remove();
+    exportElement?.remove();
   }
 }
 
@@ -115,6 +122,44 @@ function reportPdfProgress(options: PdfExportOptions, phase: PdfExportPhase, pro
 function throwIfAborted(signal?: AbortSignal) {
   if (!signal?.aborted) return;
   throw new DOMException("PDF export cancelled", "AbortError");
+}
+
+function nextAnimationFrame() {
+  return new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+}
+
+function injectPdfCanvasStyles(documentClone: Document) {
+  const style = documentClone.createElement("style");
+  style.textContent = pdfRuntimeCss();
+  documentClone.head.appendChild(style);
+}
+
+function installPdfRuntimeStyle() {
+  const style = document.createElement("style");
+  style.dataset.pdfRuntimeStyle = "true";
+  style.textContent = pdfRuntimeCss();
+  document.head.appendChild(style);
+  return style;
+}
+
+function pdfRuntimeCss() {
+  return `
+    body,
+    .preview-article,
+    .preview-article *,
+    .pdf-export,
+    .pdf-export * {
+      animation: none !important;
+      background-image: none !important;
+      box-shadow: none !important;
+      filter: none !important;
+      text-shadow: none !important;
+      transition: none !important;
+    }
+    body {
+      background: #ffffff !important;
+    }
+  `;
 }
 
 export async function copyImage(element: HTMLElement) {

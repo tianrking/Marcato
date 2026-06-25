@@ -6,6 +6,26 @@ export interface GitHubEmojiEntry {
 }
 
 const EMOJI_API_URL = "https://api.github.com/emojis";
+const COMMON_EMOJI_SHORTCODES: Record<string, string> = {
+  "+1": "👍",
+  "-1": "👎",
+  rocket: "🚀",
+  tada: "🎉",
+  sparkles: "✨",
+  fire: "🔥",
+  bug: "🐛",
+  memo: "📝",
+  eyes: "👀",
+  bulb: "💡",
+  zap: "⚡",
+  warning: "⚠️",
+  white_check_mark: "✅",
+  x: "❌",
+  heart: "❤️",
+  smile: "😄",
+  thinking: "🤔",
+  construction: "🚧",
+};
 
 let emojiPromise: Promise<GitHubEmojiEntry[]> | null = null;
 let emojiCache: GitHubEmojiEntry[] | null = null;
@@ -34,4 +54,8 @@ export function loadGitHubEmojis() {
       throw error;
     });
   return emojiPromise;
+}
+
+export function getCommonGitHubEmoji(name: string) {
+  return COMMON_EMOJI_SHORTCODES[name.toLowerCase()] || null;
 }
