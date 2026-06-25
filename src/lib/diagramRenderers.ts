@@ -11,6 +11,8 @@ import type { TopLevelSpec } from "vega-lite";
 let mermaidReady = false;
 const previewCleanups = new Map<HTMLElement, () => void>();
 let graphvizInstance: Promise<import("@viz-js/viz").Viz> | null = null;
+const remoteSvgCache = new Map<string, string>();
+const remoteSvgRequests = new Map<string, Promise<string>>();
 const REMOTE_DIAGRAM_ENGINES = [
   "plantuml",
   "d2",
@@ -348,7 +350,7 @@ async function renderRemoteDiagrams(root: HTMLElement) {
     const engine = viewer?.dataset.diagramEngine || "";
     const code = decodeURIComponent(node.dataset.originalCode || "");
     try {
-      const svg = await fetchRemoteSvg(engine, code);
+      const svg = await fetchRemoteSvgCached(engine, code);
       node.innerHTML = svg;
       node.dataset.rendered = "1";
       markReady(viewer);
@@ -381,6 +383,26 @@ function setupPreviewLinks(root: HTMLElement) {
     }
   });
   setupDiagramActions(root, { registerCleanup: registerPreviewCleanup });
+}
+
+async function fetchRemoteSvgCached(engine: string, code: string) {
+  const key = `${engine}\n${code}`;
+  const cached = remoteSvgCache.get(key);
+  if (cached) return cached;
+  const existing = remoteSvgRequests.get(key);
+  if (existing) return await existing;
+  const request = fetchRemoteSvg(engine, code)
+    .then((svg) => {
+      remoteSvgCache.set(key, svg);
+      if (remoteSvgCache.size > 80) {
+        const oldestKey = remoteSvgCache.keys().next().value;
+        if (oldestKey) remoteSvgCache.delete(oldestKey);
+      }
+      return svg;
+    })
+    .finally(() => remoteSvgRequests.delete(key));
+  remoteSvgRequests.set(key, request);
+  return await request;
 }
 
 async function fetchRemoteSvg(engine: string, code: string) {
