@@ -1,8 +1,10 @@
 import { saveAs } from "file-saver";
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
+import { getExportName } from "./exportNames";
 import { A4_PDF_CONFIG, estimatePdfPageCount, getPageHeightPx, preparePdfLayout } from "./pdfPagination";
 
+export { getExportName };
 export type PdfExportPhase = "preparing" | "rendering" | "paginating" | "saving";
 
 export interface PdfExportProgress {
@@ -121,10 +123,6 @@ export async function copyImage(element: HTMLElement) {
   if (!blob || !navigator.clipboard || !("write" in navigator.clipboard)) return false;
   await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
   return true;
-}
-
-export function getExportName(title: string) {
-  return (title || "document").replace(/[\\/:*?"<>|]+/g, "-").replace(/\s+/g, "-").toLowerCase();
 }
 
 function ensureExtension(filename: string, extension: string) {

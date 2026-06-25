@@ -49,12 +49,13 @@ import { useMarkdownRender } from "./hooks/useMarkdownRender";
 import { useShare } from "./hooks/useShare";
 import { MAX_IMPORT_BYTES, MAX_TABS } from "./lib/constants";
 import { applyCommand, handleSmartEnter, type MarkdownCommand } from "./lib/editorCommands";
-import { copyImage, exportHtml, exportMarkdown, exportPdf, exportPng, getExportName, type PdfExportPhase } from "./lib/exporters";
+import { getExportName } from "./lib/exportNames";
 import { analyzeDocumentHealth } from "./lib/documentHealth";
 import { i18n } from "./lib/i18n";
 import { previewDocumentToHtml, type PreviewBlock } from "./lib/previewDocument";
 import { makeTab } from "./lib/storage";
 import { useAppStore } from "./stores/appStore";
+import type { PdfExportPhase } from "./lib/exporters";
 import type { MarkdownTab } from "./types";
 
 interface PdfExportState {
@@ -173,7 +174,9 @@ function App() {
     onNewTab: () => newTab(),
     onOpenFind: () => findReplace.setOpen(true),
     onRedo: redo,
-    onSave: () => exportMarkdown(getExportName(activeTab?.title || "document"), text),
+    onSave: () => {
+      void import("./lib/exporters").then(({ exportMarkdown }) => exportMarkdown(getExportName(activeTab?.title || "document"), text));
+    },
     onToggleSyncScroll: () => updateGlobal({ syncScroll: !globalState.syncScroll }),
     onUndo: undo,
   });
@@ -225,8 +228,25 @@ function App() {
     showToast(t("toast.markdownCopied"));
   };
 
+  const exportMarkdownFile = async () => {
+    const { exportMarkdown } = await import("./lib/exporters");
+    exportMarkdown(getExportName(activeTab?.title || "document"), text);
+  };
+
+  const exportHtmlFile = async () => {
+    const { exportHtml } = await import("./lib/exporters");
+    exportHtml(getExportName(activeTab?.title || "document"), renderedHtml, activeTab?.title || t("status.document"));
+  };
+
+  const exportPreviewPng = async () => {
+    if (!previewRef.current) return;
+    const { exportPng } = await import("./lib/exporters");
+    await exportPng(getExportName(activeTab?.title || "document"), previewRef.current);
+  };
+
   const doCopyPreviewImage = async () => {
     if (!previewRef.current) return;
+    const { copyImage } = await import("./lib/exporters");
     const ok = await copyImage(previewRef.current);
     showToast(ok ? t("toast.previewImageCopied") : t("toast.clipboardImageUnavailable"));
   };
@@ -237,6 +257,7 @@ function App() {
     pdfAbortRef.current = controller;
     setPdfExport({ phase: "preparing", progress: 0.04 });
     try {
+      const { exportPdf } = await import("./lib/exporters");
       await exportPdf(getExportName(activeTab?.title || "document"), previewRef.current, {
         signal: controller.signal,
         onProgress: ({ phase, progress }) => setPdfExport({ phase, progress }),
@@ -349,10 +370,10 @@ function App() {
         onNewTab={() => newTab("", undefined)}
         onGithubImport={githubImport.open}
         onFilesSelected={(files) => void handleFiles(files)}
-        onExportMarkdown={() => exportMarkdown(getExportName(activeTab?.title || "document"), text)}
-        onExportHtml={() => exportHtml(getExportName(activeTab?.title || "document"), renderedHtml, activeTab?.title || t("status.document"))}
+        onExportMarkdown={() => void exportMarkdownFile()}
+        onExportHtml={() => void exportHtmlFile()}
         onExportPdf={() => void doExportPdf()}
-        onExportPng={() => previewRef.current && void exportPng(getExportName(activeTab?.title || "document"), previewRef.current)}
+        onExportPng={() => previewRef.current && void exportPreviewPng()}
         onCopyMarkdown={doCopyMarkdown}
         onCopyPreviewImage={doCopyPreviewImage}
         onShare={() => share.open("view")}

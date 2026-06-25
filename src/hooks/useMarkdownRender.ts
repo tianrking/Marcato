@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { renderMarkdownToHtml } from "../lib/markdownCore";
 import { createPreviewDocument, EMPTY_PREVIEW_DOCUMENT } from "../lib/previewDocument";
 import type { MarkdownTab, RenderResult } from "../types";
 
@@ -26,23 +25,31 @@ export function useMarkdownRender(activeTab: MarkdownTab | undefined) {
         })
         .catch((renderError) => {
           if (requestRef.current !== requestId) return;
-          try {
-            const fallback = renderMarkdownToHtml(activeTab.content, false);
-            const nextDocument = createPreviewDocument(fallback);
-            setDocument(nextDocument);
-            setToc(fallback.toc);
-            setState("idle");
-            setError("");
-          } catch {
-            setState("error");
-            setError(renderError instanceof Error ? renderError.message : "Render failed");
-          }
+          void renderFallback(activeTab.content)
+            .then((fallback) => {
+              if (requestRef.current !== requestId) return;
+              const nextDocument = createPreviewDocument(fallback);
+              setDocument(nextDocument);
+              setToc(fallback.toc);
+              setState("idle");
+              setError("");
+            })
+            .catch(() => {
+              if (requestRef.current !== requestId) return;
+              setState("error");
+              setError(renderError instanceof Error ? renderError.message : "Render failed");
+            });
         });
     }, getRenderDelay(activeTab.content));
     return () => window.clearTimeout(timer);
   }, [activeTab]);
 
   return { document, toc, state, error };
+}
+
+async function renderFallback(markdown: string) {
+  const { renderMarkdownToHtml } = await import("../lib/markdownCore");
+  return renderMarkdownToHtml(markdown, false);
 }
 
 function renderWithWorker(markdown: string, requestId: number): Promise<RenderResult> {
