@@ -4,6 +4,7 @@ import {
   AlignCenter,
   AlignLeft,
   AlignRight,
+  BookMarked,
   Bold,
   Braces,
   Code2,
@@ -36,11 +37,12 @@ import { GitHubImportModal } from "./components/GitHubImportModal";
 import { ImageInsertModal } from "./components/ImageInsertModal";
 import { LinkInsertModal } from "./components/LinkInsertModal";
 import { PreviewPane } from "./components/PreviewPane";
+import { ReferenceInsertModal } from "./components/ReferenceInsertModal";
 import { TableInsertModal } from "./components/TableInsertModal";
 import { WorkspaceToolbar } from "./components/WorkspaceToolbar";
 import { useGlobalShortcuts } from "./hooks/useGlobalShortcuts";
 import { MAX_IMPORT_BYTES, MAX_TABS, SHARE_URL_SOFT_LIMIT } from "./lib/constants";
-import { applyCommand, buildMarkdownImage, buildMarkdownLink, buildMarkdownTable, handleSmartEnter, insertText, type MarkdownCommand, type TableAlignment } from "./lib/editorCommands";
+import { applyCommand, buildMarkdownImage, buildMarkdownLink, buildMarkdownReference, buildMarkdownTable, handleSmartEnter, insertText, suggestMarkdownReferenceNumber, type MarkdownCommand, type TableAlignment } from "./lib/editorCommands";
 import { copyImage, exportHtml, exportMarkdown, exportPdf, exportPng, getExportName } from "./lib/exporters";
 import { analyzeDocumentHealth } from "./lib/documentHealth";
 import { buildDiffPreview, findMatches, replaceAll, replaceOne } from "./lib/findReplace";
@@ -97,6 +99,7 @@ function App() {
   const [tableOpen, setTableOpen] = useState(false);
   const [linkSelection, setLinkSelection] = useState<{ end: number; start: number; text: string } | null>(null);
   const [imageSelection, setImageSelection] = useState<{ end: number; start: number; text: string } | null>(null);
+  const [referenceSelection, setReferenceSelection] = useState<{ end: number; number: number; start: number } | null>(null);
   const [toast, setToast] = useState("");
   const [dragging, setDragging] = useState(false);
 
@@ -418,6 +421,31 @@ function App() {
     });
   };
 
+  const openReferenceModal = () => {
+    const editor = editorRef.current;
+    if (!editor) {
+      setReferenceSelection({ start: 0, end: 0, number: suggestMarkdownReferenceNumber(text) });
+      return;
+    }
+    setReferenceSelection({
+      start: editor.selectionStart,
+      end: editor.selectionEnd,
+      number: suggestMarkdownReferenceNumber(text),
+    });
+  };
+
+  const insertConfiguredReference = (options: { numberText: string; title: string; url: string }) => {
+    if (!activeTab || !referenceSelection) return;
+    const result = buildMarkdownReference(activeTab.content, referenceSelection.start, referenceSelection.end, options.numberText, options.url, options.title);
+    commitContent(result.value);
+    requestAnimationFrame(() => {
+      const editor = editorRef.current;
+      if (!editor) return;
+      editor.focus();
+      editor.setSelectionRange(result.start, result.end);
+    });
+  };
+
   const onScrollEditor = () => {
     if (!globalState.syncScroll || syncingRef.current || !editorRef.current || !previewPaneRef.current) return;
     syncingRef.current = true;
@@ -524,6 +552,7 @@ function App() {
         <IconButton title="Task list" onClick={() => runCommand("task")}><ListChecks size={16} /></IconButton>
         <IconButton title="Link" onClick={openLinkModal}><Link size={16} /></IconButton>
         <IconButton title="Image" onClick={openImageModal}><Image size={16} /></IconButton>
+        <IconButton title="Reference" onClick={openReferenceModal}><BookMarked size={16} /></IconButton>
         <IconButton title="Inline code" onClick={() => runCommand("inlineCode")}><Code2 size={16} /></IconButton>
         <IconButton title="Code block" onClick={() => runCommand("codeBlock")}><Braces size={16} /></IconButton>
         <IconButton title="Table" onClick={() => setTableOpen(true)}><Table2 size={16} /></IconButton>
@@ -660,6 +689,14 @@ function App() {
           initialAlt={imageSelection.text}
           onClose={() => setImageSelection(null)}
           onInsert={insertConfiguredImage}
+        />
+      )}
+
+      {referenceSelection && (
+        <ReferenceInsertModal
+          initialNumber={referenceSelection.number}
+          onClose={() => setReferenceSelection(null)}
+          onInsert={insertConfiguredReference}
         />
       )}
 

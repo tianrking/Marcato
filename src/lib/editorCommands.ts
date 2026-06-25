@@ -146,6 +146,50 @@ export function buildMarkdownImage(alt: string, source: string) {
   return `![${safeAlt}](${safeSource})`;
 }
 
+export function buildMarkdownReference(value: string, start: number, end: number, numberText: string, url: string, title: string): CommandResult {
+  const used = getUsedReferenceNumbers(value);
+  const parsed = Number.parseInt(numberText.replace(/[^\d]/g, ""), 10);
+  const baseNumber = Number.isNaN(parsed) ? suggestMarkdownReferenceNumber(value) : parsed;
+  const finalNumber = getNextAvailableReferenceNumber(used, baseNumber);
+  const selected = value.slice(start, end);
+  const inlineReference = `${selected}[${finalNumber}]`;
+  const baseValue = value.slice(0, start) + inlineReference + value.slice(end);
+  const separator = baseValue.length && !baseValue.endsWith("\n") ? "\n" : "";
+  const safeTitle = sanitizeMarkdownTitle(title.trim());
+  const definition = `[${finalNumber}]: ${url.trim() || "https://"}${safeTitle ? ` "${safeTitle}"` : ""}`;
+  const next = baseValue + separator + definition;
+  const caret = start + inlineReference.length;
+  return { value: next, start: caret, end: caret };
+}
+
+export function suggestMarkdownReferenceNumber(value: string) {
+  const used = getUsedReferenceNumbers(value);
+  const maxUsed = used.size ? Math.max(...used) : 0;
+  return getNextAvailableReferenceNumber(used, maxUsed + 1);
+}
+
+export function getUsedReferenceNumbers(value: string) {
+  const used = new Set<number>();
+  const regex = /^\[(\d+)\]:/gm;
+  let match = regex.exec(value);
+  while (match) {
+    const num = Number.parseInt(match[1], 10);
+    if (!Number.isNaN(num)) used.add(num);
+    match = regex.exec(value);
+  }
+  return used;
+}
+
+function getNextAvailableReferenceNumber(used: Set<number>, startNumber: number) {
+  let next = Math.max(1, startNumber || 1);
+  while (used.has(next)) next += 1;
+  return next;
+}
+
+function sanitizeMarkdownTitle(title: string) {
+  return title.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+}
+
 function tableDivider(alignment: TableAlignment) {
   if (alignment === "left") return ":---";
   if (alignment === "center") return ":---:";

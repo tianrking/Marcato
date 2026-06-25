@@ -67,7 +67,7 @@ must remain smooth and predictable after initial access.
 | Link insert modal | Done | `index.html` link modal | `src/components/LinkInsertModal.tsx` | URL/text modal with selection replacement implemented. |
 | Image insert modal | Done | `index.html` image modal | `src/components/ImageInsertModal.tsx` | URL, file embed, alt text, and selection replacement flow implemented. |
 | Table insert modal | Done | `index.html` table modal | `src/components/TableInsertModal.tsx` | Rows, columns, and table-wide alignment insert flow implemented. |
-| Reference insert modal | Missing | `index.html` reference modal | fixed template | Need number/url/title flow. |
+| Reference insert modal | Done | `index.html` reference modal | `src/components/ReferenceInsertModal.tsx`, `src/lib/editorCommands.ts` | Scans used definitions, suggests the next number, inserts inline marker plus definition with optional title. |
 | Emoji picker | Missing | `index.html`, `script.js` | none | Need GitHub emoji fetch/cache, skeleton, search, insert. |
 | Symbols/entities picker | Missing | `script.js` symbol groups | none | Need common symbols/entity insert flow. |
 | Alert insert UI | Partial | `index.html`, `script.js`, `styles.css` | `src/lib/editorCommands.ts` | Basic command exists; modal/grid/preview missing. |
