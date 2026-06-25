@@ -26,7 +26,7 @@ must remain smooth and predictable after initial access.
 | Main preview HTML sanitization | Done | `script.js sanitizePreviewHtml` | `src/lib/previewDocument.ts`, `src/lib/sanitizer.ts` | DOMPurify protects main Markdown HTML before `dangerouslySetInnerHTML`. |
 | Post-process HTML sanitization | Partial | `script.js` diagram/link sanitizing | `src/lib/diagramRenderers.ts`, `src/lib/sanitizer.ts`, `tests/e2e/diagram-remote.spec.mjs` | Remote SVG sanitize has browser proof; still audit Leaflet popups, fallbacks, and toolbar HTML. |
 | Safe links and anchor fallback | Done | `script.js` preview link interception | `src/lib/diagramRenderers.ts` | Preview links are single-bound, unsafe protocols are blocked, and hash anchors fall back through id/name/title lookup. |
-| PWA/runtime cache rules | Partial | `index.html`, `sw.js`, `script.js` | `vite.config.ts` | Avoid catch-all caching overriding GitHub/diagram/map rules; verify update behavior. |
+| PWA/runtime cache rules | Partial | `index.html`, `sw.js`, `script.js` | `vite.config.ts`, `vercel.json` | App-shell precache is narrowed to 12 entries / 551.19 KiB and Vercel serves `sw.js`/Workbox with `Cache-Control: no-cache`; still need deployed update-behavior proof. |
 
 ## Markdown Rendering
 
@@ -116,7 +116,7 @@ must remain smooth and predictable after initial access.
 | Accessibility announcements | Missing | `script.js` announcer | none | Need live region for copy/import/render/find actions. |
 | Loading skeletons | Partial | `script.js`, `styles.css` | GitHub tree is basic | Need emoji/GitHub/diagram skeletons where original had them. |
 | Error toasts and recovery | Partial | `script.js` | `src/App.tsx` | Standardize actionable errors and retry paths. |
-| Bundle/performance budget | Partial | build output | Vite build, `tests/e2e/performance.spec.mjs` | First-load index reduced from 1,999.76KB / gzip 634.90KB to ~433KB / gzip ~140KB by lazy-loading export and markdown fallback chunks; plain Markdown startup now has a browser test proving `diagramRenderers` is not requested until rich content appears. PWA precache and per-engine diagram chunks still need slimming. |
+| Bundle/performance budget | Partial | build output | Vite build, `tests/e2e/performance.spec.mjs` | First-load index reduced from 1,999.76KB / gzip 634.90KB to ~433KB / gzip ~140KB; plain Markdown startup now has a browser test proving `diagramRenderers` is not requested until rich content appears; PWA precache reduced from ~10.14 MiB to 551.19 KiB. Per-engine diagram chunks still need slimming. |
 
 ## Verification Matrix
 

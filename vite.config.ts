@@ -18,7 +18,12 @@ export default defineConfig({
       manifest: false,
       workbox: {
         maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,jpg,webmanifest,md}'],
+        globPatterns: [
+          'index.html',
+          'assets/index-*.js',
+          'assets/index-*.css',
+          '*.{ico,png,svg,jpg,webmanifest,md}',
+        ],
         runtimeCaching: [
           {
             urlPattern: ({ url }) => url.protocol === 'http:' || url.protocol === 'https:',
