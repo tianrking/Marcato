@@ -360,6 +360,95 @@ textarea {
   white-space: nowrap;
 }
 
+.health-panel {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 10px;
+}
+
+.health-panel strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 0;
+}
+
+.health-score {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.health-score span {
+  font-size: 30px;
+  font-weight: 750;
+  line-height: 1;
+}
+
+.health-score small {
+  color: var(--muted);
+}
+
+.health-score.strong span {
+  color: var(--accent-2);
+}
+
+.health-score.good span {
+  color: var(--accent);
+}
+
+.health-score.weak span {
+  color: var(--danger);
+}
+
+.health-signals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.health-signals span {
+  padding: 3px 7px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  background: var(--panel-2);
+  font-size: 12px;
+}
+
+.health-panel ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 7px;
+}
+
+.health-panel li {
+  position: relative;
+  padding-left: 14px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.health-panel li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.58em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-2);
+}
+
+.health-panel li.warning::before {
+  background: var(--danger);
+}
+
 .render-pill {
   margin-left: auto;
   border: 1px solid var(--line);

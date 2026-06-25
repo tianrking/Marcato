@@ -36,6 +36,7 @@ import {
   Save,
   Search,
   Share2,
+  ShieldCheck,
   Sigma,
   SplitSquareHorizontal,
   Strikethrough,
@@ -47,6 +48,7 @@ import {
 import { MAX_IMPORT_BYTES, MAX_TABS, SHARE_URL_SOFT_LIMIT, LANGUAGE_LABELS, UI_TEXT } from "./lib/constants";
 import { applyCommand, handleSmartEnter, type MarkdownCommand } from "./lib/editorCommands";
 import { copyImage, exportHtml, exportMarkdown, exportPdf, exportPng, getExportName } from "./lib/exporters";
+import { analyzeDocumentHealth } from "./lib/documentHealth";
 import { buildDiffPreview, findMatches, replaceAll, replaceOne } from "./lib/findReplace";
 import { fetchMarkdownFile, importFromGitHubUrl } from "./lib/githubImport";
 import { renderMarkdownToHtml } from "./lib/markdownCore";
@@ -112,6 +114,7 @@ function App() {
   const labels = UI_TEXT[globalState.language] || UI_TEXT.en;
   const matches = useMemo(() => findMatches(text, findOptions, getCurrentSelection(editorRef.current)), [text, findOptions]);
   const stats = useMemo(() => getStats(text), [text]);
+  const health = useMemo(() => analyzeDocumentHealth(text), [text]);
 
   useEffect(() => {
     document.documentElement.dataset.theme = globalState.theme;
@@ -622,12 +625,34 @@ function App() {
             dangerouslySetInnerHTML={{ __html: renderedHtml }}
           />
         </section>
-        {toc.length > 0 && (
+        {(toc.length > 0 || text.trim().length > 0) && (
           <aside className="toc-panel">
-            <strong>Outline</strong>
-            {toc.map((entry) => (
-              <a key={entry.id} href={`#${entry.id}`} style={{ paddingLeft: `${(entry.level - 1) * 10}px` }}>{entry.text}</a>
-            ))}
+            {toc.length > 0 && (
+              <>
+                <strong>Outline</strong>
+                {toc.map((entry) => (
+                  <a key={entry.id} href={`#${entry.id}`} style={{ paddingLeft: `${(entry.level - 1) * 10}px` }}>{entry.text}</a>
+                ))}
+              </>
+            )}
+            <div className="health-panel">
+              <strong><ShieldCheck size={15} /> Health</strong>
+              <div className={`health-score ${health.score >= 86 ? "strong" : health.score >= 68 ? "good" : "weak"}`}>
+                <span>{health.score}</span>
+                <small>{health.label}</small>
+              </div>
+              <div className="health-signals">
+                <span>{health.signals.headings} headings</span>
+                <span>{health.signals.links} links</span>
+                <span>{health.signals.images} images</span>
+                <span>{health.signals.codeBlocks} code</span>
+              </div>
+              <ul>
+                {(health.issues.length ? health.issues : [{ level: "info" as const, message: "No obvious issues found." }]).map((issue) => (
+                  <li key={issue.message} className={issue.level}>{issue.message}</li>
+                ))}
+              </ul>
+            </div>
           </aside>
         )}
       </main>
