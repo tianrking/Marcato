@@ -449,6 +449,24 @@ textarea {
   background: var(--danger);
 }
 
+.health-issue-button {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  display: inline;
+  font-size: inherit;
+  line-height: inherit;
+  text-align: left;
+}
+
+.health-issue-button:hover,
+.health-issue-button:focus-visible {
+  color: var(--text);
+  text-decoration: underline;
+}
+
 .render-pill {
   margin-left: auto;
   border: 1px solid var(--line);

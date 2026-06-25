@@ -306,6 +306,16 @@ function App() {
     editor.scrollTop = Math.max(0, (block.startLine - 1) * lineHeight - 80);
   }, [text]);
 
+  const jumpToLine = useCallback((line: number) => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    const range = lineRangeToOffsets(text, line, line);
+    editor.focus();
+    editor.setSelectionRange(range.start, range.end);
+    const lineHeight = Number.parseFloat(window.getComputedStyle(editor).lineHeight) || 22;
+    editor.scrollTop = Math.max(0, (line - 1) * lineHeight - 80);
+  }, [text]);
+
   const cycleMatch = (direction: 1 | -1) => {
     if (!matches.length) return;
     const next = (activeMatch + direction + matches.length) % matches.length;
@@ -502,7 +512,15 @@ function App() {
               </div>
               <ul>
                 {health.issues.length ? health.issues.map((issue) => (
-                  <li key={`${issue.code}-${JSON.stringify(issue.params || {})}`} className={issue.level}>{t(`health.issue.${issue.code}`, issue.params)}</li>
+                  <li key={`${issue.code}-${JSON.stringify(issue.params || {})}`} className={issue.level}>
+                    {issue.line ? (
+                      <button className="health-issue-button" type="button" onClick={() => jumpToLine(issue.line!)}>
+                        {t(`health.issue.${issue.code}`, issue.params)}
+                      </button>
+                    ) : (
+                      t(`health.issue.${issue.code}`, issue.params)
+                    )}
+                  </li>
                 )) : (
                   <li className="info">{t("health.empty")}</li>
                 )}
@@ -602,19 +620,30 @@ function lineNumbers(text: string) {
 }
 
 function lineRangeToOffsets(text: string, startLine: number, endLine: number) {
-  const lines = text.replace(/\r\n/g, "\n").split("\n");
+  const lines = splitLinesWithBreaks(text);
   const safeStartLine = Math.min(Math.max(1, startLine), lines.length);
   const safeEndLine = Math.min(Math.max(safeStartLine, endLine), lines.length);
   let start = 0;
   for (let index = 0; index < safeStartLine - 1; index += 1) {
-    start += lines[index].length + 1;
+    start += lines[index].length;
   }
   let end = start;
   for (let index = safeStartLine - 1; index < safeEndLine; index += 1) {
-    end += lines[index].length;
-    if (index < safeEndLine - 1) end += 1;
+    end += lines[index].replace(/\r\n$|\r$|\n$/, "").length;
+    if (index < safeEndLine - 1) end += lineBreakLength(lines[index]);
   }
   return { start, end };
+}
+
+function splitLinesWithBreaks(text: string) {
+  const lines = text.match(/[^\r\n]*(?:\r\n|\r|\n|$)/g) || [""];
+  if (lines.length > 1 && lines[lines.length - 1] === "") lines.pop();
+  return lines.length ? lines : [""];
+}
+
+function lineBreakLength(line: string) {
+  const match = line.match(/\r\n$|\r$|\n$/);
+  return match?.[0].length || 0;
 }
 
 function getRenderDelay(text: string) {
