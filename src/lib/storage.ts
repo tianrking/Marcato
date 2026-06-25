@@ -115,5 +115,5 @@ function normalizeLanguage(value: string) {
   if (lower.startsWith("zh-tw") || lower.startsWith("zh-hant") || lower === "tw") return "tw";
   if (lower.startsWith("zh")) return "zh";
   const base = lower.split("-")[0];
-  return ["en", "ja", "ko", "es", "fr", "de"].includes(base) ? base : "en";
+  return ["en", "ja", "ko", "pt", "es", "fr", "de", "ru", "it", "tr", "pl", "uk"].includes(base) ? base : "en";
 }

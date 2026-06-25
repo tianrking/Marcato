@@ -101,8 +101,8 @@ must remain smooth and predictable after initial access.
 
 | Area | Status | Original evidence | React evidence | Gap / acceptance |
 | --- | --- | --- | --- | --- |
-| 14-language coverage | Partial | `index.html`, `script.js` | `src/lib/i18n.ts` | Add pt, ru, it, tr, pl, uk to current en/zh/tw/ja/ko/es/fr/de set. |
-| Browser language detection | Partial | `script.js` | `src/lib/storage.ts` | Extend detection to all supported languages. |
+| 14-language coverage | Done | `index.html`, `script.js` | `src/lib/i18n.ts` | Covers en, zh, tw, ja, ko, pt, es, fr, de, ru, it, tr, pl, uk. |
+| Browser language detection | Done | `script.js` | `src/lib/storage.ts` | Normalizes all supported base languages plus zh-Hant/tw. |
 | Mobile menu | Missing | `index.html`, `styles.css`, `script.js` | responsive CSS only | Need original mobile action drawer/menu and mobile tabs. |
 | Mobile tab list/actions | Missing | `index.html`, `script.js` | none | Need mobile tab list, duplicate/close/reset actions. |
 | RTL/LTR behavior | Needs proof | `script.js`, `styles.css` | `src/App.tsx`, `src/components/WorkspaceToolbar.tsx` | Verify editor + preview + modals. |
