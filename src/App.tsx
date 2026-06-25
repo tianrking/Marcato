@@ -4,6 +4,7 @@ import {
   AlignCenter,
   AlignLeft,
   AlignRight,
+  BadgeAlert,
   BadgeCent,
   BookMarked,
   Bold,
@@ -32,6 +33,7 @@ import {
   Undo2,
 } from "lucide-react";
 import { AppHeader } from "./components/AppHeader";
+import { AlertInsertModal } from "./components/AlertInsertModal";
 import { FindReplacePanel } from "./components/FindReplacePanel";
 import { IconButton, Modal } from "./components/Common";
 import { GitHubImportModal } from "./components/GitHubImportModal";
@@ -44,7 +46,7 @@ import { TableInsertModal } from "./components/TableInsertModal";
 import { WorkspaceToolbar } from "./components/WorkspaceToolbar";
 import { useGlobalShortcuts } from "./hooks/useGlobalShortcuts";
 import { MAX_IMPORT_BYTES, MAX_TABS, SHARE_URL_SOFT_LIMIT } from "./lib/constants";
-import { applyCommand, buildMarkdownImage, buildMarkdownLink, buildMarkdownReference, buildMarkdownTable, handleSmartEnter, insertText, suggestMarkdownReferenceNumber, type MarkdownCommand, type TableAlignment } from "./lib/editorCommands";
+import { applyCommand, buildMarkdownAlert, buildMarkdownImage, buildMarkdownLink, buildMarkdownReference, buildMarkdownTable, handleSmartEnter, insertText, suggestMarkdownReferenceNumber, type MarkdownAlertType, type MarkdownCommand, type TableAlignment } from "./lib/editorCommands";
 import { copyImage, exportHtml, exportMarkdown, exportPdf, exportPng, getExportName } from "./lib/exporters";
 import { analyzeDocumentHealth } from "./lib/documentHealth";
 import { buildDiffPreview, findMatches, replaceAll, replaceOne } from "./lib/findReplace";
@@ -103,6 +105,7 @@ function App() {
   const [imageSelection, setImageSelection] = useState<{ end: number; start: number; text: string } | null>(null);
   const [referenceSelection, setReferenceSelection] = useState<{ end: number; number: number; start: number } | null>(null);
   const [symbolsSelection, setSymbolsSelection] = useState<{ end: number; start: number } | null>(null);
+  const [alertSelection, setAlertSelection] = useState<{ end: number; start: number } | null>(null);
   const [toast, setToast] = useState("");
   const [dragging, setDragging] = useState(false);
 
@@ -472,6 +475,27 @@ function App() {
     });
   };
 
+  const openAlertModal = () => {
+    const editor = editorRef.current;
+    if (!editor) {
+      setAlertSelection({ start: 0, end: 0 });
+      return;
+    }
+    setAlertSelection({ start: editor.selectionStart, end: editor.selectionEnd });
+  };
+
+  const insertConfiguredAlert = (type: MarkdownAlertType) => {
+    if (!activeTab || !alertSelection) return;
+    const result = buildMarkdownAlert(activeTab.content, alertSelection.start, alertSelection.end, type);
+    commitContent(result.value);
+    requestAnimationFrame(() => {
+      const editor = editorRef.current;
+      if (!editor) return;
+      editor.focus();
+      editor.setSelectionRange(result.start, result.end);
+    });
+  };
+
   const onScrollEditor = () => {
     if (!globalState.syncScroll || syncingRef.current || !editorRef.current || !previewPaneRef.current) return;
     syncingRef.current = true;
@@ -580,6 +604,7 @@ function App() {
         <IconButton title="Image" onClick={openImageModal}><Image size={16} /></IconButton>
         <IconButton title="Reference" onClick={openReferenceModal}><BookMarked size={16} /></IconButton>
         <IconButton title="Symbols & HTML entities" onClick={openSymbolsModal}><BadgeCent size={16} /></IconButton>
+        <IconButton title="Markdown alerts" onClick={openAlertModal}><BadgeAlert size={16} /></IconButton>
         <IconButton title="Inline code" onClick={() => runCommand("inlineCode")}><Code2 size={16} /></IconButton>
         <IconButton title="Code block" onClick={() => runCommand("codeBlock")}><Braces size={16} /></IconButton>
         <IconButton title="Table" onClick={() => setTableOpen(true)}><Table2 size={16} /></IconButton>
@@ -731,6 +756,13 @@ function App() {
         <SymbolsInsertModal
           onClose={() => setSymbolsSelection(null)}
           onInsert={insertSymbols}
+        />
+      )}
+
+      {alertSelection && (
+        <AlertInsertModal
+          onClose={() => setAlertSelection(null)}
+          onInsert={insertConfiguredAlert}
         />
       )}
 

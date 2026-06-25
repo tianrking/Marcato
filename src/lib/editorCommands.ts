@@ -31,6 +31,16 @@ export interface CommandResult {
   end: number;
 }
 
+export type MarkdownAlertType = "note" | "tip" | "important" | "warning" | "caution";
+
+export const MARKDOWN_ALERT_LABELS: Record<MarkdownAlertType, string> = {
+  note: "Note",
+  tip: "Tip",
+  important: "Important",
+  warning: "Warning",
+  caution: "Caution",
+};
+
 export function applyCommand(value: string, command: MarkdownCommand, start: number, end: number): CommandResult {
   const selected = value.slice(start, end);
   const lineRange = getLineRange(value, start, end);
@@ -75,7 +85,7 @@ export function applyCommand(value: string, command: MarkdownCommand, start: num
     case "reference":
       return insertBlock(value, end, `\n\n[${selected || "Reference"}]: https://example.com\n`);
     case "alert":
-      return insertBlock(value, start, `\n> [!NOTE]\n> ${selected || "Important note"}\n`);
+      return buildMarkdownAlert(value, start, end, "note");
     case "mermaid":
       return insertBlock(value, start, "\n```mermaid\nflowchart LR\n  A[Start] --> B[Preview]\n```\n");
     case "math":
@@ -188,6 +198,18 @@ function getNextAvailableReferenceNumber(used: Set<number>, startNumber: number)
 
 function sanitizeMarkdownTitle(title: string) {
   return title.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+}
+
+export function buildMarkdownAlert(value: string, start: number, end: number, type: MarkdownAlertType): CommandResult {
+  const label = MARKDOWN_ALERT_LABELS[type];
+  const selected = value.slice(start, end).trim();
+  const body = selected || `${label} details go here.`;
+  const quotedBody = body.split(/\r?\n/).map((line) => `> ${line}`).join("\n");
+  const block = `> [!${type.toUpperCase()}]\n${quotedBody}\n`;
+  const needsLeadingBreak = start > 0 && value[start - 1] !== "\n";
+  const needsTrailingBreak = end < value.length && value[end] !== "\n";
+  const replacement = `${needsLeadingBreak ? "\n" : ""}${block}${needsTrailingBreak ? "\n" : ""}`;
+  return replaceRange(value, start, end, replacement);
 }
 
 function tableDivider(alignment: TableAlignment) {

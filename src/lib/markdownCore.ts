@@ -12,6 +12,15 @@ const HIGHLIGHT_PATTERN = /^==(?=\S)([\s\S]*?\S)==/;
 const INLINE_MATH_PATTERN = /^\$(?!\s|\$)([\s\S]*?\S)\$(?!\$)/;
 const EMPTY_LINE_PATTERN = /^\s*$/;
 const MARKDOWN_LIST_MARKER_PATTERN = /^(\s*)(?:[-*+]\s+|\d+\.\s+|>\s+)/;
+const GITHUB_ALERT_MARKER_PATTERN = /^\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\](?:(?:\s|&nbsp;|<br\s*\/?>)+|$)/i;
+
+const GITHUB_ALERT_LABELS: Record<string, string> = {
+  note: "Note",
+  tip: "Tip",
+  important: "Important",
+  warning: "Warning",
+  caution: "Caution",
+};
 
 interface MarkdownContext {
   footnoteDefinitions: Map<string, string>;
@@ -93,7 +102,7 @@ export function parseFrontmatter(markdown: string): { body: string; frontmatter?
 
 function renderFullMarkdown(markdown: string, frontmatter: Record<string, unknown> | undefined, includeFrontmatter: boolean) {
   const marked = getMarked();
-  const rendered = marked.parse(markdown, { async: false }) as string;
+  const rendered = enhanceGitHubAlerts(marked.parse(markdown, { async: false }) as string);
   if (!includeFrontmatter || !frontmatter || Object.keys(frontmatter).length === 0) return rendered;
   const rows = Object.entries(frontmatter)
     .map(([key, value]) => {
@@ -102,6 +111,18 @@ function renderFullMarkdown(markdown: string, frontmatter: Record<string, unknow
     })
     .join("");
   return `<table class="frontmatter-table"><tbody>${rows}</tbody></table>\n${rendered}`;
+}
+
+function enhanceGitHubAlerts(html: string) {
+  return html.replace(/<blockquote>\s*<p>([\s\S]*?)<\/p>/gi, (_match, firstParagraph: string) => {
+    const marker = GITHUB_ALERT_MARKER_PATTERN.exec(firstParagraph);
+    if (!marker) return _match;
+    const type = marker[1].toLowerCase();
+    const remaining = firstParagraph.replace(GITHUB_ALERT_MARKER_PATTERN, "").trim();
+    const label = GITHUB_ALERT_LABELS[type] || marker[1];
+    const title = `<p class="markdown-alert-title"><span class="markdown-alert-icon" aria-hidden="true"></span><span>${escapeHtml(label)}</span></p>`;
+    return `<blockquote class="markdown-alert markdown-alert-${escapeHtmlAttribute(type)}">${title}${remaining ? `<p>${remaining}</p>` : ""}`;
+  });
 }
 
 function getMarked() {

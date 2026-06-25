@@ -39,7 +39,7 @@ must remain smooth and predictable after initial access.
 | Definition lists | Needs proof | `preview-worker.js` | `src/lib/markdownCore.ts` | Verify nested/continuation behavior. |
 | Superscript/subscript/highlight | Needs proof | `preview-worker.js` | `src/lib/markdownCore.ts` | Verify escaping and edge cases. |
 | Math blocks and inline math | Needs proof | `preview-worker.js`, `script.js` | `src/lib/markdownCore.ts`, `src/lib/diagramRenderers.ts` | Verify escaped dollar handling and KaTeX error rendering. |
-| GitHub alerts | Partial | `script.js enhanceGitHubAlerts`, `styles.css` | `src/lib/editorCommands.ts` | Rendering enhancement and styling parity still missing. |
+| GitHub alerts | Done | `script.js enhanceGitHubAlerts`, `styles.css` | `src/lib/markdownCore.ts`, `src/styles.css` | NOTE/TIP/IMPORTANT/WARNING/CAUTION blockquotes render with GitHub-style titles and colors. |
 | Segmented incremental preview | Partial | `script.js`, `preview-worker.js` | `src/lib/markdownCore.ts`, `src/components/PreviewPane.tsx` | Works, but renderer post-process is still imperative and can rerender too much. |
 
 ## Diagrams And Rich Blocks
@@ -70,7 +70,7 @@ must remain smooth and predictable after initial access.
 | Reference insert modal | Done | `index.html` reference modal | `src/components/ReferenceInsertModal.tsx`, `src/lib/editorCommands.ts` | Scans used definitions, suggests the next number, inserts inline marker plus definition with optional title. |
 | Emoji picker | Missing | `index.html`, `script.js` | none | Need GitHub emoji fetch/cache, skeleton, search, insert. |
 | Symbols/entities picker | Done | `script.js` symbol groups | `src/components/SymbolsInsertModal.tsx` | Searchable grouped picker with multi-select, ordered entity insertion, and per-entity copy. |
-| Alert insert UI | Partial | `index.html`, `script.js`, `styles.css` | `src/lib/editorCommands.ts` | Basic command exists; modal/grid/preview missing. |
+| Alert insert UI | Done | `index.html`, `script.js`, `styles.css` | `src/components/AlertInsertModal.tsx`, `src/lib/editorCommands.ts` | Type picker with previews inserts selected alert, preserving selected text as body. |
 | Smart enter/list continuation | Needs proof | `script.js` | `src/lib/editorCommands.ts` | Verify task/list/quote continuation and indentation edge cases. |
 | Undo/redo history | Needs proof | `script.js` custom history | `src/stores/appStore.ts` | Verify multi-tab history, restore, and limits. |
 

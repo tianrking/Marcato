@@ -983,6 +983,129 @@ textarea {
   background: var(--button-bg);
 }
 
+.alert-insert {
+  display: grid;
+  gap: 12px;
+}
+
+.alert-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+  max-height: min(45vh, 360px);
+  overflow: auto;
+  padding: 2px;
+}
+
+.alert-option {
+  align-items: stretch;
+  padding: 0;
+  border: 1px solid var(--line);
+  background: transparent;
+}
+
+.alert-option.is-selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.markdown-alert {
+  margin: 1em 0;
+  padding: 0.75rem 1rem;
+  border-left: 0.25em solid;
+  border-radius: 8px;
+}
+
+.alert-preview.markdown-alert {
+  width: 100%;
+  margin: 0;
+  text-align: left;
+}
+
+.markdown-alert > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown-alert-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 6px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.markdown-alert-icon {
+  width: 0.85em;
+  height: 0.85em;
+  border: 2px solid currentColor;
+  border-radius: 999px;
+}
+
+.markdown-alert-note {
+  color: #0969da;
+  border-left-color: #0969da;
+  background: #ddf4ff;
+}
+
+.markdown-alert-tip {
+  color: #1a7f37;
+  border-left-color: #1a7f37;
+  background: #dafbe1;
+}
+
+.markdown-alert-important {
+  color: #8250df;
+  border-left-color: #8250df;
+  background: #fbefff;
+}
+
+.markdown-alert-warning {
+  color: #9a6700;
+  border-left-color: #9a6700;
+  background: #fff8c5;
+}
+
+.markdown-alert-caution {
+  color: #cf222e;
+  border-left-color: #cf222e;
+  background: #ffebe9;
+}
+
+[data-theme="dark"] .markdown-alert-note {
+  color: #4493f8;
+  border-left-color: #4493f8;
+  background: rgba(31, 111, 235, 0.15);
+}
+
+[data-theme="dark"] .markdown-alert-tip {
+  color: #3fb950;
+  border-left-color: #3fb950;
+  background: rgba(35, 134, 54, 0.15);
+}
+
+[data-theme="dark"] .markdown-alert-important {
+  color: #ab7df8;
+  border-left-color: #ab7df8;
+  background: rgba(137, 87, 229, 0.15);
+}
+
+[data-theme="dark"] .markdown-alert-warning {
+  color: #d29922;
+  border-left-color: #d29922;
+  background: rgba(210, 153, 34, 0.18);
+}
+
+[data-theme="dark"] .markdown-alert-caution {
+  color: #f85149;
+  border-left-color: #f85149;
+  background: rgba(248, 81, 73, 0.18);
+}
+
+.markdown-alert > *:not(.markdown-alert-title) {
+  color: var(--text);
+}
+
 .table-preview {
   overflow: auto;
   border: 1px solid var(--line);
