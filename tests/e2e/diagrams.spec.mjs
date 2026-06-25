@@ -47,6 +47,18 @@ const localDiagramFixture = `# Local Diagram Fixture
   { name: 'ready', wave: '0.1.0.' }
 ] }
 \`\`\`
+
+\`\`\`stl
+solid marcato
+  facet normal 0 0 1
+    outer loop
+      vertex 0 0 0
+      vertex 1 0 0
+      vertex 0 1 0
+    endloop
+  endfacet
+endsolid marcato
+\`\`\`
 `;
 
 const startedAt = Date.now();
@@ -90,6 +102,12 @@ await withApp(async ({ consoleMessages, page, server }) => {
   await waitForPreviewText(page, "Local Diagram Fixture");
   await page.locator('.diagram-viewer[data-diagram-engine="markmap"] svg.markmap-svg').waitFor({ state: "visible", timeout: 20_000 });
   await page.locator('.diagram-viewer[data-diagram-engine="wavedrom"] svg.wavedrom-svg').waitFor({ state: "visible", timeout: 20_000 });
+  await page.locator('.diagram-viewer[data-diagram-engine="stl"] canvas.stl-canvas').waitFor({ state: "visible", timeout: 20_000 });
+  const stlViewer = page.locator('.diagram-viewer[data-diagram-engine="stl"]');
+  await stlViewer.getByRole("button", { name: "Wireframe" }).click();
+  await stlViewer.getByRole("button", { name: "Open" }).click();
+  await page.locator(".stl-viewer-overlay canvas.stl-canvas").waitFor({ state: "visible", timeout: 20_000 });
+  await page.locator(".stl-viewer-overlay").getByRole("button", { name: "Close" }).click();
   const markmapChecks = await page.evaluate(() => {
     const viewer = document.querySelector('.diagram-viewer[data-diagram-engine="markmap"]');
     const svg = viewer?.querySelector("svg.markmap-svg");

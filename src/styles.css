@@ -964,6 +964,34 @@ button:focus-visible {
   width: 100%;
   max-height: 420px;
   display: block;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #0f172a;
+}
+
+.stl-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.stl-viewer-panel {
+  width: min(1080px, 94vw);
+  height: min(760px, 88vh);
+}
+
+.stl-modal-body {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 8px;
+  min-height: 0;
+  padding: 12px;
+}
+
+.stl-modal-body .stl-canvas {
+  height: 100%;
+  max-height: none;
 }
 
 .find-panel {

@@ -282,40 +282,9 @@ function renderStl(root: HTMLElement, theme: "light" | "dark", signal?: AbortSig
     if (node.dataset.rendered === "1") return;
     const code = decodeURIComponent(node.dataset.originalCode || "");
     try {
-      node.innerHTML = "";
-      const scene = new THREE.Scene();
-      scene.background = new THREE.Color(theme === "dark" ? 0x0f172a : 0xf8fafc);
-      const camera = new THREE.PerspectiveCamera(45, 1.6, 0.1, 1000);
-      camera.position.set(0, 0, 80);
-      const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
-      renderer.setSize(640, 400);
-      renderer.domElement.className = "stl-canvas";
-      node.appendChild(renderer.domElement);
-      scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 1.6));
-      const loader = new STLLoader();
-      const geometry = loader.parse(new TextEncoder().encode(code).buffer);
-      geometry.computeBoundingSphere();
-      const material = new THREE.MeshStandardMaterial({ color: theme === "dark" ? 0x94a3b8 : 0x2563eb, metalness: 0.15, roughness: 0.55 });
-      const mesh = new THREE.Mesh(geometry, material);
-      scene.add(mesh);
-      const radius = geometry.boundingSphere?.radius || 40;
-      camera.position.z = radius * 2.8;
-      const controls = new OrbitControls(camera, renderer.domElement);
-      controls.enableDamping = true;
-      let animationFrame = 0;
-      const animate = () => {
-        if (!node.isConnected) return;
-        controls.update();
-        renderer.render(scene, camera);
-        animationFrame = requestAnimationFrame(animate);
-      };
-      animate();
+      const cleanupViewer = setupStlViewer(node, code, theme, { height: 400, width: 640 });
       registerPreviewCleanup(node, () => {
-        cancelAnimationFrame(animationFrame);
-        controls.dispose();
-        geometry.dispose();
-        material.dispose();
-        renderer.dispose();
+        cleanupViewer();
         delete node.dataset.rendered;
         node.innerHTML = "";
       });
@@ -324,6 +293,111 @@ function renderStl(root: HTMLElement, theme: "light" | "dark", signal?: AbortSig
     } catch (error) {
       markError(node.closest<HTMLElement>(".diagram-viewer"), error);
     }
+  });
+}
+
+function setupStlViewer(container: HTMLElement, code: string, theme: "light" | "dark", size: { allowOpen?: boolean; height: number; width: number }) {
+  container.innerHTML = "";
+  const controlsBar = document.createElement("div");
+  controlsBar.className = "stl-controls";
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(theme === "dark" ? 0x0f172a : 0xf8fafc);
+  const camera = new THREE.PerspectiveCamera(45, size.width / size.height, 0.1, 1000);
+  const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+  renderer.setSize(size.width, size.height);
+  renderer.domElement.className = "stl-canvas";
+  container.append(controlsBar, renderer.domElement);
+
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 1.6));
+  const loader = new STLLoader();
+  const geometry = loader.parse(new TextEncoder().encode(code).buffer);
+  geometry.computeBoundingSphere();
+  geometry.computeVertexNormals();
+  const material = new THREE.MeshStandardMaterial({ color: theme === "dark" ? 0x94a3b8 : 0x2563eb, metalness: 0.15, roughness: 0.55 });
+  const mesh = new THREE.Mesh(geometry, material);
+  scene.add(mesh);
+  const radius = geometry.boundingSphere?.radius || 40;
+  const center = geometry.boundingSphere?.center || new THREE.Vector3();
+  camera.position.set(center.x, center.y, center.z + radius * 2.8);
+  camera.near = Math.max(0.01, radius / 100);
+  camera.far = radius * 100;
+  camera.updateProjectionMatrix();
+  const controls = new OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.target.copy(center);
+
+  const solid = makeStlButton("Solid", () => {
+    material.wireframe = false;
+  });
+  const wireframe = makeStlButton("Wireframe", () => {
+    material.wireframe = true;
+  });
+  const reset = makeStlButton("Reset", () => {
+    mesh.rotation.set(0, 0, 0);
+    camera.position.set(center.x, center.y, center.z + radius * 2.8);
+    controls.target.copy(center);
+    controls.update();
+  });
+  const png = makeStlButton("PNG", () => {
+    renderer.domElement.toBlob((blob) => {
+      if (blob) void navigator.clipboard?.write?.([new ClipboardItem({ [blob.type]: blob })]);
+    }, "image/png");
+  });
+  const open = makeStlButton("Open", () => openStlViewerModal(code, theme));
+  controlsBar.append(solid, wireframe, reset, png);
+  if (size.allowOpen !== false) controlsBar.append(open);
+
+  let animationFrame = 0;
+  const animate = () => {
+    if (!container.isConnected) return;
+    controls.update();
+    renderer.render(scene, camera);
+    animationFrame = requestAnimationFrame(animate);
+  };
+  animate();
+
+  return () => {
+    cancelAnimationFrame(animationFrame);
+    controls.dispose();
+    geometry.dispose();
+    material.dispose();
+    renderer.dispose();
+    controlsBar.replaceChildren();
+  };
+}
+
+function makeStlButton(label: string, onClick: () => void) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "mini-button";
+  button.textContent = label;
+  button.addEventListener("click", onClick);
+  return button;
+}
+
+function openStlViewerModal(code: string, theme: "light" | "dark") {
+  const overlay = document.createElement("div");
+  overlay.className = "zoom-overlay stl-viewer-overlay";
+  const panel = document.createElement("div");
+  panel.className = "zoom-panel stl-viewer-panel";
+  const header = document.createElement("div");
+  header.className = "zoom-toolbar";
+  const close = makeStlButton("Close", cleanup);
+  const body = document.createElement("div");
+  body.className = "stl-modal-body";
+  header.append(close);
+  panel.append(header, body);
+  overlay.append(panel);
+  document.body.appendChild(overlay);
+  const cleanupViewer = setupStlViewer(body, code, theme, { allowOpen: false, height: 620, width: 960 });
+
+  function cleanup() {
+    cleanupViewer();
+    overlay.remove();
+  }
+
+  overlay.addEventListener("click", (event) => {
+    if (event.target === overlay) cleanup();
   });
 }
 
