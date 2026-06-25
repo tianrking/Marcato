@@ -44,7 +44,7 @@ import { buildDiffPreview, findMatches, replaceAll, replaceOne } from "./lib/fin
 import { fetchMarkdownFile, importFromGitHubUrl } from "./lib/githubImport";
 import { i18n } from "./lib/i18n";
 import { renderMarkdownToHtml } from "./lib/markdownCore";
-import { createPreviewDocument, EMPTY_PREVIEW_DOCUMENT, previewDocumentToHtml } from "./lib/previewDocument";
+import { createPreviewDocument, EMPTY_PREVIEW_DOCUMENT, previewDocumentToHtml, type PreviewBlock } from "./lib/previewDocument";
 import { buildShareUrl, readShareFromLocation } from "./lib/share";
 import {
   loadActiveTabId,
@@ -80,6 +80,7 @@ function App() {
   const [toc, setToc] = useState<RenderResult["toc"]>([]);
   const [renderState, setRenderState] = useState<"idle" | "rendering" | "error">("idle");
   const [renderError, setRenderError] = useState("");
+  const [selectedPreviewBlockId, setSelectedPreviewBlockId] = useState("");
   const [findOpen, setFindOpen] = useState(false);
   const [findOptions, setFindOptions] = useState<FindOptions>(INITIAL_FIND);
   const [activeMatch, setActiveMatch] = useState(0);
@@ -423,6 +424,17 @@ function App() {
     showToast(ok ? t("toast.previewImageCopied") : t("toast.clipboardImageUnavailable"));
   };
 
+  const selectPreviewBlock = useCallback((block: PreviewBlock) => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    const range = lineRangeToOffsets(text, block.startLine, block.endLine);
+    setSelectedPreviewBlockId(block.id);
+    editor.focus();
+    editor.setSelectionRange(range.start, range.end);
+    const lineHeight = Number.parseFloat(window.getComputedStyle(editor).lineHeight) || 22;
+    editor.scrollTop = Math.max(0, (block.startLine - 1) * lineHeight - 80);
+  }, [text]);
+
   const cycleMatch = (direction: 1 | -1) => {
     if (!matches.length) return;
     const next = (activeMatch + direction + matches.length) % matches.length;
@@ -586,7 +598,12 @@ function App() {
             {renderState === "rendering" && <span className="render-pill">{t("status.rendering")}</span>}
             {renderError && <span className="render-pill error">{renderError}</span>}
           </div>
-          <PreviewPane ref={previewRef} document={previewDocument} />
+          <PreviewPane
+            ref={previewRef}
+            document={previewDocument}
+            selectedBlockId={selectedPreviewBlockId}
+            onBlockSelect={selectPreviewBlock}
+          />
         </section>
         {(toc.length > 0 || text.trim().length > 0) && (
           <aside className="toc-panel">
@@ -718,6 +735,22 @@ function getStats(text: string) {
 function lineNumbers(text: string) {
   const count = Math.max(1, text.split("\n").length);
   return Array.from({ length: count }, (_, index) => index + 1).join("\n");
+}
+
+function lineRangeToOffsets(text: string, startLine: number, endLine: number) {
+  const lines = text.replace(/\r\n/g, "\n").split("\n");
+  const safeStartLine = Math.min(Math.max(1, startLine), lines.length);
+  const safeEndLine = Math.min(Math.max(safeStartLine, endLine), lines.length);
+  let start = 0;
+  for (let index = 0; index < safeStartLine - 1; index += 1) {
+    start += lines[index].length + 1;
+  }
+  let end = start;
+  for (let index = safeStartLine - 1; index < safeEndLine; index += 1) {
+    end += lines[index].length;
+    if (index < safeEndLine - 1) end += 1;
+  }
+  return { start, end };
 }
 
 function getRenderDelay(text: string) {
