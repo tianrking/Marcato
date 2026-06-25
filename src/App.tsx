@@ -34,23 +34,18 @@ import {
   Undo2,
 } from "lucide-react";
 import { AppHeader } from "./components/AppHeader";
-import { AlertInsertModal } from "./components/AlertInsertModal";
-import { EmojiInsertModal } from "./components/EmojiInsertModal";
 import { FindReplacePanel } from "./components/FindReplacePanel";
 import { IconButton, Modal } from "./components/Common";
 import { GitHubImportModal } from "./components/GitHubImportModal";
-import { ImageInsertModal } from "./components/ImageInsertModal";
-import { LinkInsertModal } from "./components/LinkInsertModal";
+import { InsertModalHost } from "./components/InsertModalHost";
 import { PreviewPane } from "./components/PreviewPane";
-import { ReferenceInsertModal } from "./components/ReferenceInsertModal";
-import { SymbolsInsertModal } from "./components/SymbolsInsertModal";
-import { TableInsertModal } from "./components/TableInsertModal";
 import { WorkspaceToolbar } from "./components/WorkspaceToolbar";
 import { useFindReplace } from "./hooks/useFindReplace";
 import { useGlobalShortcuts } from "./hooks/useGlobalShortcuts";
+import { useInsertModals } from "./hooks/useInsertModals";
 import { useMarkdownRender } from "./hooks/useMarkdownRender";
 import { MAX_IMPORT_BYTES, MAX_TABS } from "./lib/constants";
-import { applyCommand, buildMarkdownAlert, buildMarkdownImage, buildMarkdownLink, buildMarkdownReference, buildMarkdownTable, handleSmartEnter, insertText, suggestMarkdownReferenceNumber, type MarkdownAlertType, type MarkdownCommand, type TableAlignment } from "./lib/editorCommands";
+import { applyCommand, handleSmartEnter, type MarkdownCommand } from "./lib/editorCommands";
 import { copyImage, exportHtml, exportMarkdown, exportPdf, exportPng, getExportName } from "./lib/exporters";
 import { analyzeDocumentHealth } from "./lib/documentHealth";
 import { fetchMarkdownFile, importFromGitHubUrl } from "./lib/githubImport";
@@ -85,13 +80,6 @@ function App() {
   const [githubUrl, setGithubUrl] = useState("");
   const [githubFiles, setGithubFiles] = useState<GitHubMarkdownFile[]>([]);
   const [selectedGithubPaths, setSelectedGithubPaths] = useState<Set<string>>(new Set());
-  const [tableOpen, setTableOpen] = useState(false);
-  const [linkSelection, setLinkSelection] = useState<{ end: number; start: number; text: string } | null>(null);
-  const [imageSelection, setImageSelection] = useState<{ end: number; start: number; text: string } | null>(null);
-  const [referenceSelection, setReferenceSelection] = useState<{ end: number; number: number; start: number } | null>(null);
-  const [symbolsSelection, setSymbolsSelection] = useState<{ end: number; start: number } | null>(null);
-  const [alertSelection, setAlertSelection] = useState<{ end: number; start: number } | null>(null);
-  const [emojiSelection, setEmojiSelection] = useState<{ end: number; start: number } | null>(null);
   const [toast, setToast] = useState("");
   const [dragging, setDragging] = useState(false);
 
@@ -111,6 +99,7 @@ function App() {
   const text = activeTab?.content || "";
   const commitContent = useCallback((content: string) => updateActiveContent(content, true), [updateActiveContent]);
   const findReplace = useFindReplace(text, editorRef, commitContent);
+  const insertModals = useInsertModals({ activeTab, commitContent, editorRef, text });
   const stats = useMemo(() => getStats(text), [text]);
   const health = useMemo(() => analyzeDocumentHealth(text), [text]);
   const renderedHtml = useMemo(() => previewDocumentToHtml(previewDocument), [previewDocument]);
@@ -300,164 +289,6 @@ function App() {
     editor.scrollTop = Math.max(0, (line - 1) * lineHeight - 80);
   }, [text]);
 
-  const insertConfiguredTable = (options: { alignment: TableAlignment; columns: number; rows: number }) => {
-    const editor = editorRef.current;
-    if (!editor || !activeTab) return;
-    const table = buildMarkdownTable(options.columns, options.rows, options.alignment);
-    const result = insertText(activeTab.content, editor.selectionStart, table);
-    commitContent(result.value);
-    requestAnimationFrame(() => {
-      editor.focus();
-      editor.setSelectionRange(result.start, result.end);
-    });
-  };
-
-  const openLinkModal = () => {
-    const editor = editorRef.current;
-    if (!editor) {
-      setLinkSelection({ start: 0, end: 0, text: "" });
-      return;
-    }
-    setLinkSelection({
-      start: editor.selectionStart,
-      end: editor.selectionEnd,
-      text: text.slice(editor.selectionStart, editor.selectionEnd),
-    });
-  };
-
-  const insertConfiguredLink = (options: { text: string; url: string }) => {
-    if (!activeTab || !linkSelection) return;
-    const markdown = buildMarkdownLink(options.text, options.url);
-    const next = activeTab.content.slice(0, linkSelection.start) + markdown + activeTab.content.slice(linkSelection.end);
-    commitContent(next);
-    requestAnimationFrame(() => {
-      const editor = editorRef.current;
-      if (!editor) return;
-      const labelStart = linkSelection.start + 1;
-      editor.focus();
-      editor.setSelectionRange(labelStart, labelStart + (options.text.trim() || "link text").length);
-    });
-  };
-
-  const openImageModal = () => {
-    const editor = editorRef.current;
-    if (!editor) {
-      setImageSelection({ start: 0, end: 0, text: "" });
-      return;
-    }
-    setImageSelection({
-      start: editor.selectionStart,
-      end: editor.selectionEnd,
-      text: text.slice(editor.selectionStart, editor.selectionEnd),
-    });
-  };
-
-  const insertConfiguredImage = (options: { alt: string; source: string }) => {
-    if (!activeTab || !imageSelection) return;
-    const markdown = buildMarkdownImage(options.alt, options.source);
-    const next = activeTab.content.slice(0, imageSelection.start) + markdown + activeTab.content.slice(imageSelection.end);
-    commitContent(next);
-    requestAnimationFrame(() => {
-      const editor = editorRef.current;
-      if (!editor) return;
-      const altStart = imageSelection.start + 2;
-      editor.focus();
-      editor.setSelectionRange(altStart, altStart + (options.alt.trim() || "image alt").length);
-    });
-  };
-
-  const openReferenceModal = () => {
-    const editor = editorRef.current;
-    if (!editor) {
-      setReferenceSelection({ start: 0, end: 0, number: suggestMarkdownReferenceNumber(text) });
-      return;
-    }
-    setReferenceSelection({
-      start: editor.selectionStart,
-      end: editor.selectionEnd,
-      number: suggestMarkdownReferenceNumber(text),
-    });
-  };
-
-  const insertConfiguredReference = (options: { numberText: string; title: string; url: string }) => {
-    if (!activeTab || !referenceSelection) return;
-    const result = buildMarkdownReference(activeTab.content, referenceSelection.start, referenceSelection.end, options.numberText, options.url, options.title);
-    commitContent(result.value);
-    requestAnimationFrame(() => {
-      const editor = editorRef.current;
-      if (!editor) return;
-      editor.focus();
-      editor.setSelectionRange(result.start, result.end);
-    });
-  };
-
-  const openSymbolsModal = () => {
-    const editor = editorRef.current;
-    if (!editor) {
-      setSymbolsSelection({ start: 0, end: 0 });
-      return;
-    }
-    setSymbolsSelection({ start: editor.selectionStart, end: editor.selectionEnd });
-  };
-
-  const insertSymbols = (entities: string[]) => {
-    if (!activeTab || !symbolsSelection || entities.length === 0) return;
-    const insertion = entities.join(" ");
-    const next = activeTab.content.slice(0, symbolsSelection.start) + insertion + activeTab.content.slice(symbolsSelection.end);
-    commitContent(next);
-    requestAnimationFrame(() => {
-      const editor = editorRef.current;
-      if (!editor) return;
-      const caret = symbolsSelection.start + insertion.length;
-      editor.focus();
-      editor.setSelectionRange(caret, caret);
-    });
-  };
-
-  const openAlertModal = () => {
-    const editor = editorRef.current;
-    if (!editor) {
-      setAlertSelection({ start: 0, end: 0 });
-      return;
-    }
-    setAlertSelection({ start: editor.selectionStart, end: editor.selectionEnd });
-  };
-
-  const insertConfiguredAlert = (type: MarkdownAlertType) => {
-    if (!activeTab || !alertSelection) return;
-    const result = buildMarkdownAlert(activeTab.content, alertSelection.start, alertSelection.end, type);
-    commitContent(result.value);
-    requestAnimationFrame(() => {
-      const editor = editorRef.current;
-      if (!editor) return;
-      editor.focus();
-      editor.setSelectionRange(result.start, result.end);
-    });
-  };
-
-  const openEmojiModal = () => {
-    const editor = editorRef.current;
-    if (!editor) {
-      setEmojiSelection({ start: 0, end: 0 });
-      return;
-    }
-    setEmojiSelection({ start: editor.selectionStart, end: editor.selectionEnd });
-  };
-
-  const insertEmojis = (shortcodes: string[]) => {
-    if (!activeTab || !emojiSelection || shortcodes.length === 0) return;
-    const insertion = shortcodes.join(" ");
-    const next = activeTab.content.slice(0, emojiSelection.start) + insertion + activeTab.content.slice(emojiSelection.end);
-    commitContent(next);
-    requestAnimationFrame(() => {
-      const editor = editorRef.current;
-      if (!editor) return;
-      const caret = emojiSelection.start + insertion.length;
-      editor.focus();
-      editor.setSelectionRange(caret, caret);
-    });
-  };
-
   const onScrollEditor = () => {
     if (!globalState.syncScroll || syncingRef.current || !editorRef.current || !previewPaneRef.current) return;
     syncingRef.current = true;
@@ -562,15 +393,15 @@ function App() {
         <IconButton title="Bulleted list" onClick={() => runCommand("ul")}><List size={16} /></IconButton>
         <IconButton title="Numbered list" onClick={() => runCommand("ol")}><ListOrdered size={16} /></IconButton>
         <IconButton title="Task list" onClick={() => runCommand("task")}><ListChecks size={16} /></IconButton>
-        <IconButton title="Link" onClick={openLinkModal}><Link size={16} /></IconButton>
-        <IconButton title="Image" onClick={openImageModal}><Image size={16} /></IconButton>
-        <IconButton title="Reference" onClick={openReferenceModal}><BookMarked size={16} /></IconButton>
-        <IconButton title="GitHub Emojis" onClick={openEmojiModal}><Smile size={16} /></IconButton>
-        <IconButton title="Symbols & HTML entities" onClick={openSymbolsModal}><BadgeCent size={16} /></IconButton>
-        <IconButton title="Markdown alerts" onClick={openAlertModal}><BadgeAlert size={16} /></IconButton>
+        <IconButton title="Link" onClick={insertModals.openLinkModal}><Link size={16} /></IconButton>
+        <IconButton title="Image" onClick={insertModals.openImageModal}><Image size={16} /></IconButton>
+        <IconButton title="Reference" onClick={insertModals.openReferenceModal}><BookMarked size={16} /></IconButton>
+        <IconButton title="GitHub Emojis" onClick={insertModals.openEmojiModal}><Smile size={16} /></IconButton>
+        <IconButton title="Symbols & HTML entities" onClick={insertModals.openSymbolsModal}><BadgeCent size={16} /></IconButton>
+        <IconButton title="Markdown alerts" onClick={insertModals.openAlertModal}><BadgeAlert size={16} /></IconButton>
         <IconButton title="Inline code" onClick={() => runCommand("inlineCode")}><Code2 size={16} /></IconButton>
         <IconButton title="Code block" onClick={() => runCommand("codeBlock")}><Braces size={16} /></IconButton>
-        <IconButton title="Table" onClick={() => setTableOpen(true)}><Table2 size={16} /></IconButton>
+        <IconButton title="Table" onClick={insertModals.openTableModal}><Table2 size={16} /></IconButton>
         <IconButton title="Math" onClick={() => runCommand("math")}><Sigma size={16} /></IconButton>
         <IconButton title="Mermaid" onClick={() => runCommand("mermaid")}><Play size={16} /></IconButton>
         <IconButton title="Find and replace" onClick={() => findReplace.setOpen(true)}><Search size={16} /></IconButton>
@@ -688,57 +519,7 @@ function App() {
         />
       )}
 
-      {tableOpen && (
-        <TableInsertModal
-          onClose={() => setTableOpen(false)}
-          onInsert={insertConfiguredTable}
-        />
-      )}
-
-      {linkSelection && (
-        <LinkInsertModal
-          initialText={linkSelection.text}
-          onClose={() => setLinkSelection(null)}
-          onInsert={insertConfiguredLink}
-        />
-      )}
-
-      {imageSelection && (
-        <ImageInsertModal
-          initialAlt={imageSelection.text}
-          onClose={() => setImageSelection(null)}
-          onInsert={insertConfiguredImage}
-        />
-      )}
-
-      {referenceSelection && (
-        <ReferenceInsertModal
-          initialNumber={referenceSelection.number}
-          onClose={() => setReferenceSelection(null)}
-          onInsert={insertConfiguredReference}
-        />
-      )}
-
-      {symbolsSelection && (
-        <SymbolsInsertModal
-          onClose={() => setSymbolsSelection(null)}
-          onInsert={insertSymbols}
-        />
-      )}
-
-      {alertSelection && (
-        <AlertInsertModal
-          onClose={() => setAlertSelection(null)}
-          onInsert={insertConfiguredAlert}
-        />
-      )}
-
-      {emojiSelection && (
-        <EmojiInsertModal
-          onClose={() => setEmojiSelection(null)}
-          onInsert={insertEmojis}
-        />
-      )}
+      <InsertModalHost {...insertModals.hostProps} />
 
       {shareUrl && (
         <Modal title="Share URL" onClose={() => setShareUrl("")}>
