@@ -1,6 +1,7 @@
 import { saveAs } from "file-saver";
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
+import { A4_PDF_CONFIG, estimatePdfPageCount, getPageHeightPx, preparePdfLayout } from "./pdfPagination";
 
 export function exportMarkdown(filename: string, content: string) {
   saveAs(new Blob([content], { type: "text/markdown;charset=utf-8" }), ensureExtension(filename, ".md"));
@@ -19,24 +20,67 @@ export async function exportPng(filename: string, element: HTMLElement) {
 }
 
 export async function exportPdf(filename: string, element: HTMLElement) {
-  const canvas = await html2canvas(element, { backgroundColor: "#ffffff", scale: 2, useCORS: true });
-  const imgData = canvas.toDataURL("image/png");
-  const pdf = new jsPDF({ orientation: "p", unit: "pt", format: "a4" });
-  const pageWidth = pdf.internal.pageSize.getWidth();
-  const pageHeight = pdf.internal.pageSize.getHeight();
-  const imgWidth = pageWidth;
-  const imgHeight = (canvas.height * imgWidth) / canvas.width;
-  let heightLeft = imgHeight;
-  let position = 0;
-  pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
-  heightLeft -= pageHeight;
-  while (heightLeft > 0) {
-    position = heightLeft - imgHeight;
-    pdf.addPage();
-    pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
-    heightLeft -= pageHeight;
+  const exportElement = await preparePdfLayout(element, A4_PDF_CONFIG);
+  try {
+    const canvas = await html2canvas(exportElement, {
+      backgroundColor: "#ffffff",
+      scale: choosePdfCanvasScale(exportElement),
+      useCORS: true,
+      allowTaint: false,
+      logging: false,
+      windowWidth: Math.ceil(exportElement.getBoundingClientRect().width),
+      windowHeight: Math.ceil(exportElement.getBoundingClientRect().height),
+    });
+    const pdf = new jsPDF({ orientation: "p", unit: "mm", format: "a4", compress: true });
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const margin = A4_PDF_CONFIG.margin;
+    const contentWidth = pageWidth - margin * 2;
+    const contentHeight = pageHeight - margin * 2;
+    const scaleFactor = canvas.width / contentWidth;
+    const sourcePageHeight = contentHeight * scaleFactor;
+    const pagesCount = Math.max(1, Math.ceil((canvas.height - 1) / sourcePageHeight));
+
+    for (let page = 0; page < pagesCount; page += 1) {
+      if (page > 0) pdf.addPage();
+      const sourceY = Math.floor(page * sourcePageHeight);
+      const sourceHeight = Math.min(canvas.height - sourceY, Math.ceil(sourcePageHeight));
+      const pageCanvas = document.createElement("canvas");
+      pageCanvas.width = canvas.width;
+      pageCanvas.height = sourceHeight;
+      const context = pageCanvas.getContext("2d");
+      if (context) context.drawImage(canvas, 0, sourceY, canvas.width, sourceHeight, 0, 0, canvas.width, sourceHeight);
+      const imgData = pageCanvas.toDataURL("image/png");
+      pdf.addImage(imgData, "PNG", margin, margin, contentWidth, sourceHeight / scaleFactor);
+    }
+
+    pdf.save(ensureExtension(filename, ".pdf"));
+  } finally {
+    exportElement.remove();
   }
-  pdf.save(ensureExtension(filename, ".pdf"));
+}
+
+export async function inspectPdfPagination(element: HTMLElement) {
+  const exportElement = await preparePdfLayout(element, A4_PDF_CONFIG);
+  try {
+    return {
+      pageHeightPx: Math.round(getPageHeightPx(exportElement, A4_PDF_CONFIG)),
+      estimatedPages: estimatePdfPageCount(exportElement, A4_PDF_CONFIG),
+      spacers: exportElement.querySelectorAll(".pdf-page-break-spacer").length,
+      splitTables: exportElement.querySelectorAll("table[data-pdf-split-part='true']").length,
+      repeatedHeads: exportElement.querySelectorAll("table[data-pdf-split-part='true'] thead").length,
+      height: Math.round(exportElement.getBoundingClientRect().height),
+    };
+  } finally {
+    exportElement.remove();
+  }
+}
+
+function choosePdfCanvasScale(element: HTMLElement) {
+  const height = element.getBoundingClientRect().height;
+  if (height > 9000) return 1.25;
+  if (height > 5200) return 1.5;
+  return 2;
 }
 
 export async function copyImage(element: HTMLElement) {
