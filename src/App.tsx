@@ -117,6 +117,10 @@ function App() {
   const stats = useMemo(() => getStats(text), [text]);
   const health = useMemo(() => analyzeDocumentHealth(text), [text]);
   const renderedHtml = useMemo(() => previewDocumentToHtml(previewDocument), [previewDocument]);
+  const liveMessage = toast ||
+    (pdfExport ? `${t(PDF_EXPORT_LABEL_KEYS[pdfExport.phase], { defaultValue: pdfExport.phase })} ${Math.round(pdfExport.progress * 100)}%` : "") ||
+    renderError ||
+    (renderState === "rendering" ? t("status.rendering") : "");
 
   useEffect(() => {
     document.documentElement.dataset.theme = globalState.theme;
@@ -561,6 +565,7 @@ function App() {
           </button>
         </div>
       )}
+      <div className="sr-live-region" aria-live="polite" aria-atomic="true">{liveMessage}</div>
       {toast && <div className="toast" role="status">{toast}</div>}
     </div>
   );

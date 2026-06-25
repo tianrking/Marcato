@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, useId, useRef, type KeyboardEvent, type ReactNode } from "react";
 
 export function Segmented({
   value,
@@ -29,12 +29,63 @@ export function IconButton({ title, onClick, children }: { title: string; onClic
 }
 
 export function Modal({ title, children, onClose }: { title: string; children: ReactNode; onClose: () => void }) {
+  const titleId = useId();
+  const dialogRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const frame = window.requestAnimationFrame(() => {
+      const dialog = dialogRef.current;
+      const target = dialog?.querySelector<HTMLElement>("[autofocus], input, select, textarea, button, [href], [tabindex]:not([tabindex='-1'])");
+      (target || dialog)?.focus();
+    });
+    return () => {
+      window.cancelAnimationFrame(frame);
+      if (previousFocus?.isConnected) previousFocus.focus();
+    };
+  }, []);
+
+  const onKeyDown = (event: KeyboardEvent<HTMLElement>) => {
+    if (event.key === "Escape") {
+      event.stopPropagation();
+      onClose();
+      return;
+    }
+    if (event.key !== "Tab") return;
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    const focusable = [...dialog.querySelectorAll<HTMLElement>("button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [href], [tabindex]:not([tabindex='-1'])")]
+      .filter((node) => node.offsetParent !== null || node === document.activeElement);
+    if (!focusable.length) {
+      event.preventDefault();
+      dialog.focus();
+      return;
+    }
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
+
   return (
     <div className="modal-backdrop" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
-      <section className="modal" role="dialog" aria-modal="true" aria-label={title}>
+      <section
+        ref={dialogRef}
+        className="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
+        onKeyDown={onKeyDown}
+      >
         <div className="modal-head">
-          <strong>{title}</strong>
-          <button onClick={onClose}>x</button>
+          <strong id={titleId}>{title}</strong>
+          <button type="button" aria-label={`Close ${title}`} onClick={onClose}>x</button>
         </div>
         {children}
       </section>

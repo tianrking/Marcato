@@ -46,8 +46,10 @@ await withApp(async ({ consoleMessages, context, page, server }) => {
   await page.locator(".preview-find-highlight.active").first().waitFor({ state: "visible" });
 
   await page.getByRole("button", { name: "Link" }).click();
-  await page.getByRole("dialog", { name: "Insert link" }).waitFor({ state: "visible" });
-  await page.getByRole("dialog", { name: "Insert link" }).getByRole("button", { name: "Cancel" }).click();
+  const linkDialog = page.getByRole("dialog", { name: "Insert link" });
+  await linkDialog.waitFor({ state: "visible" });
+  await page.keyboard.press("Escape");
+  await linkDialog.waitFor({ state: "hidden" });
 
   await page.getByRole("button", { name: "Table" }).click();
   await page.getByRole("dialog", { name: "Insert table" }).waitFor({ state: "visible" });
@@ -64,7 +66,7 @@ await withApp(async ({ consoleMessages, context, page, server }) => {
   const workspaceToolbar = page.locator(".workspace-toolbar");
   await workspaceToolbar.getByRole("button", { name: "GitHub" }).click();
   await page.getByRole("dialog", { name: "Import from GitHub" }).waitFor({ state: "visible" });
-  await page.getByRole("dialog", { name: "Import from GitHub" }).getByRole("button", { name: "x" }).click();
+  await page.getByRole("dialog", { name: "Import from GitHub" }).getByRole("button", { name: "Close Import from GitHub" }).click();
 
   await workspaceToolbar.getByRole("button", { name: "Share" }).click();
   const shareDialog = page.getByRole("dialog", { name: "Share URL" });
