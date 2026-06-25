@@ -97,9 +97,14 @@ export async function withApp(testFn, options = {}) {
     locale: "en-US",
     viewport: options.viewport || { width: 1366, height: 900 },
   });
-  await context.addInitScript(() => localStorage.clear());
+  await context.addInitScript((storageEntries) => {
+    localStorage.clear();
+    Object.entries(storageEntries || {}).forEach(([key, value]) => localStorage.setItem(key, String(value)));
+  }, options.localStorage || {});
   const page = await context.newPage();
   const consoleMessages = [];
+  const requestUrls = [];
+  page.on("request", (request) => requestUrls.push(request.url()));
   page.on("console", (message) => {
     if (["error", "warning"].includes(message.type())) consoleMessages.push(`${message.type()}: ${message.text()}`);
   });
@@ -107,7 +112,7 @@ export async function withApp(testFn, options = {}) {
 
   try {
     await page.goto(server.baseUrl, { waitUntil: "networkidle" });
-    return await testFn({ browser, consoleMessages, context, page, server });
+    return await testFn({ browser, consoleMessages, context, page, requestUrls, server });
   } finally {
     await browser.close();
     await server.stop();

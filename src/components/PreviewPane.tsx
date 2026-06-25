@@ -1,6 +1,7 @@
 import { forwardRef, memo, useEffect, useImperativeHandle, useRef } from "react";
 import type { PreviewBlock, PreviewDocument } from "../lib/previewDocument";
 import { applyPreviewFindHighlights, clearPreviewFindHighlights, scrollPreviewHighlightIntoView } from "../lib/previewFind";
+import { setupPreviewLinks } from "../lib/previewLinks";
 import type { FindOptions } from "../types";
 
 interface PreviewPaneProps {
@@ -59,18 +60,32 @@ export const PreviewPane = forwardRef<HTMLElement, PreviewPaneProps>(function Pr
     const root = articleRef.current;
     if (!root) return undefined;
     const controller = new AbortController();
+    let richProcessorLoaded = false;
+    const syncFindHighlights = () => {
+      const active = findOpen ? applyPreviewFindHighlights(root, findOptions, findActiveIndex, findEditorMatchCount) : null;
+      scrollPreviewHighlightIntoView(root.parentElement, active);
+    };
+    setupPreviewLinks(root);
+    if (!needsRichPreviewProcessing(root)) {
+      syncFindHighlights();
+      return () => {
+        controller.abort();
+      };
+    }
     void import("../lib/diagramRenderers").then(({ disposePreviewResources, postProcessPreview }) => {
       if (controller.signal.aborted) return;
+      richProcessorLoaded = true;
       disposePreviewResources(root);
       void postProcessPreview(root, theme, offlineFirst, controller.signal).then(() => {
         if (controller.signal.aborted) return;
-        const active = findOpen ? applyPreviewFindHighlights(root, findOptions, findActiveIndex, findEditorMatchCount) : null;
-        scrollPreviewHighlightIntoView(root.parentElement, active);
+        syncFindHighlights();
       });
     });
     return () => {
       controller.abort();
-      void import("../lib/diagramRenderers").then(({ disposePreviewResources }) => disposePreviewResources(root));
+      if (richProcessorLoaded) {
+        void import("../lib/diagramRenderers").then(({ disposePreviewResources }) => disposePreviewResources(root));
+      }
     };
   }, [document, theme, offlineFirst]);
 
@@ -99,3 +114,8 @@ export const PreviewPane = forwardRef<HTMLElement, PreviewPaneProps>(function Pr
     </article>
   );
 });
+
+function needsRichPreviewProcessing(root: HTMLElement) {
+  if (root.querySelector(".math-inline,.math-block,.diagram-viewer")) return true;
+  return /:([a-z0-9_+-]+):/i.test(root.textContent || "");
+}

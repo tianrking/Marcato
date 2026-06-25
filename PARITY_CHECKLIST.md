@@ -116,7 +116,7 @@ must remain smooth and predictable after initial access.
 | Accessibility announcements | Missing | `script.js` announcer | none | Need live region for copy/import/render/find actions. |
 | Loading skeletons | Partial | `script.js`, `styles.css` | GitHub tree is basic | Need emoji/GitHub/diagram skeletons where original had them. |
 | Error toasts and recovery | Partial | `script.js` | `src/App.tsx` | Standardize actionable errors and retry paths. |
-| Bundle/performance budget | Partial | build output | Vite build | First-load index reduced from 1,999.76KB / gzip 634.90KB to 431.55KB / gzip 139.03KB by lazy-loading export and markdown fallback chunks; diagram chunk and PWA precache still need slimming. |
+| Bundle/performance budget | Partial | build output | Vite build, `tests/e2e/performance.spec.mjs` | First-load index reduced from 1,999.76KB / gzip 634.90KB to ~433KB / gzip ~140KB by lazy-loading export and markdown fallback chunks; plain Markdown startup now has a browser test proving `diagramRenderers` is not requested until rich content appears. PWA precache and per-engine diagram chunks still need slimming. |
 
 ## Verification Matrix
 
