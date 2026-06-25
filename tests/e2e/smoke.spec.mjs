@@ -90,8 +90,12 @@ await withApp(async ({ consoleMessages, context, page, server }) => {
 
   const workspaceToolbar = page.locator(".workspace-toolbar");
   await workspaceToolbar.getByRole("button", { name: "GitHub" }).click();
-  await page.getByRole("dialog", { name: "Import from GitHub" }).waitFor({ state: "visible" });
-  await page.getByRole("dialog", { name: "Import from GitHub" }).getByRole("button", { name: "Close Import from GitHub" }).click();
+  const githubDialog = page.getByRole("dialog", { name: "Import from GitHub" });
+  await githubDialog.waitFor({ state: "visible" });
+  await githubDialog.getByPlaceholder("https://github.com/owner/repo or tree/blob URL").fill("https://example.com/not-github");
+  await githubDialog.getByRole("button", { name: "List Markdown files" }).click();
+  await githubDialog.getByRole("alert").waitFor({ state: "visible" });
+  await githubDialog.getByRole("button", { name: "Close Import from GitHub" }).click();
 
   await workspaceToolbar.getByRole("button", { name: "Share" }).click();
   const shareDialog = page.getByRole("dialog", { name: "Share URL" });

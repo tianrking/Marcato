@@ -1877,6 +1877,15 @@ button:focus-visible {
   padding: 0 10px;
 }
 
+.github-error {
+  padding: 9px 10px;
+  border: 1px solid color-mix(in srgb, var(--danger) 42%, var(--line));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--danger) 9%, var(--panel));
+  color: var(--danger);
+  font-size: 13px;
+}
+
 .github-tree-head {
   display: grid;
   grid-template-columns: minmax(180px, 1fr) auto auto;
@@ -1972,6 +1981,34 @@ button:focus-visible {
   padding: 24px;
   color: var(--muted);
   text-align: center;
+}
+
+.github-skeleton {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+}
+
+.github-skeleton span {
+  height: 28px;
+  border-radius: 7px;
+  background:
+    linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent) 14%, transparent), transparent),
+    var(--panel-2);
+  background-size: 220% 100%;
+  animation: skeleton-shimmer 1.2s linear infinite;
+}
+
+.github-skeleton span:nth-child(2) {
+  width: 86%;
+}
+
+.github-skeleton span:nth-child(3) {
+  width: 72%;
+}
+
+.github-skeleton span:nth-child(4) {
+  width: 58%;
 }
 
 .form-hint {

@@ -14,36 +14,59 @@ export function useGitHubImport({ newTab, showToast }: UseGitHubImportOptions) {
   const [url, setUrl] = useState("");
   const [files, setFiles] = useState<GitHubMarkdownFile[]>([]);
   const [selectedPaths, setSelectedPaths] = useState<Set<string>>(new Set());
+  const [error, setError] = useState("");
+  const [importing, setImporting] = useState(false);
+  const [listing, setListing] = useState(false);
 
   const openImport = () => {
     setFiles([]);
     setSelectedPaths(new Set());
+    setError("");
     setOpen(true);
   };
 
   const listFiles = async () => {
+    setListing(true);
+    setError("");
     try {
       const nextFiles = await importFromGitHubUrl(url);
       setFiles(nextFiles);
       setSelectedPaths(new Set(nextFiles.length === 1 ? [nextFiles[0].path] : nextFiles.map((file) => file.path)));
     } catch (error) {
-      showToast(error instanceof Error ? error.message : t("error.githubImportFailed"));
+      const message = error instanceof Error ? error.message : t("error.githubImportFailed");
+      setError(message);
+      showToast(message);
+    } finally {
+      setListing(false);
     }
   };
 
   const importSelection = async () => {
+    setImporting(true);
+    setError("");
     const selectedFiles = files.filter((file) => selectedPaths.has(file.path));
-    for (const file of selectedFiles) {
-      const content = await fetchMarkdownFile(file);
-      newTab(content, file.name);
-      await delay(120);
+    try {
+      for (const file of selectedFiles) {
+        const content = await fetchMarkdownFile(file);
+        newTab(content, file.name);
+        await delay(120);
+      }
+      setOpen(false);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : t("error.githubImportFailed");
+      setError(message);
+      showToast(message);
+    } finally {
+      setImporting(false);
     }
-    setOpen(false);
   };
 
   return {
     modalProps: {
       files,
+      error,
+      importing,
+      listing,
       onClose: () => setOpen(false),
       onImport: importSelection,
       onListFiles: listFiles,

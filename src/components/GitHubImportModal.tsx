@@ -6,8 +6,11 @@ import type { GitHubMarkdownFile } from "../types";
 import { Modal } from "./Common";
 
 interface GitHubImportModalProps {
+  error: string;
   url: string;
   files: GitHubMarkdownFile[];
+  importing: boolean;
+  listing: boolean;
   selectedPaths: Set<string>;
   onUrlChange: (url: string) => void;
   onListFiles: () => void;
@@ -25,8 +28,11 @@ interface TreeNode {
 }
 
 export function GitHubImportModal({
+  error,
   url,
   files,
+  importing,
+  listing,
   selectedPaths,
   onUrlChange,
   onListFiles,
@@ -82,11 +88,12 @@ export function GitHubImportModal({
       <div className="github-import">
         <div className="github-url-row">
           <input value={url} placeholder={t("github.placeholder")} onChange={(event) => onUrlChange(event.target.value)} />
-          <button onClick={onListFiles}>
+          <button onClick={onListFiles} disabled={listing || importing}>
             <Search size={15} />
-            {t("github.listFiles")}
+            {listing ? t("github.loading", { defaultValue: "Loading" }) : t("github.listFiles")}
           </button>
         </div>
+        {error && <div className="github-error" role="alert">{error}</div>}
         <div className="github-tree-head">
           <label className="github-filter">
             <Search size={14} />
@@ -106,7 +113,14 @@ export function GitHubImportModal({
           <span>{formatBytes(selectedSize)}</span>
         </div>
         <div className="github-tree" role="tree">
-          {files.length ? (
+          {listing ? (
+            <div className="github-skeleton" aria-label="Loading GitHub files">
+              <span />
+              <span />
+              <span />
+              <span />
+            </div>
+          ) : files.length ? (
             renderTree(tree, {
               depth: 0,
               filter,
@@ -121,10 +135,10 @@ export function GitHubImportModal({
           )}
         </div>
         <div className="modal-actions">
-          <button onClick={selectVisible} disabled={!visibleFiles.length}>{t("github.selectVisible", { defaultValue: "Select visible" })}</button>
-          <button onClick={() => onSelectedPathsChange(new Set())} disabled={!selectedPaths.size}>{t("github.clearSelection", { defaultValue: "Clear" })}</button>
-          <button onClick={onImport} disabled={!selectedPaths.size}>
-            {t("action.importSelected")} {selectedPaths.size ? `(${selectedPaths.size})` : ""}
+          <button onClick={selectVisible} disabled={listing || importing || !visibleFiles.length}>{t("github.selectVisible", { defaultValue: "Select visible" })}</button>
+          <button onClick={() => onSelectedPathsChange(new Set())} disabled={listing || importing || !selectedPaths.size}>{t("github.clearSelection", { defaultValue: "Clear" })}</button>
+          <button onClick={onImport} disabled={listing || importing || !selectedPaths.size}>
+            {importing ? t("github.importing", { defaultValue: "Importing" }) : t("action.importSelected")} {selectedPaths.size ? `(${selectedPaths.size})` : ""}
           </button>
         </div>
         {filter && (
