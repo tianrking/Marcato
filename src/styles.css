@@ -1045,6 +1045,12 @@ textarea {
   text-align: center;
 }
 
+.form-hint {
+  margin-top: -4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
 .github-tree-foot {
   color: var(--muted);
 }

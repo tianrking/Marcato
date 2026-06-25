@@ -140,6 +140,12 @@ export function buildMarkdownLink(label: string, url: string) {
   return `[${safeLabel}](${safeUrl})`;
 }
 
+export function buildMarkdownImage(alt: string, source: string) {
+  const safeAlt = (alt.trim() || "image alt").replace(/\]/g, "\\]");
+  const safeSource = (source.trim() || "https://example.com/image.png").replace(/\)/g, "%29");
+  return `![${safeAlt}](${safeSource})`;
+}
+
 function tableDivider(alignment: TableAlignment) {
   if (alignment === "left") return ":---";
   if (alignment === "center") return ":---:";

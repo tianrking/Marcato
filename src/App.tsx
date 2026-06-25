@@ -33,13 +33,14 @@ import { AppHeader } from "./components/AppHeader";
 import { FindReplacePanel } from "./components/FindReplacePanel";
 import { IconButton, Modal } from "./components/Common";
 import { GitHubImportModal } from "./components/GitHubImportModal";
+import { ImageInsertModal } from "./components/ImageInsertModal";
 import { LinkInsertModal } from "./components/LinkInsertModal";
 import { PreviewPane } from "./components/PreviewPane";
 import { TableInsertModal } from "./components/TableInsertModal";
 import { WorkspaceToolbar } from "./components/WorkspaceToolbar";
 import { useGlobalShortcuts } from "./hooks/useGlobalShortcuts";
 import { MAX_IMPORT_BYTES, MAX_TABS, SHARE_URL_SOFT_LIMIT } from "./lib/constants";
-import { applyCommand, buildMarkdownLink, buildMarkdownTable, handleSmartEnter, insertText, type MarkdownCommand, type TableAlignment } from "./lib/editorCommands";
+import { applyCommand, buildMarkdownImage, buildMarkdownLink, buildMarkdownTable, handleSmartEnter, insertText, type MarkdownCommand, type TableAlignment } from "./lib/editorCommands";
 import { copyImage, exportHtml, exportMarkdown, exportPdf, exportPng, getExportName } from "./lib/exporters";
 import { analyzeDocumentHealth } from "./lib/documentHealth";
 import { buildDiffPreview, findMatches, replaceAll, replaceOne } from "./lib/findReplace";
@@ -95,6 +96,7 @@ function App() {
   const [selectedGithubPaths, setSelectedGithubPaths] = useState<Set<string>>(new Set());
   const [tableOpen, setTableOpen] = useState(false);
   const [linkSelection, setLinkSelection] = useState<{ end: number; start: number; text: string } | null>(null);
+  const [imageSelection, setImageSelection] = useState<{ end: number; start: number; text: string } | null>(null);
   const [toast, setToast] = useState("");
   const [dragging, setDragging] = useState(false);
 
@@ -389,6 +391,33 @@ function App() {
     });
   };
 
+  const openImageModal = () => {
+    const editor = editorRef.current;
+    if (!editor) {
+      setImageSelection({ start: 0, end: 0, text: "" });
+      return;
+    }
+    setImageSelection({
+      start: editor.selectionStart,
+      end: editor.selectionEnd,
+      text: text.slice(editor.selectionStart, editor.selectionEnd),
+    });
+  };
+
+  const insertConfiguredImage = (options: { alt: string; source: string }) => {
+    if (!activeTab || !imageSelection) return;
+    const markdown = buildMarkdownImage(options.alt, options.source);
+    const next = activeTab.content.slice(0, imageSelection.start) + markdown + activeTab.content.slice(imageSelection.end);
+    commitContent(next);
+    requestAnimationFrame(() => {
+      const editor = editorRef.current;
+      if (!editor) return;
+      const altStart = imageSelection.start + 2;
+      editor.focus();
+      editor.setSelectionRange(altStart, altStart + (options.alt.trim() || "image alt").length);
+    });
+  };
+
   const onScrollEditor = () => {
     if (!globalState.syncScroll || syncingRef.current || !editorRef.current || !previewPaneRef.current) return;
     syncingRef.current = true;
@@ -494,7 +523,7 @@ function App() {
         <IconButton title="Numbered list" onClick={() => runCommand("ol")}><ListOrdered size={16} /></IconButton>
         <IconButton title="Task list" onClick={() => runCommand("task")}><ListChecks size={16} /></IconButton>
         <IconButton title="Link" onClick={openLinkModal}><Link size={16} /></IconButton>
-        <IconButton title="Image" onClick={() => runCommand("image")}><Image size={16} /></IconButton>
+        <IconButton title="Image" onClick={openImageModal}><Image size={16} /></IconButton>
         <IconButton title="Inline code" onClick={() => runCommand("inlineCode")}><Code2 size={16} /></IconButton>
         <IconButton title="Code block" onClick={() => runCommand("codeBlock")}><Braces size={16} /></IconButton>
         <IconButton title="Table" onClick={() => setTableOpen(true)}><Table2 size={16} /></IconButton>
@@ -623,6 +652,14 @@ function App() {
           initialText={linkSelection.text}
           onClose={() => setLinkSelection(null)}
           onInsert={insertConfiguredLink}
+        />
+      )}
+
+      {imageSelection && (
+        <ImageInsertModal
+          initialAlt={imageSelection.text}
+          onClose={() => setImageSelection(null)}
+          onInsert={insertConfiguredImage}
         />
       )}
 
