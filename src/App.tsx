@@ -415,7 +415,7 @@ function App() {
         <IconButton title="Code block" onClick={() => runCommand("codeBlock")}><Braces size={16} /></IconButton>
         <IconButton title="Table" onClick={insertModals.openTableModal}><Table2 size={16} /></IconButton>
         <IconButton title="Math" onClick={() => runCommand("math")}><Sigma size={16} /></IconButton>
-        <IconButton title="Mermaid" onClick={() => runCommand("mermaid")}><Play size={16} /></IconButton>
+        <IconButton title="Diagram templates" onClick={insertModals.openDiagramModal}><Play size={16} /></IconButton>
         <IconButton title="Find and replace" onClick={() => findReplace.setOpen(true)}><Search size={16} /></IconButton>
         <IconButton title="Clear formatting" onClick={() => runCommand("clear")}><RefreshCw size={16} /></IconButton>
         <IconButton title="Delete current document" onClick={() => commitContent("")}><Trash2 size={16} /></IconButton>

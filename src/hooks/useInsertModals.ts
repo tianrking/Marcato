@@ -35,15 +35,18 @@ interface ReferenceSelection extends TextSelection {
 export interface InsertModalHostProps {
   alertSelection: TextSelection | null;
   closeAlert: () => void;
+  closeDiagram: () => void;
   closeEmoji: () => void;
   closeImage: () => void;
   closeLink: () => void;
   closeReference: () => void;
   closeSymbols: () => void;
   closeTable: () => void;
+  diagramSelection: TextSelection | null;
   emojiSelection: TextSelection | null;
   imageSelection: LabeledSelection | null;
   insertAlert: (type: MarkdownAlertType) => void;
+  insertDiagram: (value: string) => void;
   insertEmojis: (shortcodes: string[]) => void;
   insertImage: (options: { alt: string; source: string }) => void;
   insertLink: (options: { text: string; url: string }) => void;
@@ -64,6 +67,7 @@ export function useInsertModals({ activeTab, commitContent, editorRef, text }: U
   const [symbolsSelection, setSymbolsSelection] = useState<TextSelection | null>(null);
   const [alertSelection, setAlertSelection] = useState<TextSelection | null>(null);
   const [emojiSelection, setEmojiSelection] = useState<TextSelection | null>(null);
+  const [diagramSelection, setDiagramSelection] = useState<TextSelection | null>(null);
 
   const openTableModal = () => setTableOpen(true);
 
@@ -225,19 +229,44 @@ export function useInsertModals({ activeTab, commitContent, editorRef, text }: U
     });
   };
 
+  const openDiagramModal = () => {
+    const editor = editorRef.current;
+    if (!editor) {
+      setDiagramSelection({ start: 0, end: 0 });
+      return;
+    }
+    setDiagramSelection({ start: editor.selectionStart, end: editor.selectionEnd });
+  };
+
+  const insertDiagram = (value: string) => {
+    if (!activeTab || !diagramSelection) return;
+    const next = activeTab.content.slice(0, diagramSelection.start) + value + activeTab.content.slice(diagramSelection.end);
+    commitContent(next);
+    requestAnimationFrame(() => {
+      const editor = editorRef.current;
+      if (!editor) return;
+      const caret = diagramSelection.start + value.length;
+      editor.focus();
+      editor.setSelectionRange(caret, caret);
+    });
+  };
+
   return {
     hostProps: {
       alertSelection,
       closeAlert: () => setAlertSelection(null),
+      closeDiagram: () => setDiagramSelection(null),
       closeEmoji: () => setEmojiSelection(null),
       closeImage: () => setImageSelection(null),
       closeLink: () => setLinkSelection(null),
       closeReference: () => setReferenceSelection(null),
       closeSymbols: () => setSymbolsSelection(null),
       closeTable: () => setTableOpen(false),
+      diagramSelection,
       emojiSelection,
       imageSelection,
       insertAlert,
+      insertDiagram,
       insertEmojis,
       insertImage,
       insertLink,
@@ -250,6 +279,7 @@ export function useInsertModals({ activeTab, commitContent, editorRef, text }: U
       tableOpen,
     },
     openAlertModal,
+    openDiagramModal,
     openEmojiModal,
     openImageModal,
     openLinkModal,

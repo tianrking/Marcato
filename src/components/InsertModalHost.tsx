@@ -1,4 +1,5 @@
 import { AlertInsertModal } from "./AlertInsertModal";
+import { DiagramTemplateModal } from "./DiagramTemplateModal";
 import { EmojiInsertModal } from "./EmojiInsertModal";
 import { ImageInsertModal } from "./ImageInsertModal";
 import { LinkInsertModal } from "./LinkInsertModal";
@@ -10,15 +11,18 @@ import type { InsertModalHostProps } from "../hooks/useInsertModals";
 export function InsertModalHost({
   alertSelection,
   closeAlert,
+  closeDiagram,
   closeEmoji,
   closeImage,
   closeLink,
   closeReference,
   closeSymbols,
   closeTable,
+  diagramSelection,
   emojiSelection,
   imageSelection,
   insertAlert,
+  insertDiagram,
   insertEmojis,
   insertImage,
   insertLink,
@@ -74,6 +78,13 @@ export function InsertModalHost({
         <AlertInsertModal
           onClose={closeAlert}
           onInsert={insertAlert}
+        />
+      )}
+
+      {diagramSelection && (
+        <DiagramTemplateModal
+          onClose={closeDiagram}
+          onInsert={insertDiagram}
         />
       )}
 

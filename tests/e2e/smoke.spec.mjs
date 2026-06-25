@@ -53,6 +53,14 @@ await withApp(async ({ consoleMessages, context, page, server }) => {
   await page.getByRole("dialog", { name: "Insert table" }).waitFor({ state: "visible" });
   await page.getByRole("dialog", { name: "Insert table" }).getByRole("button", { name: "Cancel" }).click();
 
+  await page.getByRole("button", { name: "Diagram templates" }).click();
+  const diagramDialog = page.getByRole("dialog", { name: "Diagram templates" });
+  await diagramDialog.waitFor({ state: "visible" });
+  await diagramDialog.getByPlaceholder("Search diagrams").fill("markmap");
+  await diagramDialog.getByRole("button", { name: /Markmap Roadmap/ }).click();
+  await diagramDialog.getByRole("button", { name: "Insert" }).click();
+  expect((await page.locator(".editor-pane textarea").inputValue()).includes("```markmap"), "Diagram template insertion did not add a Markmap code fence.");
+
   const workspaceToolbar = page.locator(".workspace-toolbar");
   await workspaceToolbar.getByRole("button", { name: "GitHub" }).click();
   await page.getByRole("dialog", { name: "Import from GitHub" }).waitFor({ state: "visible" });
