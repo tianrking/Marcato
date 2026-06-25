@@ -1,11 +1,11 @@
 import katex from "katex";
 import mermaid from "mermaid";
 import { deflate } from "pako";
-import { saveAs } from "file-saver";
 import L from "leaflet";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { STLLoader } from "three/examples/jsm/loaders/STLLoader.js";
+import { setupDiagramActions } from "./diagramActions";
 
 let mermaidReady = false;
 const previewCleanups = new Map<HTMLElement, () => void>();
@@ -289,27 +289,7 @@ function setupPreviewLinks(root: HTMLElement) {
       link.rel = "noopener noreferrer";
     }
   });
-  root.querySelectorAll<HTMLElement>(".diagram-viewer").forEach((viewer) => {
-    const toolbar = viewer.querySelector<HTMLElement>(".diagram-toolbar");
-    const surface = viewer.querySelector<HTMLElement>(".diagram-surface");
-    if (!toolbar || !surface || toolbar.dataset.ready === "1") return;
-    toolbar.dataset.ready = "1";
-    toolbar.append(
-      makeToolButton("Copy PNG", () => copyDiagram(surface)),
-      makeToolButton("SVG", () => downloadSvg(surface)),
-      makeToolButton("PNG", () => downloadPng(surface)),
-      makeToolButton("Zoom", () => openZoom(surface)),
-    );
-  });
-}
-
-function makeToolButton(label: string, onClick: () => void | Promise<void>) {
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = "mini-button";
-  button.textContent = label;
-  button.addEventListener("click", () => void onClick());
-  return button;
+  setupDiagramActions(root, { registerCleanup: registerPreviewCleanup });
 }
 
 async function fetchRemoteSvg(engine: string, code: string) {
@@ -368,115 +348,6 @@ function diagramLabel(engine: string) {
     markmap: "Markmap",
   };
   return labels[engine] || engine || "Diagram";
-}
-
-async function copyDiagram(surface: HTMLElement) {
-  try {
-    const blob = await renderSurfacePng(surface);
-    if (blob && navigator.clipboard && "write" in navigator.clipboard) {
-      await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
-      return;
-    }
-  } catch {
-    // Fall back to textual copy for browsers or diagrams that cannot be rasterized.
-  }
-  const svg = surface.querySelector("svg");
-  const text = svg ? new XMLSerializer().serializeToString(svg) : surface.textContent || "";
-  await navigator.clipboard.writeText(text);
-}
-
-function downloadSvg(surface: HTMLElement) {
-  const svg = surface.querySelector("svg");
-  const text = svg ? new XMLSerializer().serializeToString(svg) : surface.innerHTML;
-  saveAs(new Blob([text], { type: "image/svg+xml;charset=utf-8" }), `diagram-${Date.now()}.svg`);
-}
-
-async function downloadPng(surface: HTMLElement) {
-  const blob = await renderSurfacePng(surface);
-  if (blob) saveAs(blob, `diagram-${Date.now()}.png`);
-}
-
-async function renderSurfacePng(surface: HTMLElement) {
-  const html2canvas = (await import("html2canvas")).default;
-  const canvas = await html2canvas(surface, { backgroundColor: null, scale: 2, useCORS: true });
-  return await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
-}
-
-function openZoom(surface: HTMLElement) {
-  const overlay = document.createElement("div");
-  overlay.className = "zoom-overlay";
-  const panel = document.createElement("div");
-  panel.className = "zoom-panel";
-  const header = document.createElement("div");
-  header.className = "zoom-toolbar";
-  const close = makeToolButton("Close", () => cleanup());
-  const zoomOut = makeToolButton("-", () => setScale(scale / 1.2));
-  const zoomIn = makeToolButton("+", () => setScale(scale * 1.2));
-  const reset = makeToolButton("Reset", () => {
-    scale = 1;
-    offsetX = 0;
-    offsetY = 0;
-    applyTransform();
-  });
-  const body = document.createElement("div");
-  body.className = "zoom-body";
-  const content = document.createElement("div");
-  content.className = "zoom-content";
-  content.append(surface.cloneNode(true));
-  body.append(content);
-  header.append(zoomOut, zoomIn, reset, close);
-  panel.append(header, body);
-  overlay.append(panel);
-  let scale = 1;
-  let offsetX = 0;
-  let offsetY = 0;
-  let dragging = false;
-  let lastX = 0;
-  let lastY = 0;
-  const applyTransform = () => {
-    content.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`;
-  };
-  const setScale = (nextScale: number) => {
-    scale = Math.min(8, Math.max(0.25, nextScale));
-    applyTransform();
-  };
-  const onWheel = (event: WheelEvent) => {
-    event.preventDefault();
-    setScale(scale * (event.deltaY > 0 ? 0.9 : 1.1));
-  };
-  const onPointerMove = (event: PointerEvent) => {
-    if (!dragging) return;
-    offsetX += event.clientX - lastX;
-    offsetY += event.clientY - lastY;
-    lastX = event.clientX;
-    lastY = event.clientY;
-    applyTransform();
-  };
-  const onPointerUp = () => {
-    dragging = false;
-    body.classList.remove("is-dragging");
-  };
-  const cleanup = () => {
-    body.removeEventListener("wheel", onWheel);
-    window.removeEventListener("pointermove", onPointerMove);
-    window.removeEventListener("pointerup", onPointerUp);
-    overlay.remove();
-  };
-  overlay.addEventListener("click", (event) => {
-    if (event.target === overlay) cleanup();
-  });
-  body.addEventListener("wheel", onWheel, { passive: false });
-  body.addEventListener("pointerdown", (event) => {
-    dragging = true;
-    lastX = event.clientX;
-    lastY = event.clientY;
-    body.classList.add("is-dragging");
-    body.setPointerCapture(event.pointerId);
-  });
-  window.addEventListener("pointermove", onPointerMove);
-  window.addEventListener("pointerup", onPointerUp);
-  applyTransform();
-  document.body.appendChild(overlay);
 }
 
 function encodePlantUml(text: string) {
