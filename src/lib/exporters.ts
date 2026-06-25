@@ -3,6 +3,18 @@ import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
 import { A4_PDF_CONFIG, estimatePdfPageCount, getPageHeightPx, preparePdfLayout } from "./pdfPagination";
 
+export type PdfExportPhase = "preparing" | "rendering" | "paginating" | "saving";
+
+export interface PdfExportProgress {
+  phase: PdfExportPhase;
+  progress: number;
+}
+
+export interface PdfExportOptions {
+  signal?: AbortSignal;
+  onProgress?: (progress: PdfExportProgress) => void;
+}
+
 export function exportMarkdown(filename: string, content: string) {
   saveAs(new Blob([content], { type: "text/markdown;charset=utf-8" }), ensureExtension(filename, ".md"));
 }
@@ -19,9 +31,13 @@ export async function exportPng(filename: string, element: HTMLElement) {
   }, "image/png");
 }
 
-export async function exportPdf(filename: string, element: HTMLElement) {
-  const exportElement = await preparePdfLayout(element, A4_PDF_CONFIG);
+export async function exportPdf(filename: string, element: HTMLElement, options: PdfExportOptions = {}) {
+  reportPdfProgress(options, "preparing", 0.08);
+  const exportElement = await preparePdfLayout(element, A4_PDF_CONFIG, { signal: options.signal });
   try {
+    throwIfAborted(options.signal);
+    reportPdfProgress(options, "rendering", 0.34);
+    throwIfAborted(options.signal);
     const canvas = await html2canvas(exportElement, {
       backgroundColor: "#ffffff",
       scale: choosePdfCanvasScale(exportElement),
@@ -31,6 +47,8 @@ export async function exportPdf(filename: string, element: HTMLElement) {
       windowWidth: Math.ceil(exportElement.getBoundingClientRect().width),
       windowHeight: Math.ceil(exportElement.getBoundingClientRect().height),
     });
+    throwIfAborted(options.signal);
+    reportPdfProgress(options, "paginating", 0.68);
     const pdf = new jsPDF({ orientation: "p", unit: "mm", format: "a4", compress: true });
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
@@ -42,6 +60,7 @@ export async function exportPdf(filename: string, element: HTMLElement) {
     const pagesCount = Math.max(1, Math.ceil((canvas.height - 1) / sourcePageHeight));
 
     for (let page = 0; page < pagesCount; page += 1) {
+      throwIfAborted(options.signal);
       if (page > 0) pdf.addPage();
       const sourceY = Math.floor(page * sourcePageHeight);
       const sourceHeight = Math.min(canvas.height - sourceY, Math.ceil(sourcePageHeight));
@@ -52,9 +71,13 @@ export async function exportPdf(filename: string, element: HTMLElement) {
       if (context) context.drawImage(canvas, 0, sourceY, canvas.width, sourceHeight, 0, 0, canvas.width, sourceHeight);
       const imgData = pageCanvas.toDataURL("image/png");
       pdf.addImage(imgData, "PNG", margin, margin, contentWidth, sourceHeight / scaleFactor);
+      reportPdfProgress(options, "paginating", 0.68 + ((page + 1) / pagesCount) * 0.22);
     }
 
+    throwIfAborted(options.signal);
+    reportPdfProgress(options, "saving", 0.96);
     pdf.save(ensureExtension(filename, ".pdf"));
+    reportPdfProgress(options, "saving", 1);
   } finally {
     exportElement.remove();
   }
@@ -81,6 +104,15 @@ function choosePdfCanvasScale(element: HTMLElement) {
   if (height > 9000) return 1.25;
   if (height > 5200) return 1.5;
   return 2;
+}
+
+function reportPdfProgress(options: PdfExportOptions, phase: PdfExportPhase, progress: number) {
+  options.onProgress?.({ phase, progress: Math.min(1, Math.max(0, progress)) });
+}
+
+function throwIfAborted(signal?: AbortSignal) {
+  if (!signal?.aborted) return;
+  throw new DOMException("PDF export cancelled", "AbortError");
 }
 
 export async function copyImage(element: HTMLElement) {

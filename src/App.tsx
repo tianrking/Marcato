@@ -49,13 +49,26 @@ import { useMarkdownRender } from "./hooks/useMarkdownRender";
 import { useShare } from "./hooks/useShare";
 import { MAX_IMPORT_BYTES, MAX_TABS } from "./lib/constants";
 import { applyCommand, handleSmartEnter, type MarkdownCommand } from "./lib/editorCommands";
-import { copyImage, exportHtml, exportMarkdown, exportPdf, exportPng, getExportName } from "./lib/exporters";
+import { copyImage, exportHtml, exportMarkdown, exportPdf, exportPng, getExportName, type PdfExportPhase } from "./lib/exporters";
 import { analyzeDocumentHealth } from "./lib/documentHealth";
 import { i18n } from "./lib/i18n";
 import { previewDocumentToHtml, type PreviewBlock } from "./lib/previewDocument";
 import { makeTab } from "./lib/storage";
 import { useAppStore } from "./stores/appStore";
 import type { MarkdownTab } from "./types";
+
+interface PdfExportState {
+  phase: PdfExportPhase | "cancelling";
+  progress: number;
+}
+
+const PDF_EXPORT_LABEL_KEYS: Record<PdfExportState["phase"], string> = {
+  preparing: "export.pdfPreparing",
+  rendering: "export.pdfRendering",
+  paginating: "export.pdfPaginating",
+  saving: "export.pdfSaving",
+  cancelling: "export.pdfCancelling",
+};
 
 function App() {
   const { t } = useTranslation();
@@ -77,12 +90,14 @@ function App() {
   const [selectedPreviewBlockId, setSelectedPreviewBlockId] = useState("");
   const [toast, setToast] = useState("");
   const [dragging, setDragging] = useState(false);
+  const [pdfExport, setPdfExport] = useState<PdfExportState | null>(null);
 
   const editorRef = useRef<HTMLTextAreaElement | null>(null);
   const previewRef = useRef<HTMLElement | null>(null);
   const editorPaneRef = useRef<HTMLDivElement | null>(null);
   const previewPaneRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const pdfAbortRef = useRef<AbortController | null>(null);
   const syncingRef = useRef(false);
   const toastTimerRef = useRef<number | null>(null);
 
@@ -114,6 +129,7 @@ function App() {
   useEffect(() => {
     return () => {
       if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
+      pdfAbortRef.current?.abort();
     };
   }, []);
 
@@ -215,6 +231,31 @@ function App() {
     showToast(ok ? t("toast.previewImageCopied") : t("toast.clipboardImageUnavailable"));
   };
 
+  const doExportPdf = async () => {
+    if (!previewRef.current || pdfAbortRef.current) return;
+    const controller = new AbortController();
+    pdfAbortRef.current = controller;
+    setPdfExport({ phase: "preparing", progress: 0.04 });
+    try {
+      await exportPdf(getExportName(activeTab?.title || "document"), previewRef.current, {
+        signal: controller.signal,
+        onProgress: ({ phase, progress }) => setPdfExport({ phase, progress }),
+      });
+      showToast(t("toast.pdfSaved", { defaultValue: "PDF exported." }));
+    } catch (error) {
+      if (isAbortError(error)) showToast(t("toast.pdfCancelled", { defaultValue: "PDF export cancelled." }));
+      else showToast(t("toast.pdfFailed", { defaultValue: "PDF export failed. Please try again." }));
+    } finally {
+      if (pdfAbortRef.current === controller) pdfAbortRef.current = null;
+      setPdfExport(null);
+    }
+  };
+
+  const cancelPdfExport = () => {
+    pdfAbortRef.current?.abort();
+    setPdfExport((current) => current ? { ...current, phase: "cancelling" } : current);
+  };
+
   const selectPreviewBlock = useCallback((block: PreviewBlock) => {
     const editor = editorRef.current;
     if (!editor) return;
@@ -310,7 +351,7 @@ function App() {
         onFilesSelected={(files) => void handleFiles(files)}
         onExportMarkdown={() => exportMarkdown(getExportName(activeTab?.title || "document"), text)}
         onExportHtml={() => exportHtml(getExportName(activeTab?.title || "document"), renderedHtml, activeTab?.title || t("status.document"))}
-        onExportPdf={() => previewRef.current && void exportPdf(getExportName(activeTab?.title || "document"), previewRef.current)}
+        onExportPdf={() => void doExportPdf()}
         onExportPng={() => previewRef.current && void exportPng(getExportName(activeTab?.title || "document"), previewRef.current)}
         onCopyMarkdown={doCopyMarkdown}
         onCopyPreviewImage={doCopyPreviewImage}
@@ -460,6 +501,18 @@ function App() {
       <ShareModal mode={share.mode} onClose={share.close} onCopy={share.copy} onModeChange={share.setModeUrl} tooLong={share.tooLong} url={share.url} />
 
       {dragging && <div className="drag-overlay">{t("status.dropMarkdown")}</div>}
+      {pdfExport && (
+        <div className="export-overlay" role="status" aria-live="polite">
+          <div>
+            <strong>{t("export.pdfTitle", { defaultValue: "Exporting PDF" })}</strong>
+            <span>{t(PDF_EXPORT_LABEL_KEYS[pdfExport.phase], { defaultValue: pdfExport.phase })}</span>
+          </div>
+          <progress value={Math.round(pdfExport.progress * 100)} max={100} />
+          <button type="button" onClick={cancelPdfExport} disabled={pdfExport.phase === "cancelling"}>
+            {t("action.cancel", { defaultValue: "Cancel" })}
+          </button>
+        </div>
+      )}
       {toast && <div className="toast" role="status">{toast}</div>}
     </div>
   );
@@ -514,6 +567,10 @@ function lineBreakLength(line: string) {
 
 function hasBinaryBytes(text: string) {
   return text.includes("\u0000");
+}
+
+function isAbortError(error: unknown) {
+  return error instanceof DOMException && error.name === "AbortError";
 }
 
 export default App;

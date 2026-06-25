@@ -31,8 +31,17 @@ const resources = {
         copyPng: "Copy PNG",
         reset: "Reset",
         close: "Close",
+        cancel: "Cancel",
         selectAll: "Select all",
         importSelected: "Import selected",
+      },
+      export: {
+        pdfTitle: "Exporting PDF",
+        pdfPreparing: "Preparing PDF layout",
+        pdfRendering: "Rendering document",
+        pdfPaginating: "Paginating pages",
+        pdfSaving: "Saving PDF",
+        pdfCancelling: "Cancelling",
       },
       view: {
         editor: "Editor",
@@ -81,6 +90,9 @@ const resources = {
         clipboardImageUnavailable: "Clipboard image copy is unavailable.",
         shareCopied: "Share URL copied.",
         shareTooLong: "Share URL generated, but it is too long for reliable clipboard use.",
+        pdfSaved: "PDF exported.",
+        pdfCancelled: "PDF export cancelled.",
+        pdfFailed: "PDF export failed. Please try again.",
       },
       error: {
         githubImportFailed: "GitHub import failed",

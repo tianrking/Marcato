@@ -85,7 +85,7 @@ must remain smooth and predictable after initial access.
 | Export Markdown | Needs proof | `script.js` | `src/lib/exporters.ts` | Verify filename/title behavior. |
 | Export HTML | Needs proof | `script.js` | `src/lib/exporters.ts` | Verify CSS, diagrams, sanitized HTML, standalone result. |
 | Export PNG | Partial | `script.js` | `src/lib/exporters.ts`, `src/lib/diagramActions.ts` | Needs white/transparent background choices and remote image handling proof. |
-| Export PDF | Partial | `script.js`, `styles.css` | `src/lib/pdfPagination.ts` | Pagination exists; needs original cascade/keep/table/page-edge proof. |
+| Export PDF | Partial | `script.js`, `styles.css` | `src/lib/pdfPagination.ts`, `src/lib/exporters.ts`, `tests/e2e/pdf-pagination.spec.mjs` | Pagination, progress UI, real download, and AbortSignal cleanup have browser proof; still needs visual fixture diff and deeper original cascade parity. |
 
 ## Find, Preview Navigation, Health
 

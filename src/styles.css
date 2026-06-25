@@ -1425,6 +1425,43 @@ textarea {
   box-shadow: var(--shadow);
 }
 
+.export-overlay {
+  position: fixed;
+  right: 16px;
+  bottom: 68px;
+  z-index: 80;
+  width: min(360px, calc(100vw - 32px));
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.export-overlay > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.export-overlay span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.export-overlay progress {
+  width: 100%;
+  height: 8px;
+  accent-color: var(--accent-2);
+}
+
+.export-overlay button {
+  justify-self: end;
+}
+
 @media (max-width: 1080px) {
   .app-header {
     height: auto;

@@ -4,6 +4,10 @@ export interface PdfPageConfig {
   margin: number;
 }
 
+export interface PdfLayoutOptions {
+  signal?: AbortSignal;
+}
+
 interface FlowElement {
   element: HTMLElement;
   type: "text" | "heading" | "graphic" | "table" | "pre" | "blockquote" | "list";
@@ -63,14 +67,24 @@ export function createPdfExportClone(source: HTMLElement, config = A4_PDF_CONFIG
   return clone;
 }
 
-export async function preparePdfLayout(source: HTMLElement, config = A4_PDF_CONFIG) {
+export async function preparePdfLayout(source: HTMLElement, config = A4_PDF_CONFIG, options: PdfLayoutOptions = {}) {
+  throwIfAborted(options.signal);
   const clone = createPdfExportClone(source, config);
-  await waitForExportAssets(clone);
-  await nextFrame();
-  fitWideBlocks(clone);
-  applyPageBreakCascade(clone, config, 10);
-  await nextFrame();
-  return clone;
+  try {
+    await waitForExportAssets(clone, options.signal);
+    throwIfAborted(options.signal);
+    await nextFrame();
+    throwIfAborted(options.signal);
+    fitWideBlocks(clone);
+    applyPageBreakCascade(clone, config, 10);
+    throwIfAborted(options.signal);
+    await nextFrame();
+    throwIfAborted(options.signal);
+    return clone;
+  } catch (error) {
+    clone.remove();
+    throw error;
+  }
 }
 
 export function getPageHeightPx(container: HTMLElement, config = A4_PDF_CONFIG) {
@@ -319,18 +333,36 @@ function copyCanvasPixels(source: HTMLElement, clone: HTMLElement) {
   });
 }
 
-async function waitForExportAssets(container: HTMLElement) {
+async function waitForExportAssets(container: HTMLElement, signal?: AbortSignal) {
   const images = Array.from(container.querySelectorAll("img"));
   await Promise.all(images.map((image) => {
+    throwIfAborted(signal);
     if (image.complete) return Promise.resolve();
     return new Promise<void>((resolve) => {
-      image.addEventListener("load", () => resolve(), { once: true });
-      image.addEventListener("error", () => resolve(), { once: true });
+      const cleanup = () => {
+        image.removeEventListener("load", onDone);
+        image.removeEventListener("error", onDone);
+        signal?.removeEventListener("abort", onDone);
+      };
+      const onDone = () => {
+        cleanup();
+        resolve();
+      };
+      image.addEventListener("load", onDone, { once: true });
+      image.addEventListener("error", onDone, { once: true });
+      signal?.addEventListener("abort", onDone, { once: true });
     });
   }));
+  throwIfAborted(signal);
   await (document.fonts?.ready || Promise.resolve());
+  throwIfAborted(signal);
 }
 
 function nextFrame() {
   return new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+}
+
+function throwIfAborted(signal?: AbortSignal) {
+  if (!signal?.aborted) return;
+  throw new DOMException("PDF export cancelled", "AbortError");
 }

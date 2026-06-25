@@ -107,6 +107,41 @@ await withApp(async ({ consoleMessages, page, server }) => {
   expect(metrics.crossingHeadings === 0, `Headings must not cross page boundaries. Metrics: ${JSON.stringify(metrics)}`);
   expect(metrics.wideBlocks === 0, `Wide PDF blocks should be fitted before export. Metrics: ${JSON.stringify(metrics)}`);
 
+  const abortResult = await page.evaluate(async () => {
+    const { exportPdf } = await import("/src/lib/exporters.ts");
+    const source = document.querySelector(".preview-article");
+    if (!(source instanceof HTMLElement)) throw new Error("Preview article not found.");
+    const controller = new AbortController();
+    try {
+      await exportPdf("cancelled-export", source, {
+        signal: controller.signal,
+        onProgress: ({ phase }) => {
+          if (phase === "rendering") controller.abort();
+        },
+      });
+      return { ok: false, name: "completed", leakedClones: document.querySelectorAll(".pdf-export").length };
+    } catch (error) {
+      return {
+        ok: error instanceof DOMException && error.name === "AbortError",
+        name: error instanceof Error ? error.name : String(error),
+        leakedClones: document.querySelectorAll(".pdf-export").length,
+      };
+    }
+  });
+  expect(abortResult.ok, `Expected exportPdf to abort cleanly. Result: ${JSON.stringify(abortResult)}`);
+  expect(abortResult.leakedClones === 0, `Cancelled PDF export left clone nodes behind. Result: ${JSON.stringify(abortResult)}`);
+
+  const downloadPromise = page.waitForEvent("download", { timeout: 45_000 });
+  await page.locator(".workspace-toolbar").getByRole("button", { name: "PDF" }).click();
+  const overlay = page.locator(".export-overlay");
+  await overlay.waitFor({ state: "visible", timeout: 5_000 });
+  await overlay.locator("progress").waitFor({ state: "visible" });
+  expect((await overlay.textContent())?.includes("Exporting PDF"), "PDF export progress overlay should be visible.");
+  const download = await downloadPromise;
+  expect((await download.suggestedFilename()).endsWith(".pdf"), "PDF export should produce a .pdf download.");
+  await overlay.waitFor({ state: "hidden", timeout: 20_000 });
+  await download.delete();
+
   await takeScreenshot(page, "pdf-fixture-preview.png");
   expectNoBrowserErrors(consoleMessages);
   await writeJsonArtifact("pdf.json", {
