@@ -42,6 +42,7 @@ import { PreviewPane } from "./components/PreviewPane";
 import { ShareModal } from "./components/ShareModal";
 import { WorkspaceToolbar } from "./components/WorkspaceToolbar";
 import { useFindReplace } from "./hooks/useFindReplace";
+import { useGitHubImport } from "./hooks/useGitHubImport";
 import { useGlobalShortcuts } from "./hooks/useGlobalShortcuts";
 import { useInsertModals } from "./hooks/useInsertModals";
 import { useMarkdownRender } from "./hooks/useMarkdownRender";
@@ -50,12 +51,11 @@ import { MAX_IMPORT_BYTES, MAX_TABS } from "./lib/constants";
 import { applyCommand, handleSmartEnter, type MarkdownCommand } from "./lib/editorCommands";
 import { copyImage, exportHtml, exportMarkdown, exportPdf, exportPng, getExportName } from "./lib/exporters";
 import { analyzeDocumentHealth } from "./lib/documentHealth";
-import { fetchMarkdownFile, importFromGitHubUrl } from "./lib/githubImport";
 import { i18n } from "./lib/i18n";
 import { previewDocumentToHtml, type PreviewBlock } from "./lib/previewDocument";
 import { makeTab } from "./lib/storage";
 import { useAppStore } from "./stores/appStore";
-import type { GitHubMarkdownFile, MarkdownTab } from "./types";
+import type { MarkdownTab } from "./types";
 
 function App() {
   const { t } = useTranslation();
@@ -75,10 +75,6 @@ function App() {
   const undo = useAppStore((state) => state.undo);
   const redo = useAppStore((state) => state.redo);
   const [selectedPreviewBlockId, setSelectedPreviewBlockId] = useState("");
-  const [githubOpen, setGithubOpen] = useState(false);
-  const [githubUrl, setGithubUrl] = useState("");
-  const [githubFiles, setGithubFiles] = useState<GitHubMarkdownFile[]>([]);
-  const [selectedGithubPaths, setSelectedGithubPaths] = useState<Set<string>>(new Set());
   const [toast, setToast] = useState("");
   const [dragging, setDragging] = useState(false);
 
@@ -136,6 +132,7 @@ function App() {
     const tab = addTab(content, title || `${t("status.untitled")}-${untitledCounter}.md`);
     if (!tab) showToast(`Tab limit is ${MAX_TABS}.`);
   }, [addTab, t, untitledCounter]);
+  const githubImport = useGitHubImport({ newTab, showToast });
 
   const closeTab = useCallback((id: string) => {
     closeStoreTab(id, `${t("status.untitled")}-${untitledCounter}.md`);
@@ -205,32 +202,6 @@ function App() {
     }
     if (!imported.length) return;
     addTabs(imported, imported[0].id);
-  };
-
-  const openGithubImport = async () => {
-    setGithubFiles([]);
-    setSelectedGithubPaths(new Set());
-    setGithubOpen(true);
-  };
-
-  const listGithubFiles = async () => {
-    try {
-      const files = await importFromGitHubUrl(githubUrl);
-      setGithubFiles(files);
-      setSelectedGithubPaths(new Set(files.length === 1 ? [files[0].path] : files.map((file) => file.path)));
-    } catch (error) {
-      showToast(error instanceof Error ? error.message : t("error.githubImportFailed"));
-    }
-  };
-
-  const importGithubSelection = async () => {
-    const files = githubFiles.filter((file) => selectedGithubPaths.has(file.path));
-    for (const file of files) {
-      const content = await fetchMarkdownFile(file);
-      newTab(content, file.name);
-      await delay(120);
-    }
-    setGithubOpen(false);
   };
 
   const doCopyMarkdown = async () => {
@@ -335,7 +306,7 @@ function App() {
         globalState={globalState}
         onGlobalChange={updateGlobal}
         onNewTab={() => newTab("", undefined)}
-        onGithubImport={openGithubImport}
+        onGithubImport={githubImport.open}
         onFilesSelected={(files) => void handleFiles(files)}
         onExportMarkdown={() => exportMarkdown(getExportName(activeTab?.title || "document"), text)}
         onExportHtml={() => exportHtml(getExportName(activeTab?.title || "document"), renderedHtml, activeTab?.title || t("status.document"))}
@@ -482,18 +453,7 @@ function App() {
         />
       )}
 
-      {githubOpen && (
-        <GitHubImportModal
-          url={githubUrl}
-          files={githubFiles}
-          selectedPaths={selectedGithubPaths}
-          onUrlChange={setGithubUrl}
-          onListFiles={() => void listGithubFiles()}
-          onSelectedPathsChange={setSelectedGithubPaths}
-          onImport={() => void importGithubSelection()}
-          onClose={() => setGithubOpen(false)}
-        />
-      )}
+      {githubImport.opened && <GitHubImportModal {...githubImport.modalProps} />}
 
       <InsertModalHost {...insertModals.hostProps} />
 
@@ -554,10 +514,6 @@ function lineBreakLength(line: string) {
 
 function hasBinaryBytes(text: string) {
   return text.includes("\u0000");
-}
-
-function delay(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export default App;
