@@ -1,5 +1,26 @@
 import { Marked, Renderer } from "marked";
-import hljs from "highlight.js";
+import type { LanguageFn } from "highlight.js";
+import hljs from "highlight.js/lib/core";
+import bash from "highlight.js/lib/languages/bash";
+import c from "highlight.js/lib/languages/c";
+import cpp from "highlight.js/lib/languages/cpp";
+import csharp from "highlight.js/lib/languages/csharp";
+import css from "highlight.js/lib/languages/css";
+import diff from "highlight.js/lib/languages/diff";
+import go from "highlight.js/lib/languages/go";
+import java from "highlight.js/lib/languages/java";
+import javascript from "highlight.js/lib/languages/javascript";
+import json from "highlight.js/lib/languages/json";
+import markdown from "highlight.js/lib/languages/markdown";
+import php from "highlight.js/lib/languages/php";
+import powershell from "highlight.js/lib/languages/powershell";
+import python from "highlight.js/lib/languages/python";
+import ruby from "highlight.js/lib/languages/ruby";
+import rust from "highlight.js/lib/languages/rust";
+import sql from "highlight.js/lib/languages/sql";
+import typescript from "highlight.js/lib/languages/typescript";
+import xml from "highlight.js/lib/languages/xml";
+import yamlLanguage from "highlight.js/lib/languages/yaml";
 import * as yaml from "js-yaml";
 import type { RenderBlock, RenderResult, TocEntry } from "../types";
 import { DIAGRAM_LANGUAGES } from "./constants";
@@ -43,6 +64,44 @@ const context: MarkdownContext = {
 };
 
 let markedInstance: Marked | null = null;
+
+const HIGHLIGHT_LANGUAGES: Array<[string, LanguageFn]> = [
+  ["bash", bash],
+  ["sh", bash],
+  ["shell", bash],
+  ["c", c],
+  ["cpp", cpp],
+  ["c++", cpp],
+  ["csharp", csharp],
+  ["cs", csharp],
+  ["css", css],
+  ["diff", diff],
+  ["go", go],
+  ["java", java],
+  ["javascript", javascript],
+  ["js", javascript],
+  ["json", json],
+  ["markdown", markdown],
+  ["md", markdown],
+  ["php", php],
+  ["powershell", powershell],
+  ["ps1", powershell],
+  ["python", python],
+  ["py", python],
+  ["ruby", ruby],
+  ["rb", ruby],
+  ["rust", rust],
+  ["rs", rust],
+  ["sql", sql],
+  ["typescript", typescript],
+  ["ts", typescript],
+  ["html", xml],
+  ["xml", xml],
+  ["yaml", yamlLanguage],
+  ["yml", yamlLanguage],
+];
+
+HIGHLIGHT_LANGUAGES.forEach(([name, language]) => hljs.registerLanguage(name, language));
 
 export function renderMarkdownToHtml(markdown: string, segmented = true): RenderResult {
   const warnings: string[] = [];
