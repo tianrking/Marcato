@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import { AppHeader } from "./components/AppHeader";
 import { IconButton, Modal } from "./components/Common";
+import { GitHubImportModal } from "./components/GitHubImportModal";
 import { PreviewPane } from "./components/PreviewPane";
 import { WorkspaceToolbar } from "./components/WorkspaceToolbar";
 import { MAX_IMPORT_BYTES, MAX_TABS, SHARE_URL_SOFT_LIMIT } from "./lib/constants";
@@ -646,33 +647,16 @@ function App() {
       )}
 
       {githubOpen && (
-        <Modal title={t("github.importTitle")} onClose={() => setGithubOpen(false)}>
-          <div className="github-import">
-            <input value={githubUrl} placeholder={t("github.placeholder")} onChange={(event) => setGithubUrl(event.target.value)} />
-            <button onClick={() => void listGithubFiles()}><Search size={15} />{t("github.listFiles")}</button>
-            <div className="github-list">
-              {githubFiles.map((file) => (
-                <label key={file.path}>
-                  <input
-                    type="checkbox"
-                    checked={selectedGithubPaths.has(file.path)}
-                    onChange={(event) => {
-                      const next = new Set(selectedGithubPaths);
-                      if (event.target.checked) next.add(file.path);
-                      else next.delete(file.path);
-                      setSelectedGithubPaths(next);
-                    }}
-                  />
-                  {file.path}
-                </label>
-              ))}
-            </div>
-            <div className="modal-actions">
-              <button onClick={() => setSelectedGithubPaths(new Set(githubFiles.map((file) => file.path)))}>{t("action.selectAll")}</button>
-              <button onClick={() => void importGithubSelection()}>{t("action.importSelected")}</button>
-            </div>
-          </div>
-        </Modal>
+        <GitHubImportModal
+          url={githubUrl}
+          files={githubFiles}
+          selectedPaths={selectedGithubPaths}
+          onUrlChange={setGithubUrl}
+          onListFiles={() => void listGithubFiles()}
+          onSelectedPathsChange={setSelectedGithubPaths}
+          onImport={() => void importGithubSelection()}
+          onClose={() => setGithubOpen(false)}
+        />
       )}
 
       {shareUrl && (
