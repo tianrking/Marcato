@@ -44,6 +44,8 @@ await withApp(async ({ consoleMessages, context, page, server }) => {
   await page.locator('.find-panel input[placeholder="Find"]').fill("Smoke");
   await page.getByRole("button", { name: "Next" }).click();
   await page.locator(".preview-find-highlight.active").first().waitFor({ state: "visible" });
+  await page.locator(".find-panel").getByRole("button", { name: "x", exact: true }).click();
+  await page.locator(".find-panel").waitFor({ state: "hidden" });
 
   await page.getByRole("button", { name: "Link" }).click();
   const linkDialog = page.getByRole("dialog", { name: "Insert link" });
@@ -62,6 +64,12 @@ await withApp(async ({ consoleMessages, context, page, server }) => {
   await diagramDialog.getByRole("button", { name: /Markmap Roadmap/ }).click();
   await diagramDialog.getByRole("button", { name: "Insert" }).click();
   expect((await page.locator(".editor-pane textarea").inputValue()).includes("```markmap"), "Diagram template insertion did not add a Markmap code fence.");
+
+  await page.getByRole("button", { name: "Delete current document" }).click();
+  const clearDialog = page.getByRole("dialog", { name: "Clear document" });
+  await clearDialog.waitFor({ state: "visible" });
+  await clearDialog.getByRole("button", { name: "Cancel" }).click();
+  expect((await page.locator(".editor-pane textarea").inputValue()).includes("# Smoke Fixture"), "Canceling clear confirmation should keep the document.");
 
   const workspaceToolbar = page.locator(".workspace-toolbar");
   await workspaceToolbar.getByRole("button", { name: "GitHub" }).click();

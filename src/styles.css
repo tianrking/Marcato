@@ -1058,6 +1058,48 @@ button:focus-visible {
   color: #fff;
 }
 
+.danger-button {
+  border-color: color-mix(in srgb, var(--danger) 72%, var(--line));
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--danger) 16%, var(--panel)), color-mix(in srgb, var(--danger) 10%, var(--button-bg)));
+  color: var(--danger);
+}
+
+.confirm-modal {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 12px;
+  max-width: 460px;
+}
+
+.confirm-modal p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.confirm-modal .modal-actions {
+  grid-column: 2;
+  justify-content: flex-end;
+}
+
+.confirm-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel-2);
+  color: var(--accent-3);
+}
+
+.confirm-icon.danger {
+  border-color: color-mix(in srgb, var(--danger) 36%, var(--line));
+  background: color-mix(in srgb, var(--danger) 10%, var(--panel));
+  color: var(--danger);
+}
+
 .insert-form {
   display: grid;
   gap: 12px;

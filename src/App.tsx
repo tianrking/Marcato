@@ -34,6 +34,7 @@ import {
   Undo2,
 } from "lucide-react";
 import { AppHeader } from "./components/AppHeader";
+import { ConfirmModal } from "./components/ConfirmModal";
 import { FindReplacePanel } from "./components/FindReplacePanel";
 import { IconButton } from "./components/Common";
 import { GitHubImportModal } from "./components/GitHubImportModal";
@@ -62,6 +63,14 @@ import type { MarkdownTab } from "./types";
 interface PdfExportState {
   phase: PdfExportPhase | "cancelling";
   progress: number;
+}
+
+interface ConfirmAction {
+  confirmLabel: string;
+  danger?: boolean;
+  message: string;
+  onConfirm: () => void;
+  title: string;
 }
 
 const PDF_EXPORT_LABEL_KEYS: Record<PdfExportState["phase"], string> = {
@@ -94,6 +103,7 @@ function App() {
   const [dragging, setDragging] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [pdfExport, setPdfExport] = useState<PdfExportState | null>(null);
+  const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
 
   const editorRef = useRef<HTMLTextAreaElement | null>(null);
   const previewRef = useRef<HTMLElement | null>(null);
@@ -158,8 +168,22 @@ function App() {
   const githubImport = useGitHubImport({ newTab, showToast });
 
   const closeTab = useCallback((id: string) => {
+    const tab = tabs.find((item) => item.id === id);
+    if (tab?.content.trim()) {
+      setConfirmAction({
+        title: "Close tab",
+        message: `Close "${tab.title}"? Unsaved local changes in this tab will be removed from the workspace.`,
+        confirmLabel: "Close tab",
+        danger: true,
+        onConfirm: () => {
+          closeStoreTab(id, `${t("status.untitled")}-${untitledCounter}.md`);
+          setConfirmAction(null);
+        },
+      });
+      return;
+    }
     closeStoreTab(id, `${t("status.untitled")}-${untitledCounter}.md`);
-  }, [closeStoreTab, t, untitledCounter]);
+  }, [closeStoreTab, t, tabs, untitledCounter]);
 
   const renameTab = (id: string) => {
     const tab = tabs.find((item) => item.id === id);
@@ -281,6 +305,20 @@ function App() {
   const cancelPdfExport = () => {
     pdfAbortRef.current?.abort();
     setPdfExport((current) => current ? { ...current, phase: "cancelling" } : current);
+  };
+
+  const requestClearDocument = () => {
+    if (!text.trim()) return;
+    setConfirmAction({
+      title: "Clear document",
+      message: "Clear the current document? This removes the text from the active tab.",
+      confirmLabel: "Clear document",
+      danger: true,
+      onConfirm: () => {
+        commitContent("");
+        setConfirmAction(null);
+      },
+    });
   };
 
   const selectPreviewBlock = useCallback((block: PreviewBlock) => {
@@ -422,7 +460,7 @@ function App() {
         <IconButton title="Diagram templates" onClick={insertModals.openDiagramModal}><Play size={16} /></IconButton>
         <IconButton title="Find and replace" onClick={() => findReplace.setOpen(true)}><Search size={16} /></IconButton>
         <IconButton title="Clear formatting" onClick={() => runCommand("clear")}><RefreshCw size={16} /></IconButton>
-        <IconButton title="Delete current document" onClick={() => commitContent("")}><Trash2 size={16} /></IconButton>
+        <IconButton title="Delete current document" onClick={requestClearDocument}><Trash2 size={16} /></IconButton>
         <IconButton title="Left align" onClick={() => insertAlignment("left")}><AlignLeft size={16} /></IconButton>
         <IconButton title="Center align" onClick={() => insertAlignment("center")}><AlignCenter size={16} /></IconButton>
         <IconButton title="Right align" onClick={() => insertAlignment("right")}><AlignRight size={16} /></IconButton>
@@ -551,6 +589,17 @@ function App() {
       <InsertModalHost {...insertModals.hostProps} />
 
       <ShareModal mode={share.mode} onClose={share.close} onCopy={share.copy} onModeChange={share.setModeUrl} tooLong={share.tooLong} url={share.url} />
+
+      {confirmAction && (
+        <ConfirmModal
+          confirmLabel={confirmAction.confirmLabel}
+          danger={confirmAction.danger}
+          message={confirmAction.message}
+          title={confirmAction.title}
+          onCancel={() => setConfirmAction(null)}
+          onConfirm={confirmAction.onConfirm}
+        />
+      )}
 
       {dragging && <div className="drag-overlay">{t("status.dropMarkdown")}</div>}
       {pdfExport && (
