@@ -25,7 +25,7 @@ must remain smooth and predictable after initial access.
 | Preview resource scope | Partial | original cleanup helpers | `src/lib/diagramRenderers.ts` | Clean only current preview instance resources; no cross-preview global sweep surprises. |
 | Main preview HTML sanitization | Done | `script.js sanitizePreviewHtml` | `src/lib/previewDocument.ts`, `src/lib/sanitizer.ts` | DOMPurify protects main Markdown HTML before `dangerouslySetInnerHTML`. |
 | Post-process HTML sanitization | Partial | `script.js` diagram/link sanitizing | `src/lib/diagramRenderers.ts` | Sanitize or construct DOM nodes for Leaflet popups, remote SVG, fallbacks, toolbar HTML. |
-| Safe links and anchor fallback | Partial | `script.js` preview link interception | `src/lib/diagramRenderers.ts` | Match original robust hash-anchor lookup and unsafe protocol blocking. |
+| Safe links and anchor fallback | Done | `script.js` preview link interception | `src/lib/diagramRenderers.ts` | Preview links are single-bound, unsafe protocols are blocked, and hash anchors fall back through id/name/title lookup. |
 | PWA/runtime cache rules | Partial | `index.html`, `sw.js`, `script.js` | `vite.config.ts` | Avoid catch-all caching overriding GitHub/diagram/map rules; verify update behavior. |
 
 ## Markdown Rendering
