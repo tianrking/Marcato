@@ -39,13 +39,29 @@ export function WorkspaceToolbar({
   onShare,
 }: WorkspaceToolbarProps) {
   const { t } = useTranslation();
+  const labels = {
+    copy: t("action.copy"),
+    copyPng: t("action.copyPng"),
+    copyWechat: t("action.copyWechat"),
+    github: "GitHub",
+    html: "HTML",
+    import: t("action.import"),
+    direction: globalState.direction.toUpperCase(),
+    md: "MD",
+    new: t("action.new"),
+    offlineFirst: t("setting.offlineFirst"),
+    pdf: "PDF",
+    png: "PNG",
+    share: t("action.share"),
+    sync: t("setting.sync"),
+  };
 
   return (
     <div className="workspace-toolbar">
       <div className="toolbar-group">
-        <button onClick={onNewTab}><Plus size={16} />{t("action.new")}</button>
-        <button onClick={() => fileInputRef.current?.click()}><Download size={16} />{t("action.import")}</button>
-        <button onClick={onGithubImport}><GitBranch size={16} />GitHub</button>
+        <button className="workspace-action" title={labels.new} aria-label={labels.new} onClick={onNewTab}><Plus size={15} /><span className="toolbar-button-label">{labels.new}</span></button>
+        <button className="workspace-action" title={labels.import} aria-label={labels.import} onClick={() => fileInputRef.current?.click()}><Download size={15} /><span className="toolbar-button-label">{labels.import}</span></button>
+        <button className="workspace-action" title={labels.github} aria-label={labels.github} onClick={onGithubImport}><GitBranch size={15} /><span className="toolbar-button-label">{labels.github}</span></button>
         <input
           ref={fileInputRef}
           hidden
@@ -56,31 +72,33 @@ export function WorkspaceToolbar({
         />
       </div>
       <div className="toolbar-group">
-        <button onClick={onExportMarkdown}><Save size={16} />MD</button>
-        <button onClick={onExportHtml}><FileCode2 size={16} />HTML</button>
-        <button onClick={onExportPdf}><FileDown size={16} />PDF</button>
-        <button onClick={onExportPng}><FileImage size={16} />PNG</button>
-        <button onClick={onCopyMarkdown}><Copy size={16} />{t("action.copy")}</button>
-        <button onClick={onCopyWechat}><MessageCircle size={16} />{t("action.copyWechat")}</button>
-        <button onClick={onCopyPreviewImage}><FileImage size={16} />{t("action.copyPng")}</button>
-        <button onClick={onShare}><Share2 size={16} />{t("action.share")}</button>
+        <button className="workspace-action" title={labels.md} aria-label={labels.md} onClick={onExportMarkdown}><Save size={15} /><span className="toolbar-button-label">{labels.md}</span></button>
+        <button className="workspace-action" title={labels.html} aria-label={labels.html} onClick={onExportHtml}><FileCode2 size={15} /><span className="toolbar-button-label">{labels.html}</span></button>
+        <button className="workspace-action" title={labels.pdf} aria-label={labels.pdf} onClick={onExportPdf}><FileDown size={15} /><span className="toolbar-button-label">{labels.pdf}</span></button>
+        <button className="workspace-action" title={labels.png} aria-label={labels.png} onClick={onExportPng}><FileImage size={15} /><span className="toolbar-button-label">{labels.png}</span></button>
+        <button className="workspace-action" title={labels.copy} aria-label={labels.copy} onClick={onCopyMarkdown}><Copy size={15} /><span className="toolbar-button-label">{labels.copy}</span></button>
+        <button className="workspace-action" title={labels.copyWechat} aria-label={labels.copyWechat} onClick={onCopyWechat}><MessageCircle size={15} /><span className="toolbar-button-label">{labels.copyWechat}</span></button>
+        <button className="workspace-action" title={labels.copyPng} aria-label={labels.copyPng} onClick={onCopyPreviewImage}><FileImage size={15} /><span className="toolbar-button-label">{labels.copyPng}</span></button>
+        <button className="workspace-action" title={labels.share} aria-label={labels.share} onClick={onShare}><Share2 size={15} /><span className="toolbar-button-label">{labels.share}</span></button>
       </div>
       <div className="toolbar-group compact">
-        <label>
+        <label title={labels.sync}>
           <input
+            aria-label={labels.sync}
             type="checkbox"
             checked={globalState.syncScroll}
             onChange={(event) => onGlobalChange({ syncScroll: event.target.checked })}
           />
-          {t("setting.sync")}
+          <span className="toolbar-setting-label">{labels.sync}</span>
         </label>
-        <label>
+        <label title={labels.offlineFirst}>
           <input
+            aria-label={labels.offlineFirst}
             type="checkbox"
             checked={globalState.offlineFirst}
             onChange={(event) => onGlobalChange({ offlineFirst: event.target.checked })}
           />
-          {t("setting.offlineFirst")}
+          <span className="toolbar-setting-label">{labels.offlineFirst}</span>
         </label>
         <select
           className="profile-select"
@@ -97,8 +115,8 @@ export function WorkspaceToolbar({
         >
           {Object.entries(LANGUAGE_LABELS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
         </select>
-        <button onClick={() => onGlobalChange({ direction: globalState.direction === "rtl" ? "ltr" : "rtl" })}>
-          <Languages size={16} />{globalState.direction.toUpperCase()}
+        <button className="workspace-action direction-action" title={labels.direction} aria-label={labels.direction} onClick={() => onGlobalChange({ direction: globalState.direction === "rtl" ? "ltr" : "rtl" })}>
+          <Languages size={15} /><span className="toolbar-button-label">{labels.direction}</span>
         </button>
       </div>
     </div>
