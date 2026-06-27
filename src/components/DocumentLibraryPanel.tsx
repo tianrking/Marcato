@@ -1,5 +1,5 @@
 import { CopyPlus, FileText, GitBranch, Import, Pencil, Plus, Search, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import type { MarkdownTab } from "../types";
 
 interface DocumentLibraryPanelProps {
@@ -12,7 +12,7 @@ interface DocumentLibraryPanelProps {
   onGithubImport: () => void;
   onImportFiles: () => void;
   onNewTab: () => void;
-  onRenameTab: (id: string) => void;
+  onRenameTab: (id: string, title: string) => void;
   onSelectTab: (id: string) => void;
 }
 
@@ -30,6 +30,9 @@ export function DocumentLibraryPanel({
   onSelectTab,
 }: DocumentLibraryPanelProps) {
   const [query, setQuery] = useState("");
+  const editInputRef = useRef<HTMLInputElement | null>(null);
+  const [editingTabId, setEditingTabId] = useState<string | null>(null);
+  const [draftTitle, setDraftTitle] = useState("");
   const filteredTabs = useMemo(() => {
     const needle = query.trim().toLowerCase();
     if (!needle) return tabs;
@@ -50,11 +53,46 @@ export function DocumentLibraryPanel({
   );
   const previewHeadings = useMemo(() => extractHeadings(previewTab?.content || ""), [previewTab]);
 
+  useEffect(() => {
+    if (!editingTabId) return;
+    requestAnimationFrame(() => {
+      editInputRef.current?.focus();
+      editInputRef.current?.select();
+    });
+  }, [editingTabId]);
+
   if (!opened) return null;
 
   const runAndClose = (action: () => void) => {
     action();
     onClose();
+  };
+
+  const startEditing = (tab: MarkdownTab) => {
+    setPreviewTabId(tab.id);
+    setEditingTabId(tab.id);
+    setDraftTitle(tab.title);
+  };
+
+  const finishEditing = (commit: boolean) => {
+    if (!editingTabId) return;
+    const tab = tabs.find((item) => item.id === editingTabId);
+    const nextTitle = draftTitle.trim();
+    if (commit && tab && nextTitle && nextTitle !== tab.title) {
+      onRenameTab(editingTabId, nextTitle);
+    }
+    setEditingTabId(null);
+    setDraftTitle("");
+  };
+
+  const onEditKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      finishEditing(true);
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      finishEditing(false);
+    }
   };
 
   return (
@@ -94,24 +132,43 @@ export function DocumentLibraryPanel({
             {filteredTabs.length ? filteredTabs.map((tab) => {
               const active = tab.id === activeTabId;
               const previewing = previewTab?.id === tab.id;
+              const editing = editingTabId === tab.id;
               return (
                 <article
                   key={tab.id}
-                  className={`${active ? "library-card active" : "library-card"}${previewing ? " previewing" : ""}`}
+                  className={`${active ? "library-card active" : "library-card"}${previewing ? " previewing" : ""}${editing ? " editing" : ""}`}
                   onMouseEnter={() => setPreviewTabId(tab.id)}
                 >
-                  <button
-                    type="button"
-                    className="library-card-main"
-                    onClick={() => runAndClose(() => onSelectTab(tab.id))}
-                    onFocus={() => setPreviewTabId(tab.id)}
-                  >
-                    <span><FileText size={16} />{tab.title}</span>
-                    <p>{previewText(tab.content)}</p>
-                    <small>{countWords(tab.content).toLocaleString()} words | {tab.content.length.toLocaleString()} chars | {formatUpdated(tab.updatedAt)}</small>
-                  </button>
+                  {editing ? (
+                    <div className="library-card-main library-card-edit-shell">
+                      <label>
+                        <FileText size={16} />
+                        <input
+                          ref={editInputRef}
+                          aria-label="Library document name"
+                          value={draftTitle}
+                          onBlur={() => finishEditing(true)}
+                          onChange={(event) => setDraftTitle(event.target.value)}
+                          onKeyDown={onEditKeyDown}
+                        />
+                      </label>
+                      <p>{previewText(tab.content)}</p>
+                      <small>{countWords(tab.content).toLocaleString()} words | {tab.content.length.toLocaleString()} chars | {formatUpdated(tab.updatedAt)}</small>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      className="library-card-main"
+                      onClick={() => runAndClose(() => onSelectTab(tab.id))}
+                      onFocus={() => setPreviewTabId(tab.id)}
+                    >
+                      <span><FileText size={16} />{tab.title}</span>
+                      <p>{previewText(tab.content)}</p>
+                      <small>{countWords(tab.content).toLocaleString()} words | {tab.content.length.toLocaleString()} chars | {formatUpdated(tab.updatedAt)}</small>
+                    </button>
+                  )}
                   <div className="library-card-actions">
-                    <button type="button" aria-label={`Rename ${tab.title}`} onClick={() => runAndClose(() => onRenameTab(tab.id))}><Pencil size={14} /></button>
+                    <button type="button" aria-label={`Rename ${tab.title}`} onClick={() => startEditing(tab)}><Pencil size={14} /></button>
                     <button type="button" aria-label={`Duplicate ${tab.title}`} onClick={() => onDuplicateTab(tab.id)}><CopyPlus size={14} /></button>
                     <button type="button" aria-label={`Close ${tab.title}`} onClick={() => onCloseTab(tab.id)}><X size={14} /></button>
                   </div>

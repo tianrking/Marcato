@@ -57,7 +57,6 @@ import { MobileMenu } from "./components/MobileMenu";
 import { PreviewPane } from "./components/PreviewPane";
 import { ProfessionalProfilePanel } from "./components/ProfessionalProfilePanel";
 import { ReplacePreviewModal } from "./components/ReplacePreviewModal";
-import { RenameTabModal } from "./components/RenameTabModal";
 import { ShareModal } from "./components/ShareModal";
 import { TabStrip } from "./components/TabStrip";
 import { WorkspaceToolbar } from "./components/WorkspaceToolbar";
@@ -139,7 +138,6 @@ function App() {
   const [pdfExport, setPdfExport] = useState<PdfExportState | null>(null);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const [healthOpen, setHealthOpen] = useState(false);
-  const [renameTabId, setRenameTabId] = useState<string | null>(null);
 
   const editorRef = useRef<HTMLTextAreaElement | null>(null);
   const previewRef = useRef<HTMLElement | null>(null);
@@ -224,11 +222,6 @@ function App() {
     }
     closeStoreTab(id, "");
   }, [closeStoreTab, tabs]);
-
-  const renameTab = (id: string) => {
-    if (!tabs.some((item) => item.id === id)) return;
-    setRenameTabId(id);
-  };
 
   const duplicateTab = (id: string) => {
     const tab = duplicateStoreTab(id);
@@ -520,7 +513,7 @@ function App() {
         onGithubImport={githubImport.open}
         onImportFiles={() => fileInputRef.current?.click()}
         onNewTab={() => newTab("", undefined)}
-        onRenameTab={renameTab}
+        onRenameTab={renameStoreTab}
         onSelectTab={setActiveTabId}
       />
 
@@ -729,17 +722,6 @@ function App() {
           title={confirmAction.title}
           onCancel={() => setConfirmAction(null)}
           onConfirm={confirmAction.onConfirm}
-        />
-      )}
-
-      {renameTabId && (
-        <RenameTabModal
-          initialTitle={tabs.find((tab) => tab.id === renameTabId)?.title || ""}
-          onClose={() => setRenameTabId(null)}
-          onRename={(title) => {
-            renameStoreTab(renameTabId, title);
-            setRenameTabId(null);
-          }}
         />
       )}
 

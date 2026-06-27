@@ -76,9 +76,15 @@ await withApp(async ({ consoleMessages, context, page, server }) => {
   await page.getByRole("button", { name: "Open document library" }).click();
   await library.waitFor({ state: "visible" });
   await library.getByPlaceholder("Search documents").fill("");
-  await library.getByRole("button", { name: /Duplicate Inline Rename/ }).first().click();
+  await library.getByRole("button", { name: /Rename Inline Rename/ }).first().click();
+  const libraryNameInput = library.getByLabel("Library document name");
+  await libraryNameInput.waitFor({ state: "visible" });
+  await libraryNameInput.fill("Library Rename.md");
+  await page.keyboard.press("Enter");
+  await library.getByRole("button", { name: /Duplicate Library Rename/ }).first().click();
   await library.getByRole("button", { name: "Close document library" }).click();
   await library.waitFor({ state: "hidden" });
+  await page.getByRole("tab", { name: "Library Rename.md" }).waitFor({ state: "visible" });
   expect((await page.getByRole("tab").count()) >= 3, "Document library should duplicate the active tab.");
   await page.getByRole("tab", { name: /Welcome|Smoke|Shared|Untitled/ }).first().click();
 
