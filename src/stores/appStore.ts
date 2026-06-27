@@ -106,9 +106,9 @@ export const useAppStore = create<AppStoreState>((set, get) => ({
   addTab(content = "", title) {
     const state = get();
     if (state.tabs.length >= MAX_TABS) return null;
-    const nextCounter = state.untitledCounter + 1;
-    const tab = makeTab(title || `Untitled-${state.untitledCounter}.md`, content);
+    const tab = makeTab(title || nextUntitledTitle(state.tabs), content);
     const tabs = [...state.tabs, tab];
+    const nextCounter = nextUntitledIndex(tabs);
     set({ tabs, activeTabId: tab.id, untitledCounter: nextCounter });
     persistTabs(tabs, tab.id, nextCounter);
     return tab;
@@ -123,11 +123,11 @@ export const useAppStore = create<AppStoreState>((set, get) => ({
     persistTabs(tabs, activeTabId, state.untitledCounter);
   },
 
-  closeTab(id, fallbackTitle) {
+  closeTab(id, _fallbackTitle) {
     const state = get();
     if (state.tabs.length <= 1) {
-      const tab = makeTab(fallbackTitle, "");
-      const untitledCounter = state.untitledCounter + 1;
+      const tab = makeTab(nextUntitledTitle([]), "");
+      const untitledCounter = nextUntitledIndex([tab]);
       set({ tabs: [tab], activeTabId: tab.id, untitledCounter });
       persistTabs([tab], tab.id, untitledCounter);
       return;
@@ -193,4 +193,21 @@ function persistTabs(tabs: MarkdownTab[], activeTabId: string, untitledCounter: 
   if (tabs.length) saveTabs(tabs);
   if (activeTabId) saveActiveTabId(activeTabId);
   saveUntitledCounter(untitledCounter);
+}
+
+function nextUntitledTitle(tabs: MarkdownTab[]) {
+  return `Untitled-${nextUntitledIndex(tabs)}.md`;
+}
+
+function nextUntitledIndex(tabs: MarkdownTab[]) {
+  const used = new Set<number>();
+  for (const tab of tabs) {
+    const match = /^Untitled-(\d+)\.md$/i.exec(tab.title.trim());
+    if (!match) continue;
+    const value = Number(match[1]);
+    if (Number.isInteger(value) && value > 0) used.add(value);
+  }
+  let index = 1;
+  while (used.has(index)) index += 1;
+  return index;
 }

@@ -54,7 +54,11 @@ await withApp(async ({ consoleMessages, context, page, server }) => {
   await page.locator(".find-panel").waitFor({ state: "hidden" });
 
   await page.getByRole("button", { name: "New tab" }).click();
-  await page.getByRole("tab", { name: /Untitled/ }).waitFor({ state: "visible" });
+  await page.getByRole("tab", { name: /Untitled-1\.md/ }).waitFor({ state: "visible" });
+  await page.getByRole("button", { name: /Close Untitled-1\.md/ }).click();
+  await page.getByRole("tab", { name: /Untitled-1\.md/ }).waitFor({ state: "hidden" });
+  await page.getByRole("button", { name: "New tab" }).click();
+  await page.getByRole("tab", { name: /Untitled-1\.md/ }).waitFor({ state: "visible" });
   await page.getByRole("button", { name: "Open document library" }).click();
   const library = page.getByRole("dialog", { name: "Document library" });
   await library.waitFor({ state: "visible" });

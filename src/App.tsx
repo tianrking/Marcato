@@ -119,7 +119,6 @@ function App() {
   const globalState = useAppStore((state) => state.globalState);
   const tabs = useAppStore((state) => state.tabs);
   const activeTabId = useAppStore((state) => state.activeTabId);
-  const untitledCounter = useAppStore((state) => state.untitledCounter);
   const initializeWorkspace = useAppStore((state) => state.initializeWorkspace);
   const updateGlobal = useAppStore((state) => state.updateGlobal);
   const setActiveTabId = useAppStore((state) => state.setActiveTabId);
@@ -203,9 +202,9 @@ function App() {
   };
 
   const newTab = useCallback((content = "", title?: string) => {
-    const tab = addTab(content, title || `${t("status.untitled")}-${untitledCounter}.md`);
+    const tab = addTab(content, title);
     if (!tab) showToast(`Tab limit is ${MAX_TABS}.`);
-  }, [addTab, t, untitledCounter]);
+  }, [addTab]);
   const githubImport = useGitHubImport({ newTab, showToast });
 
   const closeTab = useCallback((id: string) => {
@@ -217,14 +216,14 @@ function App() {
         confirmLabel: "Close tab",
         danger: true,
         onConfirm: () => {
-          closeStoreTab(id, `${t("status.untitled")}-${untitledCounter}.md`);
+          closeStoreTab(id, "");
           setConfirmAction(null);
         },
       });
       return;
     }
-    closeStoreTab(id, `${t("status.untitled")}-${untitledCounter}.md`);
-  }, [closeStoreTab, t, tabs, untitledCounter]);
+    closeStoreTab(id, "");
+  }, [closeStoreTab, tabs]);
 
   const renameTab = (id: string) => {
     if (!tabs.some((item) => item.id === id)) return;
