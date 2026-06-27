@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { createPreviewDocument, EMPTY_PREVIEW_DOCUMENT } from "../lib/previewDocument";
-import type { MarkdownTab, RenderResult } from "../types";
+import type { MarkdownTab, ProfessionalProfile, RenderResult } from "../types";
 
-export function useMarkdownRender(activeTab: MarkdownTab | undefined) {
+export function useMarkdownRender(activeTab: MarkdownTab | undefined, professionalProfile: ProfessionalProfile) {
   const [document, setDocument] = useState(EMPTY_PREVIEW_DOCUMENT);
   const [toc, setToc] = useState<RenderResult["toc"]>([]);
   const [state, setState] = useState<"idle" | "rendering" | "error">("idle");
@@ -15,7 +15,7 @@ export function useMarkdownRender(activeTab: MarkdownTab | undefined) {
     const requestId = ++requestRef.current;
     const controller = new AbortController();
     const timer = window.setTimeout(() => {
-      renderWithWorker(activeTab.content, requestId, controller.signal)
+      renderWithWorker(activeTab.content, professionalProfile, requestId, controller.signal)
         .then((result) => {
           if (controller.signal.aborted || requestRef.current !== requestId) return;
           const nextDocument = createPreviewDocument(result);
@@ -26,7 +26,7 @@ export function useMarkdownRender(activeTab: MarkdownTab | undefined) {
         })
         .catch((renderError) => {
           if (controller.signal.aborted || isAbortError(renderError) || requestRef.current !== requestId) return;
-          void renderFallback(activeTab.content)
+          void renderFallback(activeTab.content, professionalProfile)
             .then((fallback) => {
               if (controller.signal.aborted || requestRef.current !== requestId) return;
               const nextDocument = createPreviewDocument(fallback);
@@ -46,17 +46,17 @@ export function useMarkdownRender(activeTab: MarkdownTab | undefined) {
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [activeTab]);
+  }, [activeTab, professionalProfile]);
 
   return { document, toc, state, error };
 }
 
-async function renderFallback(markdown: string) {
+async function renderFallback(markdown: string, professionalProfile: ProfessionalProfile) {
   const { renderMarkdownToHtml } = await import("../lib/markdownCore");
-  return renderMarkdownToHtml(markdown, false);
+  return renderMarkdownToHtml(markdown, false, professionalProfile);
 }
 
-function renderWithWorker(markdown: string, requestId: number, signal?: AbortSignal): Promise<RenderResult> {
+function renderWithWorker(markdown: string, professionalProfile: ProfessionalProfile, requestId: number, signal?: AbortSignal): Promise<RenderResult> {
   return new Promise((resolve, reject) => {
     if (signal?.aborted) {
       reject(createAbortError());
@@ -86,7 +86,7 @@ function renderWithWorker(markdown: string, requestId: number, signal?: AbortSig
     }, 6000);
     worker.addEventListener("message", onMessage);
     signal?.addEventListener("abort", onAbort, { once: true });
-    worker.postMessage({ id: requestId, markdown, segmented: true });
+    worker.postMessage({ id: requestId, markdown, segmented: true, professionalProfile });
   });
 }
 

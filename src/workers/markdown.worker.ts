@@ -1,9 +1,9 @@
 import { renderMarkdownToHtml } from "../lib/markdownCore";
 
 self.onmessage = (event: MessageEvent) => {
-  const { id, markdown, segmented } = event.data || {};
+  const { id, markdown, segmented, professionalProfile } = event.data || {};
   try {
-    const result = renderMarkdownToHtml(String(markdown || ""), segmented !== false);
+    const result = renderMarkdownToHtml(String(markdown || ""), segmented !== false, professionalProfile || "standard");
     self.postMessage({ id, ok: true, result });
   } catch (error) {
     self.postMessage({

@@ -5,6 +5,15 @@ export function sanitizePreviewHtml(html: string) {
     ADD_ATTR: [
       "target",
       "rel",
+      "nodeleaf",
+      "data-role",
+      "data-pluginname",
+      "data-id",
+      "data-nickname",
+      "data-headimg",
+      "data-signature",
+      "data-service_type",
+      "data-verify_status",
       "data-original-code",
       "data-diagram-engine",
       "data-tex",
@@ -12,8 +21,9 @@ export function sanitizePreviewHtml(html: string) {
       "aria-hidden",
       "role",
       "download",
+      "xmlns",
     ],
-    ADD_TAGS: ["mjx-container"],
+    ADD_TAGS: ["mjx-container", "mp-common-profile"],
   });
 }
 

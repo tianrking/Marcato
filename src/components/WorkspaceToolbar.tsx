@@ -1,5 +1,5 @@
 import type { RefObject } from "react";
-import { Copy, Download, FileCode2, FileDown, FileImage, GitBranch, Languages, Plus, Save, Share2 } from "lucide-react";
+import { Copy, Download, FileCode2, FileDown, FileImage, GitBranch, Languages, MessageCircle, Plus, Save, Share2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { LANGUAGE_LABELS } from "../lib/i18n";
 import { PROFESSIONAL_PROFILES } from "../lib/professionalProfiles";
@@ -17,6 +17,7 @@ interface WorkspaceToolbarProps {
   onExportPdf: () => void;
   onExportPng: () => void;
   onCopyMarkdown: () => void;
+  onCopyWechat: () => void;
   onCopyPreviewImage: () => void;
   onShare: () => void;
 }
@@ -33,6 +34,7 @@ export function WorkspaceToolbar({
   onExportPdf,
   onExportPng,
   onCopyMarkdown,
+  onCopyWechat,
   onCopyPreviewImage,
   onShare,
 }: WorkspaceToolbarProps) {
@@ -59,6 +61,7 @@ export function WorkspaceToolbar({
         <button onClick={onExportPdf}><FileDown size={16} />PDF</button>
         <button onClick={onExportPng}><FileImage size={16} />PNG</button>
         <button onClick={onCopyMarkdown}><Copy size={16} />{t("action.copy")}</button>
+        <button onClick={onCopyWechat}><MessageCircle size={16} />{t("action.copyWechat")}</button>
         <button onClick={onCopyPreviewImage}><FileImage size={16} />{t("action.copyPng")}</button>
         <button onClick={onShare}><Share2 size={16} />{t("action.share")}</button>
       </div>

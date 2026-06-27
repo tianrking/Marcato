@@ -7,6 +7,7 @@ import {
   FileImage,
   GitBranch,
   Languages,
+  MessageCircle,
   PanelLeft,
   PanelRight,
   Plus,
@@ -37,6 +38,7 @@ interface MobileMenuProps {
   onClose: () => void;
   onCloseTab: (id: string) => void;
   onCopyMarkdown: () => void;
+  onCopyWechat: () => void;
   onCopyPreviewImage: () => void;
   onDuplicateTab: (id: string) => void;
   onExportHtml: () => void;
@@ -76,6 +78,7 @@ export function MobileMenu({
   onClose,
   onCloseTab,
   onCopyMarkdown,
+  onCopyWechat,
   onCopyPreviewImage,
   onDuplicateTab,
   onExportHtml,
@@ -172,6 +175,7 @@ export function MobileMenu({
             <button type="button" onClick={() => runAndClose(onExportPdf)}><FileDown size={16} />PDF</button>
             <button type="button" onClick={() => runAndClose(onExportPng)}><FileImage size={16} />PNG</button>
             <button type="button" onClick={() => runAndClose(onCopyMarkdown)}><Copy size={16} />{t("action.copy")}</button>
+            <button type="button" onClick={() => runAndClose(onCopyWechat)}><MessageCircle size={16} />{t("action.copyWechat")}</button>
             <button type="button" onClick={() => runAndClose(onCopyPreviewImage)}><FileImage size={16} />{t("action.copyPng")}</button>
             <button type="button" onClick={() => runAndClose(onShare)}><Share2 size={16} />{t("action.share")}</button>
           </div>

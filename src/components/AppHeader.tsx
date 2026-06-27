@@ -1,5 +1,6 @@
 import { Files, Menu, Moon, Palette, PanelLeft, PanelRight, Sparkles, SplitSquareHorizontal, Sun } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { buildInfo } from "../lib/buildInfo";
 import type { AccentPalette, ThemeMode, ViewMode } from "../types";
 import { IconButton, Segmented } from "./Common";
 
@@ -85,9 +86,15 @@ export function AppHeader({ accent, easterEggs, stats, theme, viewMode, onAccent
         >
           <Sparkles size={17} />
         </button>
-        <a className="repo-link" href="https://github.com/tianrking/Marcato" target="_blank" rel="noreferrer" title="Marcato on GitHub" aria-label="Marcato on GitHub">
-          <GitHubMark />
-        </a>
+        <div
+          className="repo-version"
+          title={`Marcato ${buildInfo.label}\nBranch: ${buildInfo.ref}\nCommit: ${buildInfo.commit || buildInfo.shortCommit}\nBuilt: ${buildInfo.buildTime}`}
+        >
+          <a className="repo-link" href="https://github.com/tianrking/Marcato" target="_blank" rel="noreferrer" title="Marcato on GitHub" aria-label="Marcato on GitHub">
+            <GitHubMark />
+          </a>
+          <span className="version-badge" aria-label={`Current version ${buildInfo.label}`}>{buildInfo.label}</span>
+        </div>
       </div>
     </header>
   );

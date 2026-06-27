@@ -26,6 +26,7 @@ const en = {
     export: "Export",
     share: "Share",
     copy: "Copy",
+    copyWechat: "WeChat",
     copyPng: "Copy PNG",
     reset: "Reset",
     close: "Close",
@@ -86,6 +87,7 @@ const en = {
   },
   toast: {
     markdownCopied: "Markdown copied.",
+    wechatCopied: "WeChat-ready rich text copied.",
     previewImageCopied: "Preview image copied.",
     previewImageDownloaded: "Clipboard unavailable, PNG downloaded.",
     clipboardImageUnavailable: "Clipboard image copy is unavailable.",
@@ -163,6 +165,7 @@ const resources = {
         export: "导出",
         share: "分享",
         copy: "复制",
+        copyWechat: "公众号格式",
         copyPng: "复制 PNG",
         reset: "重置",
         close: "关闭",
@@ -204,6 +207,7 @@ const resources = {
       },
       toast: {
         markdownCopied: "Markdown 已复制。",
+        wechatCopied: "公众号富文本已复制。",
         previewImageCopied: "预览图片已复制。",
         clipboardImageUnavailable: "当前浏览器无法复制图片到剪贴板。",
         shareCopied: "分享链接已复制。",

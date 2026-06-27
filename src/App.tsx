@@ -76,6 +76,7 @@ import { i18n } from "./lib/i18n";
 import { analyzeProfessionalProfile } from "./lib/professionalProfiles";
 import { previewDocumentToHtml, type PreviewBlock } from "./lib/previewDocument";
 import { makeTab } from "./lib/storage";
+import { copyWechatRichText } from "./lib/wechatExport";
 import { useAppStore } from "./stores/appStore";
 import type { PdfExportPhase } from "./lib/exporters";
 import type { MarkdownTab } from "./types";
@@ -154,7 +155,7 @@ function App() {
     () => tabs.find((tab) => tab.id === activeTabId) || tabs[0],
     [activeTabId, tabs],
   );
-  const { document: previewDocument, toc, state: renderState, error: renderError } = useMarkdownRender(activeTab);
+  const { document: previewDocument, toc, state: renderState, error: renderError } = useMarkdownRender(activeTab, globalState.professionalProfile);
   const text = activeTab?.content || "";
   const commitContent = useCallback((content: string) => updateActiveContent(content, true), [updateActiveContent]);
   const findReplace = useFindReplace(text, editorRef, commitContent);
@@ -331,6 +332,16 @@ function App() {
     }
   };
 
+  const doCopyWechat = async () => {
+    if (!previewRef.current) return;
+    try {
+      await copyWechatRichText(previewRef.current);
+      showToast(t("toast.wechatCopied", { defaultValue: "WeChat-ready rich text copied." }));
+    } catch {
+      showToast(t("toast.clipboardImageUnavailable"));
+    }
+  };
+
   const doExportPdf = async () => {
     if (!previewRef.current || pdfAbortRef.current) return;
     const controller = new AbortController();
@@ -485,6 +496,7 @@ function App() {
         onExportPdf={() => void doExportPdf()}
         onExportPng={() => previewRef.current && void exportPreviewPng()}
         onCopyMarkdown={doCopyMarkdown}
+        onCopyWechat={doCopyWechat}
         onCopyPreviewImage={doCopyPreviewImage}
         onShare={() => share.open("view")}
       />
@@ -670,6 +682,7 @@ function App() {
         onClose={() => setMobileMenuOpen(false)}
         onCloseTab={closeTab}
         onCopyMarkdown={() => void doCopyMarkdown()}
+        onCopyWechat={() => void doCopyWechat()}
         onCopyPreviewImage={() => void doCopyPreviewImage()}
         onDuplicateTab={duplicateTab}
         onExportHtml={() => void exportHtmlFile()}
