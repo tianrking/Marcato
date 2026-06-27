@@ -2371,16 +2371,17 @@ a:focus-visible {
 }
 
 .diagram-viewer figcaption {
-  padding: 9px 12px;
+  padding: 7px 10px;
   color: var(--muted);
   border-bottom: 1px solid var(--line);
   background: var(--panel);
+  font-size: 13px;
 }
 
 .diagram-toolbar {
   display: flex;
-  gap: 6px;
-  padding: 8px 10px;
+  gap: 4px;
+  padding: 5px 10px;
   border-bottom: 1px solid var(--line);
   background: var(--panel);
 }
@@ -2399,9 +2400,10 @@ a:focus-visible {
 }
 
 .diagram-status {
-  padding: 8px 12px;
+  padding: 6px 10px;
   color: var(--muted);
   border-top: 1px solid var(--line);
+  font-size: 12px;
 }
 
 .diagram-viewer.is-error .diagram-status {
@@ -2437,10 +2439,21 @@ a:focus-visible {
 }
 
 .mini-button {
-  min-height: 28px;
-  padding: 0 8px;
-  font-size: 12px;
+  min-height: 23px;
+  padding: 0 7px;
+  border-color: color-mix(in srgb, var(--line) 78%, transparent);
   border-radius: 999px;
+  background: color-mix(in srgb, var(--panel) 84%, transparent);
+  color: color-mix(in srgb, var(--text) 86%, var(--muted));
+  font-size: 11px;
+  line-height: 1;
+  box-shadow: none;
+}
+
+.mini-button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 7%, var(--panel));
+  border-radius: 999px;
+  box-shadow: none;
 }
 
 .math-block {
