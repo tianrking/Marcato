@@ -531,8 +531,8 @@ a:focus-visible {
 
 .app-header {
   position: relative;
-  height: 66px;
-  padding: 10px 16px;
+  height: 52px;
+  padding: 7px 12px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -555,22 +555,22 @@ a:focus-visible {
 .brand {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 9px;
   min-width: 0;
 }
 
 .brand img {
-  width: 40px;
-  height: 40px;
+  width: 34px;
+  height: 34px;
   border-radius: 8px;
   object-fit: cover;
   border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line));
-  box-shadow: 0 0 0 4px var(--accent-soft), 0 10px 22px rgba(15, 23, 42, 0.12);
+  box-shadow: 0 0 0 3px var(--accent-soft), 0 8px 18px rgba(15, 23, 42, 0.1);
 }
 
 .brand h1 {
   margin: 0;
-  font-size: 18px;
+  font-size: 16px;
   letter-spacing: 0;
   background: linear-gradient(90deg, var(--text), var(--accent), var(--accent-2));
   -webkit-background-clip: text;
@@ -579,9 +579,9 @@ a:focus-visible {
 }
 
 .brand p {
-  margin: 2px 0 0;
+  margin: 1px 0 0;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .header-actions,
@@ -590,7 +590,7 @@ a:focus-visible {
 .format-toolbar {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .header-actions {
@@ -602,8 +602,8 @@ a:focus-visible {
 }
 
 .workspace-toolbar {
-  min-height: 38px;
-  padding: 4px 10px;
+  min-height: 34px;
+  padding: 3px 8px;
   border-bottom: 1px solid var(--line);
   background: color-mix(in srgb, var(--panel-glass) 88%, var(--panel-2));
   flex-wrap: nowrap;
@@ -641,8 +641,8 @@ a:focus-visible {
 }
 
 .workspace-toolbar .workspace-action {
-  min-height: 28px;
-  padding: 0 8px;
+  min-height: 26px;
+  padding: 0 7px;
   gap: 5px;
   border-color: transparent;
   border-radius: 7px;
@@ -668,8 +668,8 @@ a:focus-visible {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  min-height: 28px;
-  padding: 0 7px;
+  min-height: 26px;
+  padding: 0 6px;
   border-radius: 7px;
   color: var(--muted);
   font-size: 12px;
@@ -683,15 +683,15 @@ a:focus-visible {
 
 .workspace-toolbar select {
   max-width: 150px;
-  min-height: 28px;
-  padding: 0 26px 0 8px;
+  min-height: 26px;
+  padding: 0 24px 0 7px;
   border-radius: 7px;
   font-size: 12px;
 }
 
 .segmented {
   display: inline-grid;
-  grid-template-columns: repeat(3, 34px);
+  grid-template-columns: repeat(3, 30px);
   border: 1px solid var(--line);
   border-radius: 8px;
   overflow: hidden;
@@ -702,7 +702,7 @@ a:focus-visible {
 .segmented button {
   border: 0;
   border-radius: 0;
-  min-height: 32px;
+  min-height: 28px;
   padding: 0;
   background: var(--panel);
 }
@@ -714,7 +714,8 @@ a:focus-visible {
 }
 
 .icon-button {
-  width: 34px;
+  width: 30px;
+  min-height: 30px;
   padding: 0;
 }
 
@@ -723,7 +724,7 @@ a:focus-visible {
   display: inline-flex;
   align-items: center;
   gap: 0;
-  height: 34px;
+  height: 30px;
   flex: 0 1 auto;
 }
 
@@ -732,7 +733,7 @@ a:focus-visible {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 34px;
+  height: 30px;
   border: 1px solid var(--line);
   background:
     linear-gradient(135deg, color-mix(in srgb, var(--accent) 12%, transparent), color-mix(in srgb, var(--accent-2) 8%, transparent)),
@@ -743,13 +744,13 @@ a:focus-visible {
 }
 
 .repo-link {
-  width: 34px;
+  width: 30px;
   border-radius: 8px 0 0 8px;
 }
 
 .version-badge {
   max-width: 132px;
-  padding: 0 10px;
+  padding: 0 8px;
   border-left: 0;
   border-radius: 0 8px 8px 0;
   color: var(--muted);
@@ -784,8 +785,8 @@ a:focus-visible {
 .mobile-accent-picker {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 6px;
+  gap: 5px;
+  padding: 3px 5px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: color-mix(in srgb, var(--panel) 84%, var(--panel-2));
@@ -794,9 +795,9 @@ a:focus-visible {
 
 .accent-picker button,
 .mobile-accent-picker button {
-  width: 18px;
-  height: 18px;
-  min-height: 18px;
+  width: 16px;
+  height: 16px;
+  min-height: 16px;
   padding: 0;
   border-radius: 999px;
   border-color: color-mix(in srgb, #fff 44%, var(--line));
@@ -838,10 +839,10 @@ a:focus-visible {
 
 .tab-strip-shell {
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr) 34px 34px;
+  grid-template-columns: 30px minmax(0, 1fr) 30px 30px;
   align-items: stretch;
-  gap: 6px;
-  padding: 7px 10px;
+  gap: 5px;
+  padding: 4px 8px;
   border-bottom: 1px solid var(--line);
   background:
     linear-gradient(90deg, color-mix(in srgb, var(--accent) 5%, transparent), transparent 34%),
@@ -851,24 +852,25 @@ a:focus-visible {
 .tab-strip {
   display: flex;
   align-items: stretch;
-  gap: 6px;
+  gap: 5px;
   overflow-x: auto;
-  padding: 2px;
+  padding: 1px;
   scroll-padding-inline: 12px;
 }
 
 .tab-scroll-button,
 .tab-new-button {
   align-self: center;
-  width: 34px;
+  width: 30px;
+  min-height: 30px;
   padding: 0;
 }
 
 .tab-frame {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 28px 28px;
-  flex: 0 0 clamp(170px, 18vw, 260px);
+  grid-template-columns: minmax(0, 1fr) 25px 25px;
+  flex: 0 0 clamp(150px, 17vw, 230px);
   border: 1px solid var(--line);
   border-radius: 8px;
   background: color-mix(in srgb, var(--panel) 88%, var(--panel-2));
@@ -898,9 +900,9 @@ a:focus-visible {
 
 .tab {
   justify-content: flex-start;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
-  min-height: 38px;
+  min-height: 30px;
   border: 0;
   border-radius: 8px 0 0 8px;
   background: transparent;
@@ -928,7 +930,7 @@ a:focus-visible {
 .tab-title-input {
   flex: 1;
   min-width: 0;
-  height: 28px;
+  height: 24px;
   padding: 0 8px;
   border: 1px solid color-mix(in srgb, var(--accent) 68%, var(--line));
   border-radius: 6px;
@@ -941,8 +943,8 @@ a:focus-visible {
 
 .tab-action,
 .tab-close {
-  width: 28px;
-  min-height: 38px;
+  width: 25px;
+  min-height: 30px;
   padding: 0;
   border: 0;
   border-left: 1px solid color-mix(in srgb, var(--line) 62%, transparent);
@@ -1564,8 +1566,8 @@ a:focus-visible {
 }
 
 .format-toolbar {
-  min-height: 44px;
-  padding: 6px 10px;
+  min-height: 36px;
+  padding: 4px 8px;
   flex-wrap: nowrap;
   overflow-x: auto;
   overflow-y: hidden;
@@ -1577,8 +1579,8 @@ a:focus-visible {
 
 .format-toolbar .icon-button {
   flex: 0 0 auto;
-  width: 31px;
-  min-height: 31px;
+  width: 28px;
+  min-height: 28px;
 }
 
 .workspace {
@@ -1624,8 +1626,8 @@ a:focus-visible {
 }
 
 .pane-title {
-  height: 38px;
-  padding: 0 12px;
+  height: 32px;
+  padding: 0 10px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -1638,15 +1640,15 @@ a:focus-visible {
 }
 
 .editor-wrap {
-  height: calc(100% - 38px);
+  height: calc(100% - 32px);
   display: grid;
-  grid-template-columns: 54px 1fr;
+  grid-template-columns: 48px 1fr;
   min-height: 0;
 }
 
 .line-numbers {
   margin: 0;
-  padding: 14px 10px;
+  padding: 12px 8px;
   overflow: hidden;
   border-right: 1px solid var(--line);
   color: var(--muted);
@@ -1665,7 +1667,7 @@ a:focus-visible {
   border-radius: 0;
   resize: none;
   outline: none;
-  padding: 14px 16px 40px;
+  padding: 12px 14px 36px;
   color: var(--text);
   background:
     linear-gradient(90deg, transparent 0, transparent 54px, color-mix(in srgb, var(--accent) 4%, transparent) 54px, transparent 56px),
@@ -3953,6 +3955,15 @@ a:focus-visible {
     gap: 12px;
   }
 
+  .brand p,
+  .version-badge {
+    display: none;
+  }
+
+  .repo-link {
+    border-radius: 8px;
+  }
+
   .document-library {
     width: min(520px, calc(100vw - 28px));
   }
@@ -4057,7 +4068,9 @@ a:focus-visible {
   }
 
   .app-header {
-    flex-direction: column;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
   }
 
   .mobile-menu-trigger {
@@ -4095,9 +4108,9 @@ a:focus-visible {
   }
 
   .header-actions {
-    width: 100%;
-    justify-content: space-between;
-    gap: 6px;
+    width: auto;
+    justify-content: flex-end;
+    gap: 5px;
   }
 
   .app-header .accent-picker {
@@ -4156,11 +4169,11 @@ a:focus-visible {
   }
 
   .view-editor .editor-wrap {
-    height: calc(100% - 38px);
+    height: calc(100% - 32px);
   }
 
   .view-preview .preview-article {
-    min-height: calc(100% - 38px);
+    min-height: calc(100% - 32px);
     padding: 22px clamp(16px, 5vw, 28px) 72px;
   }
 
@@ -4183,8 +4196,18 @@ a:focus-visible {
 }
 
 @media (max-width: 420px) {
+  .repo-version {
+    display: none;
+  }
+
   .mobile-action-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 360px) {
+  .brand h1 {
+    display: none;
   }
 }
 
