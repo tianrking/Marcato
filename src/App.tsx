@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ClipboardEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ClipboardEvent, type MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
 import {
   AlignCenter,
@@ -51,6 +51,7 @@ import { ConfirmModal } from "./components/ConfirmModal";
 import { DocumentLibraryPanel } from "./components/DocumentLibraryPanel";
 import { DocumentHealthModal } from "./components/DocumentHealthModal";
 import { EasterEggLayer } from "./components/EasterEggLayer";
+import { ExternalAskMenu } from "./components/ExternalAskMenu";
 import { FindReplacePanel } from "./components/FindReplacePanel";
 import { IconButton } from "./components/Common";
 import { GitHubImportModal } from "./components/GitHubImportModal";
@@ -71,6 +72,7 @@ import { useShare } from "./hooks/useShare";
 import { MAX_ASSETS, MAX_IMPORT_BYTES, MAX_TABS } from "./lib/constants";
 import { assetMarkdown, createLocalAsset, createRemoteAsset, loadAssets, saveAssets } from "./lib/assets";
 import { applyCommand, handleSmartEnter, type MarkdownCommand } from "./lib/editorCommands";
+import { buildExternalAskPrompt, buildExternalAskUrl, type ExternalAskTarget } from "./lib/externalAsk";
 import { exportHtml, exportMarkdown } from "./lib/downloads";
 import { getExportName } from "./lib/exportNames";
 import { analyzeDocumentHealth } from "./lib/documentHealth";
@@ -138,6 +140,7 @@ function App() {
   const [documentLibraryOpen, setDocumentLibraryOpen] = useState(false);
   const [assetLibraryOpen, setAssetLibraryOpen] = useState(false);
   const [assets, setAssets] = useState<MarkdownAsset[]>(() => loadAssets());
+  const [externalAsk, setExternalAsk] = useState<{ selection: string; x: number; y: number } | null>(null);
   const [dragging, setDragging] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [pdfExport, setPdfExport] = useState<PdfExportState | null>(null);
@@ -357,6 +360,47 @@ function App() {
     event.preventDefault();
     const editor = event.currentTarget;
     void addLocalAssets(imageFiles, true, { start: editor.selectionStart, end: editor.selectionEnd });
+  };
+
+  const openExternalAskMenu = (event: MouseEvent<HTMLElement>, selection: string) => {
+    if (!selection.trim()) return;
+    event.preventDefault();
+    const menuWidth = 280;
+    const menuHeight = 330;
+    setExternalAsk({
+      selection,
+      x: Math.min(event.clientX, Math.max(12, window.innerWidth - menuWidth - 12)),
+      y: Math.min(event.clientY, Math.max(12, window.innerHeight - menuHeight - 12)),
+    });
+  };
+
+  const onEditorContextMenu = (event: MouseEvent<HTMLTextAreaElement>) => {
+    const editor = event.currentTarget;
+    const selection = editor.value.slice(editor.selectionStart, editor.selectionEnd) || currentLineAt(editor.value, editor.selectionStart);
+    openExternalAskMenu(event, selection);
+  };
+
+  const onPreviewContextMenu = (event: MouseEvent<HTMLElement>) => {
+    const selection = window.getSelection()?.toString() || "";
+    openExternalAskMenu(event, selection);
+  };
+
+  const currentAskPrompt = () => buildExternalAskPrompt(externalAsk?.selection || "", activeTab?.title || "Untitled", globalState.professionalProfile);
+
+  const openExternalAsk = (target: ExternalAskTarget) => {
+    const url = buildExternalAskUrl(target, currentAskPrompt());
+    window.open(url, "_blank", "noopener,noreferrer");
+    setExternalAsk(null);
+  };
+
+  const copyExternalAskPrompt = async () => {
+    try {
+      await navigator.clipboard.writeText(currentAskPrompt());
+      showToast("External prompt copied.");
+    } catch {
+      showToast("Clipboard unavailable for external prompt.");
+    }
+    setExternalAsk(null);
   };
 
   const doCopyMarkdown = async () => {
@@ -661,6 +705,7 @@ function App() {
               onScroll={onScrollEditor}
               onKeyDown={onEditorKeyDown}
               onPaste={onEditorPaste}
+              onContextMenu={onEditorContextMenu}
               onChange={(event) => updateActiveContent(event.target.value)}
               onBlur={(event) => commitContent(event.target.value)}
               aria-label={t("view.editor")}
@@ -668,7 +713,7 @@ function App() {
           </div>
         </section>
         <div className="resizer" role="separator" aria-orientation="vertical" tabIndex={0} onPointerDown={beginResize} />
-        <section className="preview-pane" ref={previewPaneRef} onScroll={onScrollPreview}>
+        <section className="preview-pane" ref={previewPaneRef} onScroll={onScrollPreview} onContextMenu={onPreviewContextMenu}>
           <div className="pane-title">
             <Eye size={16} />{t("view.preview")}
             {renderState === "rendering" && <span className="render-pill">{t("status.rendering")}</span>}
@@ -830,6 +875,16 @@ function App() {
           </button>
         </div>
       )}
+      {externalAsk && (
+        <ExternalAskMenu
+          x={externalAsk.x}
+          y={externalAsk.y}
+          selection={externalAsk.selection}
+          onClose={() => setExternalAsk(null)}
+          onCopyPrompt={() => void copyExternalAskPrompt()}
+          onOpen={openExternalAsk}
+        />
+      )}
       <div className="sr-live-region" aria-live="polite" aria-atomic="true">{liveMessage}</div>
       {toast && <div className="toast" role="status">{toast}</div>}
     </div>
@@ -854,6 +909,13 @@ function getStats(text: string) {
 function lineNumbers(text: string) {
   const count = Math.max(1, text.split("\n").length);
   return Array.from({ length: count }, (_, index) => index + 1).join("\n");
+}
+
+function currentLineAt(text: string, offset: number) {
+  const start = text.lastIndexOf("\n", Math.max(0, offset - 1)) + 1;
+  const nextBreak = text.indexOf("\n", offset);
+  const end = nextBreak === -1 ? text.length : nextBreak;
+  return text.slice(start, end);
 }
 
 function lineRangeToOffsets(text: string, startLine: number, endLine: number) {

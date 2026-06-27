@@ -18,6 +18,7 @@ try {
   const markdown = await server.ssrLoadModule("/src/lib/markdownCore.ts");
   const profiles = await server.ssrLoadModule("/src/lib/professionalProfiles.ts");
   const share = await server.ssrLoadModule("/src/lib/share.ts");
+  const externalAsk = await server.ssrLoadModule("/src/lib/externalAsk.ts");
 
   const heading = editor.applyCommand("Hello", "h4", 0, 5);
   expect(heading.value === "#### Hello", `Expected H4 command, got ${heading.value}`);
@@ -54,6 +55,11 @@ try {
   const encoded = share.encodeShare("# Marcato\n\nHello");
   const decoded = share.decodeShare(encoded);
   expect(decoded === "# Marcato\n\nHello", "Share encode/decode roundtrip failed.");
+
+  const askPrompt = externalAsk.buildExternalAskPrompt("tighten this paragraph", "Draft.md", "wechat");
+  expect(askPrompt.includes("Draft.md") && askPrompt.includes("tighten this paragraph"), "External ask prompt should include document and selection context.");
+  expect(externalAsk.buildExternalAskUrl("chatgpt", askPrompt).startsWith("https://chatgpt.com/?q="), "ChatGPT ask URL should be generated.");
+  expect(externalAsk.buildExternalAskUrl("claudeDesktop", askPrompt).startsWith("claude://claude.ai/new?q="), "Claude Desktop URL should use the official URI scheme.");
 
   const wechatReport = profiles.analyzeProfessionalProfile("# Title\n\n| A | B |\n|---|---|\n| 1 | 2 |\n\n$$x$$\n\n```mermaid\ngraph TD\nA-->B\n```", "wechat");
   expect(wechatReport.issues.some((issue) => issue.code === "wechat-table"), "WeChat profile should warn about wide tables.");

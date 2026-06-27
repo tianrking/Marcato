@@ -53,6 +53,24 @@ await withApp(async ({ consoleMessages, context, page, server }) => {
   await page.locator(".find-panel").getByRole("button", { name: "x", exact: true }).click();
   await page.locator(".find-panel").waitFor({ state: "hidden" });
 
+  const editor = page.locator(".editor-pane textarea");
+  await editor.evaluate((node) => {
+    const textarea = node;
+    const start = textarea.value.indexOf("Inline math");
+    textarea.focus();
+    textarea.setSelectionRange(start, start + "Inline math".length);
+    textarea.dispatchEvent(new MouseEvent("contextmenu", {
+      bubbles: true,
+      cancelable: true,
+      clientX: 240,
+      clientY: 240,
+    }));
+  });
+  const askMenu = page.getByRole("menu", { name: "Ask externally" });
+  await askMenu.waitFor({ state: "visible" });
+  await askMenu.getByRole("menuitem", { name: "Copy prompt" }).click();
+  await askMenu.waitFor({ state: "hidden" });
+
   await page.getByRole("button", { name: "Asset library" }).click();
   const assetLibrary = page.getByRole("dialog", { name: "Asset library" });
   await assetLibrary.waitFor({ state: "visible" });
