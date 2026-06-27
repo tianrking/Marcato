@@ -685,6 +685,7 @@ function App() {
         onHealthDetails={() => setHealthOpen(true)}
         onImportFiles={() => fileInputRef.current?.click()}
         onNewTab={() => newTab("", undefined)}
+        onRenameTab={renameStoreTab}
         onSelectTab={setActiveTabId}
         onShare={() => share.open("view")}
         onGlobalChange={updateGlobal}

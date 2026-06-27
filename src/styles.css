@@ -3471,18 +3471,50 @@ a:focus-visible {
 
 .mobile-tab-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 36px 36px;
+  grid-template-columns: minmax(0, 1fr) 34px 34px 34px;
   gap: 6px;
 }
 
-.mobile-tab-row.active .mobile-tab-name {
+.mobile-tab-row.active .mobile-tab-name,
+.mobile-tab-row.active .mobile-tab-edit {
   border-color: var(--accent);
   background: var(--accent-soft);
 }
 
-.mobile-tab-name {
+.mobile-tab-row > button {
+  width: 34px;
+  min-height: 34px;
+  padding: 0;
+}
+
+.mobile-tab-name,
+.mobile-tab-edit {
+  min-height: 38px;
   justify-content: flex-start;
   min-width: 0;
+}
+
+.mobile-tab-edit {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+.mobile-tab-edit input {
+  min-width: 0;
+  width: 100%;
+  height: 28px;
+  padding: 0 7px;
+  border: 1px solid color-mix(in srgb, var(--accent) 42%, var(--line));
+  border-radius: 7px;
+  background: var(--panel-2);
+  color: var(--text);
+  font: inherit;
+  font-weight: 700;
 }
 
 .mobile-tab-name span {
@@ -3492,7 +3524,8 @@ a:focus-visible {
   white-space: nowrap;
 }
 
-.mobile-tab-name small {
+.mobile-tab-name small,
+.mobile-tab-edit small {
   margin-left: auto;
   color: var(--muted);
 }

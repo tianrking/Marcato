@@ -152,6 +152,12 @@ await withApp(async ({ consoleMessages, context, page, server }) => {
   await mobilePage.getByRole("button", { name: "Open mobile menu" }).click();
   const mobileMenu = mobilePage.getByRole("dialog", { name: "Mobile workspace menu" });
   await mobileMenu.waitFor({ state: "visible" });
+  await mobileMenu.getByRole("button", { name: /Rename/ }).first().click();
+  const mobileNameInput = mobileMenu.getByLabel("Mobile document name");
+  await mobileNameInput.waitFor({ state: "visible" });
+  await mobileNameInput.fill("Mobile Rename.md");
+  await mobilePage.keyboard.press("Enter");
+  await mobileMenu.getByText("Mobile Rename.md").waitFor({ state: "visible" });
   await mobileMenu.getByRole("button", { name: "GitHub" }).waitFor({ state: "visible" });
   await mobileMenu.getByRole("button", { name: "Share" }).waitFor({ state: "visible" });
   await mobilePage.getByRole("button", { name: "Close mobile menu" }).click();

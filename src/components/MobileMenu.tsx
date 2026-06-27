@@ -1,5 +1,6 @@
 import {
   Copy,
+  CopyPlus,
   Download,
   Eye,
   FileCode2,
@@ -10,6 +11,7 @@ import {
   MessageCircle,
   PanelLeft,
   PanelRight,
+  Pencil,
   Plus,
   Save,
   Share2,
@@ -17,7 +19,7 @@ import {
   SplitSquareHorizontal,
   X,
 } from "lucide-react";
-import type { ReactNode } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { LANGUAGE_LABELS } from "../lib/i18n";
 import { PROFESSIONAL_PROFILES } from "../lib/professionalProfiles";
@@ -49,6 +51,7 @@ interface MobileMenuProps {
   onHealthDetails: () => void;
   onImportFiles: () => void;
   onNewTab: () => void;
+  onRenameTab: (id: string, title: string) => void;
   onSelectTab: (id: string) => void;
   onShare: () => void;
   onGlobalChange: (patch: Partial<GlobalState>) => void;
@@ -89,16 +92,60 @@ export function MobileMenu({
   onHealthDetails,
   onImportFiles,
   onNewTab,
+  onRenameTab,
   onSelectTab,
   onShare,
   onGlobalChange,
 }: MobileMenuProps) {
   const { t } = useTranslation();
+  const editInputRef = useRef<HTMLInputElement | null>(null);
+  const [editingTabId, setEditingTabId] = useState<string | null>(null);
+  const [draftTitle, setDraftTitle] = useState("");
+
+  useEffect(() => {
+    if (!opened) {
+      setEditingTabId(null);
+      setDraftTitle("");
+      return;
+    }
+    if (!editingTabId) return;
+    requestAnimationFrame(() => {
+      editInputRef.current?.focus();
+      editInputRef.current?.select();
+    });
+  }, [editingTabId, opened]);
+
   if (!opened) return null;
 
   const runAndClose = (action: () => void) => {
     action();
     onClose();
+  };
+
+  const startEditing = (tab: MarkdownTab) => {
+    setEditingTabId(tab.id);
+    setDraftTitle(tab.title);
+  };
+
+  const finishEditing = (commit: boolean) => {
+    if (!editingTabId) return;
+    const tab = tabs.find((item) => item.id === editingTabId);
+    const nextTitle = draftTitle.trim();
+    if (commit && tab && nextTitle && nextTitle !== tab.title) {
+      onRenameTab(editingTabId, nextTitle);
+    }
+    setEditingTabId(null);
+    setDraftTitle("");
+  };
+
+  const onEditKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      finishEditing(true);
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      finishEditing(false);
+    }
   };
 
   return (
@@ -149,16 +196,34 @@ export function MobileMenu({
         <section className="mobile-drawer-section">
           <span className="mobile-section-title">{t("status.document")}</span>
           <div className="mobile-tab-list">
-            {tabs.map((tab) => (
-              <div key={tab.id} className={tab.id === activeTabId ? "mobile-tab-row active" : "mobile-tab-row"}>
-                <button type="button" className="mobile-tab-name" onClick={() => runAndClose(() => onSelectTab(tab.id))}>
-                  <span>{tab.title}</span>
-                  <small>{tab.content.length.toLocaleString()}</small>
-                </button>
-                <button type="button" aria-label={`Duplicate ${tab.title}`} onClick={() => onDuplicateTab(tab.id)}>+</button>
-                <button type="button" aria-label={`Close ${tab.title}`} onClick={() => onCloseTab(tab.id)}>x</button>
-              </div>
-            ))}
+            {tabs.map((tab) => {
+              const editing = editingTabId === tab.id;
+              return (
+                <div key={tab.id} className={`${tab.id === activeTabId ? "mobile-tab-row active" : "mobile-tab-row"}${editing ? " editing" : ""}`}>
+                  {editing ? (
+                    <div className="mobile-tab-edit">
+                      <input
+                        ref={editInputRef}
+                        aria-label="Mobile document name"
+                        value={draftTitle}
+                        onBlur={() => finishEditing(true)}
+                        onChange={(event) => setDraftTitle(event.target.value)}
+                        onKeyDown={onEditKeyDown}
+                      />
+                      <small>{tab.content.length.toLocaleString()}</small>
+                    </div>
+                  ) : (
+                    <button type="button" className="mobile-tab-name" onClick={() => runAndClose(() => onSelectTab(tab.id))}>
+                      <span>{tab.title}</span>
+                      <small>{tab.content.length.toLocaleString()}</small>
+                    </button>
+                  )}
+                  <button type="button" aria-label={`Rename ${tab.title}`} onClick={() => startEditing(tab)}><Pencil size={14} /></button>
+                  <button type="button" aria-label={`Duplicate ${tab.title}`} onClick={() => onDuplicateTab(tab.id)}><CopyPlus size={14} /></button>
+                  <button type="button" aria-label={`Close ${tab.title}`} onClick={() => onCloseTab(tab.id)}><X size={14} /></button>
+                </div>
+              );
+            })}
           </div>
           <button type="button" className="mobile-wide-action" onClick={() => runAndClose(onNewTab)}>
             <Plus size={16} />{t("action.new")}
