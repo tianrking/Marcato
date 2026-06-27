@@ -36,6 +36,12 @@ await withApp(async ({ consoleMessages, context, page, server }) => {
   await waitForPreviewText(page, "Smoke Fixture");
   await page.locator(".katex").first().waitFor({ state: "visible", timeout: 10_000 });
   await page.locator('.diagram-viewer[data-diagram-engine="mermaid"] svg').first().waitFor({ state: "visible", timeout: 20_000 });
+  const mermaidRender = await page.locator('.diagram-viewer[data-diagram-engine="mermaid"] svg').first().evaluate((svg) => ({
+    foreignObjectCount: svg.querySelectorAll("foreignObject").length,
+    labels: Array.from(svg.querySelectorAll("text")).map((node) => node.textContent?.trim()).filter(Boolean),
+  }));
+  expect(mermaidRender.foreignObjectCount === 0, "Mermaid output should use sanitizer-safe SVG text labels.");
+  expect(mermaidRender.labels.some((label) => label.includes("Write")), "Mermaid node labels should remain visible after sanitizing.");
   await page.locator(".markdown-alert").first().waitFor({ state: "visible" });
   await page.locator("table").first().waitFor({ state: "visible" });
 

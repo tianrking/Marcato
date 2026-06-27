@@ -136,7 +136,14 @@ async function renderEmojiShortcodes(root: HTMLElement, signal?: AbortSignal) {
 async function renderMermaid(root: HTMLElement, theme: "light" | "dark", signal?: AbortSignal) {
   const nextTheme = theme === "dark" ? "dark" : "default";
   if (mermaidTheme !== nextTheme) {
-    mermaid.initialize({ startOnLoad: false, securityLevel: "strict", theme: nextTheme });
+    mermaid.initialize({
+      startOnLoad: false,
+      securityLevel: "strict",
+      theme: nextTheme,
+      htmlLabels: false,
+      flowchart: { htmlLabels: false, useMaxWidth: true },
+      sequence: { useMaxWidth: true },
+    });
     mermaidTheme = nextTheme;
   }
   const nodes = [...root.querySelectorAll<HTMLElement>('.diagram-viewer[data-diagram-engine="mermaid"] .diagram-surface')];
@@ -149,12 +156,30 @@ async function renderMermaid(root: HTMLElement, theme: "light" | "dark", signal?
       const { svg } = await mermaid.render(id, code);
       if (isAborted(signal, root) || !node.isConnected) return;
       node.innerHTML = sanitizeRemoteDiagramSvg(svg);
+      fitMermaidSvg(node);
       node.dataset.rendered = "1";
       node.dataset.mermaidTheme = nextTheme;
       markReady(node.closest<HTMLElement>(".diagram-viewer"));
     } catch (error) {
       markError(node.closest<HTMLElement>(".diagram-viewer"), error);
     }
+  }
+}
+
+function fitMermaidSvg(node: HTMLElement) {
+  const svg = node.querySelector<SVGSVGElement>("svg");
+  if (!svg) return;
+  svg.setAttribute("role", "img");
+  svg.setAttribute("aria-label", "Mermaid diagram");
+  svg.style.height = "auto";
+  svg.style.maxWidth = "none";
+
+  const viewBoxWidth = Number(svg.getAttribute("viewBox")?.split(/\s+/)[2] || 0);
+  const surfaceWidth = node.clientWidth || 0;
+  if (viewBoxWidth > surfaceWidth && surfaceWidth > 0) {
+    svg.style.width = `${Math.round(Math.min(viewBoxWidth, Math.max(surfaceWidth, 720)))}px`;
+  } else {
+    svg.style.width = "100%";
   }
 }
 

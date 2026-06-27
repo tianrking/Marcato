@@ -2718,6 +2718,11 @@ a:focus-visible {
   height: auto;
 }
 
+.pdf-export .diagram-surface.mermaid svg {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
 .pdf-export table tr {
   background-color: transparent !important;
 }
