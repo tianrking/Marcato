@@ -811,6 +811,10 @@ a:focus-visible {
   box-shadow: inset 0 -2px 0 var(--accent), var(--shadow-soft);
 }
 
+.tab-frame.editing {
+  border-color: var(--accent);
+}
+
 .tab-frame.active::before {
   content: "";
   position: absolute;
@@ -842,6 +846,25 @@ a:focus-visible {
 
 .tab small {
   color: var(--muted);
+}
+
+.tab-edit-shell {
+  display: inline-flex;
+  align-items: center;
+}
+
+.tab-title-input {
+  flex: 1;
+  min-width: 0;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid color-mix(in srgb, var(--accent) 68%, var(--line));
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+  outline: none;
+  box-shadow: var(--focus-ring);
 }
 
 .tab-action,

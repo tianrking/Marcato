@@ -506,7 +506,7 @@ function App() {
         tabs={tabs}
         onCloseTab={closeTab}
         onNewTab={() => newTab("", undefined)}
-        onRenameTab={renameTab}
+        onRenameTab={renameStoreTab}
         onReorderTab={reorderStoreTab}
         onSelectTab={setActiveTabId}
       />
