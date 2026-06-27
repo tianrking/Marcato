@@ -1,5 +1,5 @@
 import { CopyPlus, FileText, GitBranch, Import, Pencil, Plus, Search, X } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { MarkdownTab } from "../types";
 
 interface DocumentLibraryPanelProps {
@@ -40,6 +40,15 @@ export function DocumentLibraryPanel({
     docs: tabs.length,
     words: tabs.reduce((sum, tab) => sum + countWords(tab.content), 0),
   }), [tabs]);
+  const [previewTabId, setPreviewTabId] = useState(activeTabId);
+  useEffect(() => {
+    if (opened) setPreviewTabId(activeTabId);
+  }, [activeTabId, opened]);
+  const previewTab = useMemo(
+    () => tabs.find((tab) => tab.id === previewTabId) || tabs.find((tab) => tab.id === activeTabId) || tabs[0],
+    [activeTabId, previewTabId, tabs],
+  );
+  const previewHeadings = useMemo(() => extractHeadings(previewTab?.content || ""), [previewTab]);
 
   if (!opened) return null;
 
@@ -80,29 +89,72 @@ export function DocumentLibraryPanel({
           />
         </label>
 
-        <div className="library-list">
-          {filteredTabs.length ? filteredTabs.map((tab) => {
-            const active = tab.id === activeTabId;
-            return (
-              <article key={tab.id} className={active ? "library-card active" : "library-card"}>
-                <button type="button" className="library-card-main" onClick={() => runAndClose(() => onSelectTab(tab.id))}>
-                  <span><FileText size={16} />{tab.title}</span>
-                  <p>{previewText(tab.content)}</p>
-                  <small>{countWords(tab.content).toLocaleString()} words | {tab.content.length.toLocaleString()} chars</small>
-                </button>
-                <div className="library-card-actions">
-                  <button type="button" aria-label={`Rename ${tab.title}`} onClick={() => runAndClose(() => onRenameTab(tab.id))}><Pencil size={14} /></button>
-                  <button type="button" aria-label={`Duplicate ${tab.title}`} onClick={() => onDuplicateTab(tab.id)}><CopyPlus size={14} /></button>
-                  <button type="button" aria-label={`Close ${tab.title}`} onClick={() => onCloseTab(tab.id)}><X size={14} /></button>
+        <div className="library-browser">
+          <div className="library-list">
+            {filteredTabs.length ? filteredTabs.map((tab) => {
+              const active = tab.id === activeTabId;
+              const previewing = previewTab?.id === tab.id;
+              return (
+                <article
+                  key={tab.id}
+                  className={`${active ? "library-card active" : "library-card"}${previewing ? " previewing" : ""}`}
+                  onMouseEnter={() => setPreviewTabId(tab.id)}
+                >
+                  <button
+                    type="button"
+                    className="library-card-main"
+                    onClick={() => runAndClose(() => onSelectTab(tab.id))}
+                    onFocus={() => setPreviewTabId(tab.id)}
+                  >
+                    <span><FileText size={16} />{tab.title}</span>
+                    <p>{previewText(tab.content)}</p>
+                    <small>{countWords(tab.content).toLocaleString()} words | {tab.content.length.toLocaleString()} chars | {formatUpdated(tab.updatedAt)}</small>
+                  </button>
+                  <div className="library-card-actions">
+                    <button type="button" aria-label={`Rename ${tab.title}`} onClick={() => runAndClose(() => onRenameTab(tab.id))}><Pencil size={14} /></button>
+                    <button type="button" aria-label={`Duplicate ${tab.title}`} onClick={() => onDuplicateTab(tab.id)}><CopyPlus size={14} /></button>
+                    <button type="button" aria-label={`Close ${tab.title}`} onClick={() => onCloseTab(tab.id)}><X size={14} /></button>
+                  </div>
+                </article>
+              );
+            }) : (
+              <div className="library-empty">
+                <strong>No documents found</strong>
+                <span>Try another search or import Markdown files.</span>
+              </div>
+            )}
+          </div>
+
+          <aside className="library-preview" aria-label="Document preview">
+            {previewTab ? (
+              <>
+                <div className="library-preview-head">
+                  <span>Preview</span>
+                  <strong>{previewTab.title}</strong>
+                  <small>{countWords(previewTab.content).toLocaleString()} words | {previewTab.content.length.toLocaleString()} chars | {formatUpdated(previewTab.updatedAt)}</small>
                 </div>
-              </article>
-            );
-          }) : (
-            <div className="library-empty">
-              <strong>No documents found</strong>
-              <span>Try another search or import Markdown files.</span>
-            </div>
-          )}
+                <p>{previewText(previewTab.content)}</p>
+                <div className="library-outline-preview">
+                  <span>Outline</span>
+                  {previewHeadings.length ? (
+                    previewHeadings.slice(0, 8).map((heading) => (
+                      <button key={`${heading.line}-${heading.text}`} type="button" onClick={() => runAndClose(() => onSelectTab(previewTab.id))}>
+                        <small>H{heading.level}</small>
+                        <span>{heading.text}</span>
+                      </button>
+                    ))
+                  ) : (
+                    <em>No headings yet.</em>
+                  )}
+                </div>
+              </>
+            ) : (
+              <div className="library-empty">
+                <strong>No preview</strong>
+                <span>Create or import a Markdown file to inspect it.</span>
+              </div>
+            )}
+          </aside>
         </div>
       </aside>
     </div>
@@ -123,4 +175,30 @@ function countWords(content: string) {
   const cjk = (content.match(/[\u4e00-\u9fff]/g) || []).length;
   const words = (content.match(/[A-Za-z0-9_]+(?:['-][A-Za-z0-9_]+)*/g) || []).length;
   return cjk + words;
+}
+
+function extractHeadings(content: string) {
+  return content
+    .split(/\r?\n/)
+    .map((line, index) => {
+      const match = /^(#{1,6})\s+(.+?)\s*$/.exec(line);
+      if (!match) return null;
+      return {
+        level: match[1].length,
+        line: index + 1,
+        text: match[2].replace(/[#*_`~[\]()]/g, "").trim(),
+      };
+    })
+    .filter((heading): heading is { level: number; line: number; text: string } => Boolean(heading?.text));
+}
+
+function formatUpdated(value: number) {
+  const deltaSeconds = Math.max(0, Math.round((Date.now() - value) / 1000));
+  if (deltaSeconds < 60) return "just now";
+  const deltaMinutes = Math.round(deltaSeconds / 60);
+  if (deltaMinutes < 60) return `${deltaMinutes}m ago`;
+  const deltaHours = Math.round(deltaMinutes / 60);
+  if (deltaHours < 24) return `${deltaHours}h ago`;
+  const deltaDays = Math.round(deltaHours / 24);
+  return `${deltaDays}d ago`;
 }

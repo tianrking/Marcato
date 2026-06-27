@@ -921,7 +921,7 @@ a:focus-visible {
 }
 
 .document-library {
-  width: min(420px, calc(100vw - 28px));
+  width: min(780px, calc(100vw - 28px));
   height: 100%;
   padding: 16px;
   display: grid;
@@ -1020,6 +1020,13 @@ a:focus-visible {
   padding-right: 2px;
 }
 
+.library-browser {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(260px, 0.95fr) minmax(240px, 0.8fr);
+  gap: 12px;
+}
+
 .library-card {
   position: relative;
   display: grid;
@@ -1035,7 +1042,8 @@ a:focus-visible {
 }
 
 .library-card:hover,
-.library-card.active {
+.library-card.active,
+.library-card.previewing {
   border-color: color-mix(in srgb, var(--accent) 56%, var(--line));
   box-shadow: var(--shadow-soft);
 }
@@ -1105,6 +1113,84 @@ a:focus-visible {
   width: 30px;
   min-height: 30px;
   padding: 0;
+}
+
+.library-preview {
+  min-height: 0;
+  overflow: auto;
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background:
+    linear-gradient(145deg, color-mix(in srgb, var(--accent-2) 7%, transparent), transparent 42%),
+    color-mix(in srgb, var(--panel) 88%, transparent);
+}
+
+.library-preview-head {
+  display: grid;
+  gap: 4px;
+}
+
+.library-preview-head span,
+.library-outline-preview > span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.library-preview-head strong {
+  overflow-wrap: anywhere;
+  font-size: 18px;
+  line-height: 1.25;
+}
+
+.library-preview-head small {
+  color: var(--muted);
+}
+
+.library-preview > p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.library-outline-preview {
+  display: grid;
+  gap: 7px;
+}
+
+.library-outline-preview button {
+  min-width: 0;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 7px 9px;
+  border-radius: 7px;
+  background: var(--panel);
+}
+
+.library-outline-preview button small {
+  flex: 0 0 auto;
+  color: var(--accent);
+  font-weight: 800;
+}
+
+.library-outline-preview button span {
+  min-width: 0;
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.library-outline-preview em {
+  color: var(--muted);
+  font-size: 13px;
 }
 
 .library-empty {
@@ -3453,6 +3539,18 @@ a:focus-visible {
     height: auto;
     align-items: flex-start;
     gap: 12px;
+  }
+
+  .document-library {
+    width: min(520px, calc(100vw - 28px));
+  }
+
+  .library-browser {
+    grid-template-columns: 1fr;
+  }
+
+  .library-preview {
+    max-height: 260px;
   }
 
   .workspace-toolbar,
