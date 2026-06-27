@@ -220,7 +220,7 @@ export function MobileMenu({
                   )}
                   <button type="button" aria-label={`Rename ${tab.title}`} onClick={() => startEditing(tab)}><Pencil size={14} /></button>
                   <button type="button" aria-label={`Duplicate ${tab.title}`} onClick={() => onDuplicateTab(tab.id)}><CopyPlus size={14} /></button>
-                  <button type="button" aria-label={`Close ${tab.title}`} onClick={() => onCloseTab(tab.id)}><X size={14} /></button>
+                  <button type="button" aria-label={`Close ${tab.title}`} onClick={() => runAndClose(() => onCloseTab(tab.id))}><X size={14} /></button>
                 </div>
               );
             })}

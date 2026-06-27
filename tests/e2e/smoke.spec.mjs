@@ -160,7 +160,12 @@ await withApp(async ({ consoleMessages, context, page, server }) => {
   await mobileMenu.getByText("Mobile Rename.md").waitFor({ state: "visible" });
   await mobileMenu.getByRole("button", { name: "GitHub" }).waitFor({ state: "visible" });
   await mobileMenu.getByRole("button", { name: "Share" }).waitFor({ state: "visible" });
-  await mobilePage.getByRole("button", { name: "Close mobile menu" }).click();
+  await mobileMenu.getByRole("button", { name: "Close Mobile Rename.md" }).click();
+  await mobileMenu.waitFor({ state: "hidden" });
+  const mobileConfirm = mobilePage.getByRole("dialog", { name: "Close tab" });
+  await mobileConfirm.waitFor({ state: "visible" });
+  await mobileConfirm.getByRole("button", { name: "Cancel" }).click();
+  await mobileConfirm.waitFor({ state: "hidden" });
   await mobilePage.locator(".segmented button").nth(0).click();
   const editorOnly = await mobilePage.evaluate(() => {
     const workspace = document.querySelector(".workspace")?.getBoundingClientRect();
