@@ -59,6 +59,11 @@ try {
   expect(wechatReport.issues.some((issue) => issue.code === "wechat-table"), "WeChat profile should warn about wide tables.");
   expect(wechatReport.issues.some((issue) => issue.code === "wechat-math"), "WeChat profile should warn about math paste reliability.");
   expect(wechatReport.issues.some((issue) => issue.code === "wechat-diagram"), "WeChat profile should warn about interactive diagrams.");
+  const wechatAssetReport = profiles.analyzeProfessionalProfile("---\ntitle: Draft\n---\n\n# Draft\n\n![Local](./cover.png)\n\n![Embedded](data:image/png;base64,abc)", "wechat");
+  expect(wechatAssetReport.issues.some((issue) => issue.code === "wechat-local-image"), "WeChat profile should warn about local image paths.");
+  expect(wechatAssetReport.issues.some((issue) => issue.code === "wechat-embedded-image"), "WeChat profile should warn about embedded image drafts.");
+  expect(wechatAssetReport.issues.some((issue) => issue.code === "wechat-cover"), "WeChat profile should suggest a cover field.");
+  expect(wechatAssetReport.issues.some((issue) => issue.code === "wechat-summary"), "WeChat profile should suggest a summary or digest field.");
 
   const wechatRender = markdown.renderMarkdownToHtml('<MpProfile mpId="MzIxNjA5ODQ0OQ==" nickname="Doocs" />\n\n<![A](https://example.com/a.png),![B](https://example.com/b.png)>\n\n![Logo|320x120](https://example.com/logo.png)\n\n:::tip\nNo platform mix.\n:::', false, "wechat");
   expect(wechatRender.html.includes("mp-common-profile"), "WeChat MpProfile component should render to the official account card tag.");

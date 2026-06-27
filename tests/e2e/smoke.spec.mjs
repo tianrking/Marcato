@@ -53,6 +53,17 @@ await withApp(async ({ consoleMessages, context, page, server }) => {
   await page.locator(".find-panel").getByRole("button", { name: "x", exact: true }).click();
   await page.locator(".find-panel").waitFor({ state: "hidden" });
 
+  await page.getByRole("button", { name: "Asset library" }).click();
+  const assetLibrary = page.getByRole("dialog", { name: "Asset library" });
+  await assetLibrary.waitFor({ state: "visible" });
+  await assetLibrary.getByPlaceholder("https://example.com/image.png").fill("https://example.com/cover.png");
+  await assetLibrary.getByPlaceholder("Optional name").fill("Cover.png");
+  await assetLibrary.getByRole("button", { name: "Register" }).click();
+  await assetLibrary.getByRole("button", { name: "Insert" }).click();
+  await assetLibrary.waitFor({ state: "hidden" });
+  expect((await page.locator(".editor-pane textarea").inputValue()).includes("![Cover](https://example.com/cover.png)"), "Asset insert should add Markdown image syntax.");
+  await page.locator('.preview-article img[src="https://example.com/cover.png"]').waitFor({ state: "attached" });
+
   await page.getByRole("button", { name: "New tab" }).click();
   await page.getByRole("tab", { name: /Untitled-1\.md/ }).waitFor({ state: "visible" });
   await page.getByRole("button", { name: /Close Untitled-1\.md/ }).click();

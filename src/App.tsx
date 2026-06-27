@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ClipboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 import {
   AlignCenter,
@@ -23,6 +23,7 @@ import {
   Heading2,
   Heading3,
   Image,
+  Images,
   Italic,
   Link,
   List,
@@ -45,6 +46,7 @@ import {
   Undo2,
 } from "lucide-react";
 import { AppHeader } from "./components/AppHeader";
+import { AssetLibraryPanel } from "./components/AssetLibraryPanel";
 import { ConfirmModal } from "./components/ConfirmModal";
 import { DocumentLibraryPanel } from "./components/DocumentLibraryPanel";
 import { DocumentHealthModal } from "./components/DocumentHealthModal";
@@ -66,7 +68,8 @@ import { useGlobalShortcuts } from "./hooks/useGlobalShortcuts";
 import { useInsertModals } from "./hooks/useInsertModals";
 import { useMarkdownRender } from "./hooks/useMarkdownRender";
 import { useShare } from "./hooks/useShare";
-import { MAX_IMPORT_BYTES, MAX_TABS } from "./lib/constants";
+import { MAX_ASSETS, MAX_IMPORT_BYTES, MAX_TABS } from "./lib/constants";
+import { assetMarkdown, createLocalAsset, createRemoteAsset, loadAssets, saveAssets } from "./lib/assets";
 import { applyCommand, handleSmartEnter, type MarkdownCommand } from "./lib/editorCommands";
 import { exportHtml, exportMarkdown } from "./lib/downloads";
 import { getExportName } from "./lib/exportNames";
@@ -78,7 +81,7 @@ import { makeTab } from "./lib/storage";
 import { copyWechatRichText } from "./lib/wechatExport";
 import { useAppStore } from "./stores/appStore";
 import type { PdfExportPhase } from "./lib/exporters";
-import type { MarkdownTab } from "./types";
+import type { MarkdownAsset, MarkdownTab } from "./types";
 
 interface PdfExportState {
   phase: PdfExportPhase | "cancelling";
@@ -133,6 +136,8 @@ function App() {
   const [selectedPreviewBlockId, setSelectedPreviewBlockId] = useState("");
   const [toast, setToast] = useState("");
   const [documentLibraryOpen, setDocumentLibraryOpen] = useState(false);
+  const [assetLibraryOpen, setAssetLibraryOpen] = useState(false);
+  const [assets, setAssets] = useState<MarkdownAsset[]>(() => loadAssets());
   const [dragging, setDragging] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [pdfExport, setPdfExport] = useState<PdfExportState | null>(null);
@@ -267,7 +272,12 @@ function App() {
 
   const handleFiles = async (files: FileList | File[]) => {
     const imported: MarkdownTab[] = [];
+    const imageFiles: File[] = [];
     for (const file of [...files]) {
+      if (file.type.startsWith("image/")) {
+        imageFiles.push(file);
+        continue;
+      }
       if (!/\.(md|markdown|txt)$/i.test(file.name)) continue;
       if (file.size > MAX_IMPORT_BYTES) {
         showToast(`${file.name} is over 10 MB.`);
@@ -280,8 +290,73 @@ function App() {
       }
       imported.push(makeTab(file.name, content));
     }
+    if (imageFiles.length) await addLocalAssets(imageFiles, false);
     if (!imported.length) return;
     addTabs(imported, imported[0].id);
+  };
+
+  const commitAssets = (nextAssets: MarkdownAsset[]) => {
+    const limited = nextAssets.slice(0, MAX_ASSETS);
+    setAssets(limited);
+    saveAssets(limited);
+  };
+
+  const addLocalAssets = async (files: FileList | File[], insert = false, range?: { start: number; end: number }) => {
+    const created: MarkdownAsset[] = [];
+    for (const file of [...files]) {
+      try {
+        created.push(await createLocalAsset(file));
+      } catch (error) {
+        showToast(error instanceof Error ? error.message : "Could not add image asset.");
+      }
+    }
+    if (!created.length) return;
+    commitAssets([...created, ...assets]);
+    if (insert) insertAssetMarkdown(created, range);
+    showToast(`${created.length} image asset${created.length > 1 ? "s" : ""} added.`);
+  };
+
+  const addRemoteAsset = (name: string, source: string) => {
+    try {
+      const asset = createRemoteAsset(name, source);
+      commitAssets([asset, ...assets]);
+      showToast("Remote image registered.");
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : "Could not register image URL.");
+    }
+  };
+
+  const removeAsset = (id: string) => {
+    commitAssets(assets.filter((asset) => asset.id !== id));
+  };
+
+  const insertAssetMarkdown = (selectedAssets: MarkdownAsset[], range?: { start: number; end: number }) => {
+    if (!activeTab || selectedAssets.length === 0) return;
+    const editor = editorRef.current;
+    const start = range?.start ?? editor?.selectionStart ?? activeTab.content.length;
+    const end = range?.end ?? editor?.selectionEnd ?? start;
+    const insertion = selectedAssets.map(assetMarkdown).join("\n");
+    const next = activeTab.content.slice(0, start) + insertion + activeTab.content.slice(end);
+    commitContent(next);
+    requestAnimationFrame(() => {
+      if (!editor) return;
+      const caret = start + insertion.length;
+      editor.focus();
+      editor.setSelectionRange(caret, caret);
+    });
+  };
+
+  const copyAssetSource = async (asset: MarkdownAsset) => {
+    await navigator.clipboard.writeText(asset.source);
+    showToast("Asset URL copied.");
+  };
+
+  const onEditorPaste = (event: ClipboardEvent<HTMLTextAreaElement>) => {
+    const imageFiles = Array.from(event.clipboardData.files).filter((file) => file.type.startsWith("image/"));
+    if (!imageFiles.length) return;
+    event.preventDefault();
+    const editor = event.currentTarget;
+    void addLocalAssets(imageFiles, true, { start: editor.selectionStart, end: editor.selectionEnd });
   };
 
   const doCopyMarkdown = async () => {
@@ -517,6 +592,20 @@ function App() {
         onSelectTab={setActiveTabId}
       />
 
+      <AssetLibraryPanel
+        assets={assets}
+        opened={assetLibraryOpen}
+        onAddFiles={(files) => void addLocalAssets(files, false)}
+        onAddRemote={addRemoteAsset}
+        onClose={() => setAssetLibraryOpen(false)}
+        onCopySource={(asset) => void copyAssetSource(asset)}
+        onInsert={(asset) => {
+          insertAssetMarkdown([asset]);
+          setAssetLibraryOpen(false);
+        }}
+        onRemove={removeAsset}
+      />
+
       <div className="format-toolbar">
         <IconButton title="Undo" onClick={undo}><Undo2 size={16} /></IconButton>
         <IconButton title="Redo" onClick={redo}><Redo2 size={16} /></IconButton>
@@ -536,6 +625,7 @@ function App() {
         <IconButton title="Horizontal rule" onClick={() => runCommand("hr")}><Minus size={16} /></IconButton>
         <IconButton title="Link" onClick={insertModals.openLinkModal}><Link size={16} /></IconButton>
         <IconButton title="Image" onClick={insertModals.openImageModal}><Image size={16} /></IconButton>
+        <IconButton title="Asset library" onClick={() => setAssetLibraryOpen(true)}><Images size={16} /></IconButton>
         <IconButton title="Reference" onClick={insertModals.openReferenceModal}><BookMarked size={16} /></IconButton>
         <IconButton title="GitHub Emojis" onClick={insertModals.openEmojiModal}><Smile size={16} /></IconButton>
         <IconButton title="Symbols & HTML entities" onClick={insertModals.openSymbolsModal}><BadgeCent size={16} /></IconButton>
@@ -570,6 +660,7 @@ function App() {
               spellCheck={false}
               onScroll={onScrollEditor}
               onKeyDown={onEditorKeyDown}
+              onPaste={onEditorPaste}
               onChange={(event) => updateActiveContent(event.target.value)}
               onBlur={(event) => commitContent(event.target.value)}
               aria-label={t("view.editor")}

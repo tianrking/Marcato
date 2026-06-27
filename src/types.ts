@@ -76,3 +76,16 @@ export interface GitHubMarkdownFile {
   downloadUrl: string;
   size: number;
 }
+
+export type AssetProvider = "local" | "remote";
+
+export interface MarkdownAsset {
+  id: string;
+  name: string;
+  source: string;
+  type: string;
+  size: number;
+  provider: AssetProvider;
+  createdAt: number;
+  updatedAt: number;
+}
