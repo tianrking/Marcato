@@ -57,12 +57,12 @@ Marcato is inspired by the original [`Markdown-Viewer`](https://github.com/ThisI
 
 ### Professional Profiles
 
-Professional Mode is not just a placeholder. It changes the preview class, applies platform-oriented visual styling, persists the selected profile, and runs compatibility diagnostics.
+Professional Mode changes the preview class, applies platform-oriented visual styling, persists the selected profile, and runs compatibility diagnostics. WeChat additionally has a deterministic paste compiler.
 
 | Profile | What it optimizes for | Current checks |
 | --- | --- | --- |
 | Standard | Full Marcato preview. | No platform restrictions. |
-| WeChat Official Account | Narrow rich-text article canvas. | Frontmatter, math, tables, footnotes, raw HTML, remote images, diagrams, article length. |
+| WeChat Official Account | Narrow article canvas plus paste-safe clipboard output. | Visible URLs, image insertion notes, editable diagram/math source, frontmatter, tables, footnotes, raw HTML, article length. |
 | GitHub Markdown | README, issues, discussions, pull requests. | Marcato-only rich fences, Docusaurus/MkDocs syntax, frontmatter visibility, references. |
 | Docusaurus / MDX | Docs pages and MDX authoring. | Frontmatter, `:::` admonitions, raw script/style, internal `.md` links. |
 | VitePress | Vue-powered documentation. | Custom containers, frontmatter, internal links, React/JSX component mismatch. |
@@ -70,6 +70,18 @@ Professional Mode is not just a placeholder. It changes the preview class, appli
 | Hugo / Goldmark | Static blogs and content pages. | Frontmatter, raw HTML safety, shortcodes, foreign container syntax. |
 | Jekyll / GitHub Pages | Blog-aware pages and posts. | YAML frontmatter, Liquid-vs-shortcode mismatch, foreign admonitions. |
 | Astro / Starlight | Content collections and MDX docs. | Frontmatter, local image handling, MDX-style components, shortcode mismatch. |
+
+#### WeChat paste contract
+
+The **WeChat paste** action compiles a separate clipboard document instead of copying live preview DOM:
+
+- ordinary links become `label https://full-url`; WeChat article links remain clickable and also expose their URL;
+- third-party, local, data, and blob images become ordered insertion notes without broken image tags or Base64 payloads;
+- Mermaid and other diagrams become a PNG insertion note plus their complete editable source;
+- both `text/html` and useful `text/plain` are written, with a Selection-based rich-text fallback;
+- each diagram also exposes **Copy source** and **Copy PNG** actions for the manual replacement pass.
+
+See [WeChat export rules and platform boundaries](docs/WECHAT_EXPORT.md).
 
 ### Visual Modes
 
@@ -86,7 +98,7 @@ Professional Mode is not just a placeholder. It changes the preview class, appli
 | Code | highlight.js core with registered common languages, including JavaScript, TypeScript, Python, Rust, Go, Java, C/C++, C#, SQL, Bash, PowerShell, YAML, JSON, XML/HTML, CSS, PHP, Ruby, diff, and Markdown. |
 | Math | KaTeX inline and block math post-processing. |
 | Diagrams | Mermaid, ABC notation, GeoJSON, TopoJSON, STL, PlantUML, D2, Graphviz/DOT, Vega-Lite, WaveDrom, Markmap. |
-| Diagram actions | Toolbar actions for copy/download SVG or PNG where supported, zoom modal paths, sanitization and clipboard fallbacks. |
+| Diagram actions | Toolbar actions for copying source or PNG, downloading SVG/PNG where supported, zoom modal paths, sanitization and clipboard fallbacks. |
 | Safety | DOMPurify for main Markdown HTML, safe external-link handling, SVG sanitization paths, clipboard/download fallbacks. |
 
 ## Editing Tools
@@ -104,6 +116,7 @@ Professional Mode is not just a placeholder. It changes the preview class, appli
 | Local import | `.md`, `.markdown`, `.txt`; drag-and-drop overlay; binary detection; 10 MB import guard. |
 | GitHub import | Repository, tree, blob, and raw URL import with selectable Markdown files. |
 | Export | Markdown, HTML, PNG, clipboard PNG, and paginated PDF. |
+| WeChat paste | Inline-style rich text with visible URLs, image insertion notes, diagram source, and HTML/plain-text clipboard fallbacks. |
 | PDF | Progress UI, cancellation, page-break handling, table and rich-preview coverage in tests. |
 | Share | `#share=` URLs compressed with pako; view-only and editable modes; long-link warning; current deployed origin is used. |
 | PWA | Static app shell, Workbox service worker, no-cache service worker headers for reliable updates. |
@@ -186,6 +199,7 @@ npm test
 Reusable browser suites live in `tests/e2e`:
 
 - `npm run test:smoke`: editor, preview, modals, find/replace, share URLs, mobile shell, and mobile view modes.
+- `npm run test:wechat`: visible URLs, image annotations, Mermaid/LaTeX source retention, clipboard MIME formats, and source-copy actions.
 - `npm run test:pdf`: long tables, page breaks, diagrams, math, export progress, and cancellation.
 - `npm run test:perf`: large documents and proof that rich preview processors are lazy-loaded.
 - `npm run test:diagrams`: Markmap, WaveDrom, PlantUML, D2, retry behavior, and SVG sanitization.
@@ -213,7 +227,7 @@ Runtime network access is only needed for GitHub import, remote diagram services
 
 ## Current Boundaries
 
-Professional profiles currently provide platform-oriented preview styling and diagnostics. They do not yet fully compile every platform-specific dialect into its native runtime output. The highest-value next adapters are WeChat rich-text copy with inline styles, real `:::` admonition rendering for Docusaurus/VitePress, and Material for MkDocs `!!!` admonition rendering.
+Professional profiles do not yet compile every platform-specific dialect into its native runtime output. WeChat now has a paste-safe compiler, but automatic image upload and draft publication still require a trusted backend and WeChat credentials. The highest-value remaining adapters are real `:::` admonition rendering for Docusaurus/VitePress and Material for MkDocs `!!!` admonition rendering.
 
 ## Tribute
 

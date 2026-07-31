@@ -80,11 +80,12 @@ export async function startAppServer() {
 async function stopProcessTree(child) {
   if (child.exitCode !== null || !child.pid) return;
   if (process.platform === "win32") {
-    await new Promise((resolve) => {
+    const killedTree = await new Promise((resolve) => {
       const killer = spawn("taskkill", ["/pid", String(child.pid), "/T", "/F"], { stdio: "ignore" });
-      killer.once("exit", resolve);
-      killer.once("error", resolve);
+      killer.once("exit", (code) => resolve(code === 0));
+      killer.once("error", () => resolve(false));
     });
+    if (!killedTree && child.exitCode === null) child.kill();
     return;
   }
   child.kill("SIGTERM");

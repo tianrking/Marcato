@@ -14,6 +14,7 @@ export function setupDiagramActions(root: HTMLElement, options: DiagramActionOpt
     let zoomCleanup: (() => void) | null = null;
     const actions = [
       makeToolButton("Copy PNG", () => copyDiagram(surface)),
+      makeToolButton("Copy source", () => copyDiagramSource(surface)),
       makeToolButton("SVG", () => downloadSvg(surface)),
       makeToolButton("PNG", () => downloadPng(surface)),
       makeToolButton("Zoom", () => {
@@ -69,6 +70,27 @@ async function copyDiagram(surface: HTMLElement) {
     // Fall back to downloading the diagram source.
   }
   downloadBlob(new Blob([text], { type: svg ? "image/svg+xml;charset=utf-8" : "text/plain;charset=utf-8" }), `diagram-${Date.now()}${svg ? ".svg" : ".txt"}`);
+}
+
+async function copyDiagramSource(surface: HTMLElement) {
+  const encoded = surface.dataset.originalCode || "";
+  let source = encoded;
+  try {
+    source = decodeURIComponent(encoded);
+  } catch {
+    // Keep the original value if a hand-authored data attribute is not URI encoded.
+  }
+  if (!source) source = surface.textContent || "";
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(source);
+      return;
+    }
+  } catch {
+    // Fall through to a source download when clipboard permissions are unavailable.
+  }
+  const engine = surface.closest<HTMLElement>(".diagram-viewer")?.dataset.diagramEngine || "diagram";
+  downloadBlob(new Blob([source], { type: "text/plain;charset=utf-8" }), `${engine}-source-${Date.now()}.txt`);
 }
 
 function downloadSvg(surface: HTMLElement) {

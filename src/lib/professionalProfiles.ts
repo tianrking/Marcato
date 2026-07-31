@@ -36,8 +36,8 @@ export const PROFESSIONAL_PROFILES: Record<ProfessionalProfile, ProfessionalProf
     id: "wechat",
     label: "WeChat Official Account",
     shortLabel: "WeChat",
-    description: "Narrow article canvas with paste-oriented warnings for rich-text publication.",
-    previewHint: "Rich-text paste target",
+    description: "Paste-safe rich text with visible URLs, image insertion notes, and editable diagram source.",
+    previewHint: "Deterministic paste draft",
   },
   github: {
     id: "github",
@@ -139,18 +139,19 @@ export function analyzeProfessionalProfile(markdown: string, profile: Profession
     case "wechat":
       requireH1(markdown, issues, "WeChat articles need a strong visible title before paste or export.");
       addIf(hasFrontmatter, issues, "wechat-frontmatter", "YAML frontmatter is useful for blogs, but it will not paste into the WeChat editor.", "warn", 1);
-      addPatternIssue(markdown, MATH_PATTERN, issues, "wechat-math", "Math is not reliable in WeChat rich-text paste. Export it as an image when accuracy matters.", "warn");
+      addPatternIssue(markdown, MATH_PATTERN, issues, "wechat-math", "WeChat copy preserves the TeX source and an insertion note. Export the formula as an image when visual accuracy matters.", "warn");
       addPatternIssue(markdown, TABLE_PATTERN, issues, "wechat-table", "Wide Markdown tables often overflow on WeChat mobile articles. Prefer compact tables or images.", "warn");
       addPatternIssue(markdown, FOOTNOTE_PATTERN, issues, "wechat-footnote", "Footnote back-links and anchors may not survive WeChat paste.", "warn");
       addPatternIssue(markdown, RAW_HTML_PATTERN, issues, "wechat-html", "WeChat may strip unsupported HTML or attributes. Prefer plain Markdown plus inline-safe styling.", "warn");
-      addPatternIssue(markdown, REMOTE_IMAGE_PATTERN, issues, "wechat-remote-image", "Remote images should be uploaded or verified inside the WeChat editor before publishing.", "info");
-      addPatternIssue(markdown, LOCAL_IMAGE_PATTERN, issues, "wechat-local-image", "Local image paths need upload or replacement before pasting into the WeChat editor.", "warn");
-      addPatternIssue(markdown, EMBEDDED_IMAGE_PATTERN, issues, "wechat-embedded-image", "Embedded data/blob images are useful for drafts, but should be uploaded to a WeChat-safe image host before publishing.", "warn");
-      addRichFenceIssues(fences, issues, "wechat-diagram", "Interactive diagrams will not paste as interactive content. Export SVG/PNG and place the image in WeChat.", "warn");
+      addPatternIssue(markdown, REMOTE_IMAGE_PATTERN, issues, "wechat-remote-image", "WeChat copy turns third-party images into insertion notes with visible source URLs. Upload each image in the WeChat editor.", "info");
+      addPatternIssue(markdown, LOCAL_IMAGE_PATTERN, issues, "wechat-local-image", "WeChat copy turns local image paths into insertion notes. Upload the original file at each marked position.", "warn");
+      addPatternIssue(markdown, EMBEDDED_IMAGE_PATTERN, issues, "wechat-embedded-image", "WeChat copy omits data/blob payloads and keeps a safe insertion note instead. Re-upload the original image.", "warn");
+      addRichFenceIssues(fences, issues, "wechat-diagram", "WeChat copy inserts a PNG position note and keeps the original diagram source. Use the diagram PNG action, then insert it manually.", "warn");
       encourageFrontmatterField(frontmatterFields, ["cover", "coverImage", "thumb", "thumbnail"], issues, "wechat-cover", "Add a cover or coverImage field to track the WeChat article cover asset.");
       encourageFrontmatterField(frontmatterFields, ["description", "summary", "digest"], issues, "wechat-summary", "Add description, summary, or digest frontmatter for the WeChat article excerpt.");
       if (markdown.length > 18_000) issues.push({ code: "wechat-length", message: "This is a long article; check mobile pacing, image weight, and section breaks before publishing.", severity: "info" });
       strengths.push("Preview uses a narrow mobile-publication canvas.");
+      strengths.push("WeChat copy expands ordinary links into visible URL text.");
       break;
     case "github":
       addIf(hasFrontmatter, issues, "github-frontmatter", "GitHub README and issue views show frontmatter as content; only GitHub Pages/Jekyll processes it.", "info", 1);

@@ -446,10 +446,19 @@ function App() {
   const doCopyWechat = async () => {
     if (!previewRef.current) return;
     try {
-      await copyWechatRichText(previewRef.current);
-      showToast(t("toast.wechatCopied", { defaultValue: "WeChat-ready rich text copied." }));
+      const result = await copyWechatRichText(previewRef.current);
+      showToast(t(
+        result.method === "plain-text" ? "toast.wechatCopiedPlain" : "toast.wechatCopied",
+        {
+          defaultValue: result.method === "plain-text"
+            ? "Rich clipboard access was unavailable, so a readable plain-text WeChat draft was copied."
+            : "WeChat paste copied with visible URLs, image placeholders, and editable diagram source.",
+          diagrams: result.stats.diagrams,
+          images: result.stats.imagePlaceholders,
+        },
+      ));
     } catch {
-      showToast(t("toast.clipboardImageUnavailable"));
+      showToast(t("toast.wechatCopyFailed", { defaultValue: "Could not copy the WeChat draft. Check clipboard permission and try again." }));
     }
   };
 

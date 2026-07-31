@@ -57,12 +57,12 @@ Marcato 致敬并延续原版 [`Markdown-Viewer`](https://github.com/ThisIs-Deve
 
 ### 专业预览模式
 
-专业模式不是空接口。它会切换预览类名、应用平台化视觉样式、持久化当前选择，并运行兼容性诊断。
+专业模式会切换预览类名、应用平台化视觉样式、持久化当前选择，并运行兼容性诊断；微信模式另外提供确定性的公众号粘贴转换器。
 
 | Profile | 面向场景 | 当前检查 |
 | --- | --- | --- |
 | Standard | Marcato 完整预览。 | 不启用平台限制。 |
-| WeChat Official Account | 微信公众号富文本文章。 | frontmatter、数学、表格、脚注、HTML、远程图、图表、文章长度。 |
+| WeChat Official Account | 微信公众号窄版预览与可粘贴稿。 | 可见 URL、图片位置说明、图表/公式源码、frontmatter、表格、脚注、HTML、文章长度。 |
 | GitHub Markdown | README、Issue、Discussion、Pull Request。 | Marcato 专属图表、Docusaurus/MkDocs 语法、frontmatter 显示、引用和 mention。 |
 | Docusaurus / MDX | 文档站与 MDX。 | frontmatter、`:::` admonition、script/style、内部 `.md` 链接。 |
 | VitePress | Vue 文档站。 | 自定义容器、frontmatter、内部链接、React/JSX 组件不兼容。 |
@@ -70,6 +70,18 @@ Marcato 致敬并延续原版 [`Markdown-Viewer`](https://github.com/ThisIs-Deve
 | Hugo / Goldmark | 静态博客与内容页。 | frontmatter、raw HTML 安全、shortcode、外来容器语法。 |
 | Jekyll / GitHub Pages | 博客文章和 GitHub Pages。 | YAML frontmatter、Liquid 与 shortcode 差异、外来 admonition。 |
 | Astro / Starlight | 内容集合和 MDX 文档。 | frontmatter、本地图片路径、MDX 组件、shortcode 不兼容。 |
+
+#### 公众号粘贴规则
+
+点击 **公众号可粘贴** 时，Marcato 会编译一份单独的剪贴板文档，而不是把实时预览 DOM 原样复制出去：
+
+- 普通链接变成 `文字 https://完整地址`；公众号文章链接仍可点击，同时显示完整 URL；
+- 第三方、本地、data 和 blob 图片变成带顺序的插图位置说明，不输出破损图片或 Base64 大段数据；
+- Mermaid 和其他图表变成 PNG 插入说明，并保留完整、可编辑的原始源码；
+- 同时写入 `text/html` 和有用的 `text/plain`，富文本 Clipboard API 失败时再走 Selection 复制兜底；
+- 每个图表另外提供 **Copy source** 和 **Copy PNG**，方便完成手工替换。
+
+完整规则、平台边界和实机验收步骤见 [微信公众号粘贴模式](docs/WECHAT_EXPORT.md)。
 
 ### 视觉模式
 
@@ -86,7 +98,7 @@ Marcato 致敬并延续原版 [`Markdown-Viewer`](https://github.com/ThisIs-Deve
 | 代码 | highlight.js core 注册常用语言，包括 JS/TS、Python、Rust、Go、Java、C/C++、C#、SQL、Bash、PowerShell、YAML、JSON、XML/HTML、CSS、PHP、Ruby、diff、Markdown。 |
 | 数学 | KaTeX 行内和块级数学。 |
 | 图表 | Mermaid、ABC notation、GeoJSON、TopoJSON、STL、PlantUML、D2、Graphviz/DOT、Vega-Lite、WaveDrom、Markmap。 |
-| 图表操作 | 支持复制/下载 SVG 或 PNG、缩放查看、SVG 清洗与剪贴板降级路径。 |
+| 图表操作 | 支持复制源码或 PNG、下载 SVG/PNG、缩放查看、SVG 清洗与剪贴板降级路径。 |
 | 安全 | 主 Markdown HTML 走 DOMPurify，外链安全处理，SVG 清洗，剪贴板失败时降级下载。 |
 
 ## 编辑工具
@@ -104,6 +116,7 @@ Marcato 致敬并延续原版 [`Markdown-Viewer`](https://github.com/ThisIs-Deve
 | 本地导入 | `.md`、`.markdown`、`.txt`；拖放覆盖层；二进制检测；10 MB 限制。 |
 | GitHub 导入 | 支持 repository、tree、blob、raw URL，并可选择 Markdown 文件。 |
 | 导出 | Markdown、HTML、PNG、剪贴板 PNG、分页 PDF。 |
+| 公众号粘贴 | 内联样式富文本、可见 URL、图片位置说明、图表源码，以及 HTML/纯文本剪贴板兜底。 |
 | PDF | 进度 UI、取消、分页、表格和富预览测试覆盖。 |
 | 分享 | pako 压缩 `#share=` URL，只读/可编辑模式，长链接提示，使用当前部署地址。 |
 | PWA | 静态 app shell，Workbox service worker，service worker no-cache 便于更新。 |
@@ -186,6 +199,7 @@ npm test
 可复用浏览器测试位于 `tests/e2e`：
 
 - `npm run test:smoke`：编辑、预览、弹窗、查找替换、分享链接、移动端外壳和移动端视图模式。
+- `npm run test:wechat`：可见 URL、图片注释、Mermaid/LaTeX 源码、剪贴板 MIME 与源码复制。
 - `npm run test:pdf`：长表格、分页、图表、数学、导出进度和取消。
 - `npm run test:perf`：大文档和富内容渲染器按需加载。
 - `npm run test:diagrams`：Markmap、WaveDrom、PlantUML、D2、重试行为和 SVG 清洗。
@@ -213,7 +227,7 @@ Marcato 是纯客户端应用，可直接使用上方 Vercel 按钮部署。`ver
 
 ## 当前边界
 
-专业模式当前提供平台化预览样式和兼容性诊断，还不是每个平台原生运行时的完整编译器。下一批最有价值的是：微信公众号富文本复制与内联样式 HTML、Docusaurus/VitePress 的 `:::` admonition 真实渲染、Material for MkDocs 的 `!!!` admonition 渲染。
+专业模式仍不会把每个平台方言都编译成原生运行时输出。微信模式现在已有可粘贴稿转换器，但自动上传正文图片和提交草稿仍需要受信任的后端与微信凭据。下一批最有价值的是 Docusaurus/VitePress 的 `:::` admonition 真实渲染和 Material for MkDocs 的 `!!!` admonition 渲染。
 
 ## 致敬
 
