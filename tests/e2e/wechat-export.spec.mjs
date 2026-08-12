@@ -223,13 +223,27 @@ await withApp(async ({ consoleMessages, page }) => {
   await publishingKit.waitFor({ state: "visible" });
   await takeElementScreenshot(publishingKit, "wechat-publishing-kit.png");
   expect(await publishingKit.getByRole("textbox").first().inputValue() === "WeChat Paste Fixture", "The publishing kit should prefill the H1 as the separate article title.");
+  const tabCountBeforeModalShortcut = await page.getByRole("tab").count();
+  await page.keyboard.press("Alt+Shift+T");
+  expect(await page.getByRole("tab").count() === tabCountBeforeModalShortcut, "Document shortcuts must be disabled while the publishing snapshot is open.");
   await publishingKit.getByRole("radio", { name: /WeChat fresh/ }).click();
-  await page.locator(".preview-article.wechat-style-fresh").waitFor({ state: "visible" });
+  await page.locator(".preview-article[aria-hidden='true'].wechat-style-fresh").waitFor({ state: "attached" });
+  expect(await page.locator(".preview-pane .preview-article.wechat-style-tech").count() === 1, "Changing the export style must not mutate the live preview behind the modal.");
+
+  await page.evaluate(() => {
+    const editor = document.querySelector('textarea[aria-label="Editor"]');
+    if (!(editor instanceof HTMLTextAreaElement)) throw new Error("Editor unavailable for snapshot isolation check.");
+    const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")?.set;
+    setter?.call(editor, "# LIVE-DOCUMENT-MUTATED-AFTER-KIT-OPENED");
+    editor.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertText" }));
+  });
+  await waitForPreviewText(page, "LIVE-DOCUMENT-MUTATED-AFTER-KIT-OPENED");
   const downloadPromise = page.waitForEvent("download");
   await publishingKit.getByRole("button", { name: "Download copy-ready HTML", exact: true }).click();
   const download = await downloadPromise;
   const downloadedHtml = await readFile(await download.path(), "utf8");
   expect(download.suggestedFilename().endsWith(".wechat.html") && downloadedHtml.includes('id="wechat-copy-article"') && downloadedHtml.includes('data-wechat-style="fresh"') && downloadedHtml.includes("data:image/png;base64,iVBORw0KGgo="), "The publishing kit should download a self-contained, style-labelled copy-ready HTML file.");
+  expect(downloadedHtml.includes("official documentation") && !downloadedHtml.includes("LIVE-DOCUMENT-MUTATED-AFTER-KIT-OPENED"), "The publishing kit must export its immutable opening snapshot, not later live-document content.");
   await publishingKit.getByRole("button", { name: /Copy body with 1 image/ }).click();
   await page.waitForFunction(() => Boolean(window.__wechatClipboardCapture));
   const clipboard = await page.evaluate(() => window.__wechatClipboardCapture);

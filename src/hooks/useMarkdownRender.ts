@@ -7,31 +7,45 @@ export function useMarkdownRender(activeTab: MarkdownTab | undefined, profession
   const [toc, setToc] = useState<RenderResult["toc"]>([]);
   const [state, setState] = useState<"idle" | "rendering" | "error">("idle");
   const [error, setError] = useState("");
+  const [renderedRevision, setRenderedRevision] = useState<{
+    content: string;
+    professionalProfile: ProfessionalProfile;
+    requestId: number;
+    tabId: string;
+  } | null>(null);
   const requestRef = useRef(0);
+  const activeTabId = activeTab?.id || "";
+  const activeContent = activeTab?.content || "";
+  const revisionToken = renderedRevision
+    ? `${renderedRevision.tabId}:${renderedRevision.requestId}`
+    : "";
 
   useEffect(() => {
-    if (!activeTab) return;
+    if (!activeTabId) return;
     setState("rendering");
+    setError("");
     const requestId = ++requestRef.current;
     const controller = new AbortController();
     const timer = window.setTimeout(() => {
-      renderWithWorker(activeTab.content, professionalProfile, requestId, controller.signal)
+      renderWithWorker(activeContent, professionalProfile, requestId, controller.signal)
         .then((result) => {
           if (controller.signal.aborted || requestRef.current !== requestId) return;
           const nextDocument = createPreviewDocument(result);
           setDocument(nextDocument);
           setToc(result.toc);
+          setRenderedRevision({ content: activeContent, professionalProfile, requestId, tabId: activeTabId });
           setState("idle");
           setError("");
         })
         .catch((renderError) => {
           if (controller.signal.aborted || isAbortError(renderError) || requestRef.current !== requestId) return;
-          void renderFallback(activeTab.content, professionalProfile)
+          void renderFallback(activeContent, professionalProfile)
             .then((fallback) => {
               if (controller.signal.aborted || requestRef.current !== requestId) return;
               const nextDocument = createPreviewDocument(fallback);
               setDocument(nextDocument);
               setToc(fallback.toc);
+              setRenderedRevision({ content: activeContent, professionalProfile, requestId, tabId: activeTabId });
               setState("idle");
               setError("");
             })
@@ -41,14 +55,26 @@ export function useMarkdownRender(activeTab: MarkdownTab | undefined, profession
               setError(renderError instanceof Error ? renderError.message : "Render failed");
             });
         });
-    }, getRenderDelay(activeTab.content));
+    }, getRenderDelay(activeContent));
     return () => {
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [activeTab, professionalProfile]);
+  }, [activeContent, activeTabId, professionalProfile]);
 
-  return { document, toc, state, error };
+  return {
+    document,
+    toc,
+    state,
+    error,
+    revisionToken,
+    ready: Boolean(activeTabId) &&
+      state === "idle" &&
+      !error &&
+      renderedRevision?.tabId === activeTabId &&
+      renderedRevision.content === activeContent &&
+      renderedRevision.professionalProfile === professionalProfile,
+  };
 }
 
 async function renderFallback(markdown: string, professionalProfile: ProfessionalProfile) {

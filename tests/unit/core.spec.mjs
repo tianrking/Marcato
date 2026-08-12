@@ -4,6 +4,15 @@ function expect(condition, message) {
   if (!condition) throw new Error(message);
 }
 
+function expectThrows(callback, message) {
+  try {
+    callback();
+  } catch {
+    return;
+  }
+  throw new Error(message);
+}
+
 const server = await createServer({
   appType: "custom",
   logLevel: "error",
@@ -12,6 +21,7 @@ const server = await createServer({
 
 try {
   const editor = await server.ssrLoadModule("/src/lib/editorCommands.ts");
+  const editHistory = await server.ssrLoadModule("/src/lib/editHistory.ts");
   const find = await server.ssrLoadModule("/src/lib/findReplace.ts");
   const exportNames = await server.ssrLoadModule("/src/lib/exportNames.ts");
   const health = await server.ssrLoadModule("/src/lib/documentHealth.ts");
@@ -28,6 +38,61 @@ try {
 
   const table = editor.buildMarkdownTable(2, 1, "center");
   expect(table.includes("| :---: | :---: |"), "Centered table divider was not generated.");
+
+  const fresh = { content: "", history: [""], historyIndex: 0 };
+  const firstInput = editHistory.recordEdit(fresh, "h", { mode: "input", inputType: "insertText", now: 100 });
+  const typedWord = editHistory.recordEdit(firstInput.state, "hello", { mode: "input", inputType: "insertText", batch: firstInput.batch, now: 400 });
+  expect(typedWord.state.history.length === 2, "Continuous typing should coalesce into one history entry.");
+  expect(editHistory.undoEdit(typedWord.state).content === "", "The first typing batch in an empty document should undo to the initial content.");
+  expect(editHistory.redoEdit(editHistory.undoEdit(typedWord.state)).content === "hello", "A typing batch should be redoable.");
+
+  const commandEdit = editHistory.recordEdit(typedWord.state, "**hello**", { mode: "commit" });
+  expect(commandEdit.state.history.length === 3, "An explicit editor command should create a separate undo snapshot.");
+  expect(editHistory.undoEdit(commandEdit.state).content === "hello", "Undoing an editor command should preserve the preceding typing batch.");
+
+  const branched = editHistory.recordEdit(editHistory.undoEdit(commandEdit.state), "hello!", { mode: "input", inputType: "insertText", now: 2_000 });
+  expect(branched.state.history.length === 3 && branched.state.history.at(-1) === "hello!", "Editing after undo should replace the abandoned redo branch.");
+  expect(editHistory.redoEdit(branched.state).content === "hello!", "Redo should not resurrect an abandoned branch.");
+
+  const secondTab = editHistory.recordEdit({ content: "second", history: ["second"], historyIndex: 0 }, "second tab", { mode: "input", inputType: "insertText", now: 100 });
+  expect(editHistory.undoEdit(typedWord.state).content === "", "The first tab should keep its independent history.");
+  expect(editHistory.undoEdit(secondTab.state).content === "second", "The second tab should keep its independent history.");
+
+  const legacyLiveEdit = editHistory.reconcileHistory({ content: "unsnapshotted", history: ["saved"], historyIndex: 0 });
+  expect(legacyLiveEdit.history.join("|") === "saved|unsnapshotted", "Legacy live content should be repaired into history.");
+  expect(editHistory.undoEdit(legacyLiveEdit).content === "saved", "Repaired legacy content should be immediately undoable.");
+
+  const budgetEntrySize = 80 * 1024;
+  const oversizedHistory = Array.from({ length: 20 }, (_, index) => `${index}:`.padEnd(budgetEntrySize, String(index % 10)));
+  const budgetedHistory = editHistory.reconcileHistory({
+    content: oversizedHistory.at(-1),
+    history: oversizedHistory,
+    historyIndex: oversizedHistory.length - 1,
+  });
+  const budgetedCharacters = budgetedHistory.history.reduce((total, entry) => total + entry.length, 0);
+  expect(budgetedCharacters <= editHistory.MAX_HISTORY_CHARACTERS, `History exceeded its character budget: ${budgetedCharacters}.`);
+  expect(budgetedHistory.history.at(-1) === oversizedHistory.at(-1), "Budget trimming discarded the current snapshot.");
+  expect(editHistory.undoEdit(budgetedHistory).content === oversizedHistory.at(-2), "Budget trimming discarded the nearest undo snapshot.");
+
+  const largeUndo = "A".repeat(400 * 1024);
+  const largeRedo = "B".repeat(400 * 1024);
+  const largePair = editHistory.reconcileHistory({
+    content: largeRedo,
+    history: [largeUndo, largeRedo],
+    historyIndex: 1,
+  });
+  const undoneLargePair = editHistory.undoEdit(largePair);
+  expect(undoneLargePair.content === largeUndo, "Large-document undo did not reach the previous snapshot.");
+  expect(editHistory.redoEdit(undoneLargePair).content === largeRedo, "History budgeting discarded the immediate large-document redo target.");
+
+  const entryLimitedHistory = Array.from({ length: editHistory.MAX_HISTORY_ENTRIES + 20 }, (_, index) => `entry-${index}`);
+  const entryLimited = editHistory.reconcileHistory({
+    content: entryLimitedHistory.at(-1),
+    history: entryLimitedHistory,
+    historyIndex: entryLimitedHistory.length - 1,
+  });
+  expect(entryLimited.history.length === editHistory.MAX_HISTORY_ENTRIES, "History entry trimming no longer enforces the entry limit.");
+  expect(entryLimited.history.at(-1) === entryLimitedHistory.at(-1), "Entry trimming discarded the selected snapshot.");
 
   const options = {
     caseSensitive: false,
@@ -55,6 +120,10 @@ try {
   const encoded = share.encodeShare("# Marcato\n\nHello");
   const decoded = share.decodeShare(encoded);
   expect(decoded === "# Marcato\n\nHello", "Share encode/decode roundtrip failed.");
+  const compressedOverflow = Buffer.concat([Buffer.from(encoded, "base64url"), Buffer.alloc(256 * 1024)]).toString("base64url");
+  expectThrows(() => share.decodeShare(compressedOverflow), "Share decoder accepted an oversized compressed payload.");
+  const decompressionBomb = share.encodeShare("A".repeat(10 * 1024 * 1024 + 1));
+  expectThrows(() => share.decodeShare(decompressionBomb), "Share decoder accepted output beyond the decompressed size limit.");
 
   const askPrompt = externalAsk.buildExternalAskPrompt("tighten this paragraph", "Draft.md", "wechat");
   expect(askPrompt.includes("Draft.md") && askPrompt.includes("tighten this paragraph"), "External ask prompt should include document and selection context.");
@@ -78,6 +147,16 @@ try {
   expect(!wechatRender.html.includes("platform-admonition"), "WeChat profile should not render docs-platform admonitions.");
   const wechatChineseStrong = markdown.renderMarkdownToHtml('> **先说结论：**正文继续', false, "wechat");
   expect(wechatChineseStrong.html.includes("<strong>先说结论：</strong> 正文继续"), "WeChat profile should repair strong emphasis immediately followed by CJK text.");
+
+  const unicodeFootnotes = markdown.renderMarkdownToHtml("中文脚注[^说明]，再次引用[^说明]，以及另一个[^详情]。\n\n[^说明]: 第一条注释。\n[^详情]: 第二条注释。", false, "standard");
+  expect(unicodeFootnotes.html.includes('href="#fn-footnote-1"'), "Unicode footnote references should target a stable fallback ID.");
+  expect(unicodeFootnotes.html.includes('id="fn-footnote-1"'), "Unicode footnote definitions should reuse the reference fallback ID.");
+  expect(unicodeFootnotes.html.includes('id="fn-footnote-2"'), "Distinct Unicode footnotes should receive distinct fallback IDs.");
+  expect(unicodeFootnotes.html.includes('id="fnref-footnote-1-2"'), "Repeated Unicode footnote references should remain uniquely addressable.");
+
+  const collidingFootnotes = markdown.renderMarkdownToHtml("One[^A B] and two[^a-b].\n\n[^A B]: First.\n[^a-b]: Second.", false, "standard");
+  expect(collidingFootnotes.html.includes('id="fn-a-b"'), "The first normalized footnote ID should retain its readable slug.");
+  expect(collidingFootnotes.html.includes('id="fn-a-b-2"'), "Colliding normalized footnote IDs should be disambiguated.");
 
   const standardRender = markdown.renderMarkdownToHtml('<MpProfile mpId="x" nickname="Nope" />\n\n:::tip\nNo platform mix.\n:::', false, "standard");
   expect(!standardRender.html.includes("mp-common-profile"), "Standard profile should not render WeChat official account cards.");

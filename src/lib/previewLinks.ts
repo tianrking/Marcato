@@ -6,10 +6,8 @@ export function setupPreviewLinks(root: HTMLElement) {
 
     if (href.startsWith("#")) {
       link.addEventListener("click", (event) => {
-        const target = findPreviewAnchorTarget(root, href);
-        if (!target) return;
         event.preventDefault();
-        target.scrollIntoView({ behavior: "smooth", block: "start" });
+        scrollPreviewToAnchor(root, href);
       });
       return;
     }
@@ -30,6 +28,13 @@ export function setupPreviewLinks(root: HTMLElement) {
       link.rel = "noopener noreferrer";
     }
   });
+}
+
+export function scrollPreviewToAnchor(root: HTMLElement, href: string) {
+  const target = findPreviewAnchorTarget(root, href);
+  if (!target) return false;
+  target.scrollIntoView({ behavior: "smooth", block: "start" });
+  return true;
 }
 
 function isSafePreviewHref(href: string) {

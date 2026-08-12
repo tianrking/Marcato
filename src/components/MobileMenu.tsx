@@ -37,6 +37,7 @@ interface MobileMenuProps {
     chars: number;
   };
   tabs: MarkdownTab[];
+  readOnly?: boolean;
   onClose: () => void;
   onCloseTab: (id: string) => void;
   onCopyMarkdown: () => void;
@@ -78,6 +79,7 @@ export function MobileMenu({
   opened,
   stats,
   tabs,
+  readOnly = false,
   onClose,
   onCloseTab,
   onCopyMarkdown,
@@ -159,22 +161,24 @@ export function MobileMenu({
           <button type="button" aria-label="Close mobile menu" onClick={onClose}><X size={17} /></button>
         </div>
 
-        <section className="mobile-drawer-section">
-          <span className="mobile-section-title">{t("view.preview")}</span>
-          <div className="mobile-view-grid">
-            {VIEW_OPTIONS.map((option) => (
-              <button
-                key={option.id}
-                type="button"
-                className={globalState.viewMode === option.id ? "active" : ""}
-                onClick={() => onGlobalChange({ viewMode: option.id })}
-              >
-                {option.icon}
-                {t(option.labelKey)}
-              </button>
-            ))}
-          </div>
-        </section>
+        {!readOnly && (
+          <section className="mobile-drawer-section">
+            <span className="mobile-section-title">{t("view.preview")}</span>
+            <div className="mobile-view-grid">
+              {VIEW_OPTIONS.map((option) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  className={globalState.viewMode === option.id ? "active" : ""}
+                  onClick={() => onGlobalChange({ viewMode: option.id })}
+                >
+                  {option.icon}
+                  {t(option.labelKey)}
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
 
         <section className="mobile-drawer-section">
           <span className="mobile-section-title">{t("health.title")}</span>
@@ -197,7 +201,7 @@ export function MobileMenu({
           <span className="mobile-section-title">{t("status.document")}</span>
           <div className="mobile-tab-list">
             {tabs.map((tab) => {
-              const editing = editingTabId === tab.id;
+              const editing = !readOnly && editingTabId === tab.id;
               return (
                 <div key={tab.id} className={`${tab.id === activeTabId ? "mobile-tab-row active" : "mobile-tab-row"}${editing ? " editing" : ""}`}>
                   {editing ? (
@@ -218,23 +222,33 @@ export function MobileMenu({
                       <small>{tab.content.length.toLocaleString()}</small>
                     </button>
                   )}
-                  <button type="button" aria-label={`Rename ${tab.title}`} onClick={() => startEditing(tab)}><Pencil size={14} /></button>
-                  <button type="button" aria-label={`Duplicate ${tab.title}`} onClick={() => onDuplicateTab(tab.id)}><CopyPlus size={14} /></button>
-                  <button type="button" aria-label={`Close ${tab.title}`} onClick={() => runAndClose(() => onCloseTab(tab.id))}><X size={14} /></button>
+                  {!readOnly && (
+                    <>
+                      <button type="button" aria-label={`Rename ${tab.title}`} onClick={() => startEditing(tab)}><Pencil size={14} /></button>
+                      <button type="button" aria-label={`Duplicate ${tab.title}`} onClick={() => onDuplicateTab(tab.id)}><CopyPlus size={14} /></button>
+                      <button type="button" aria-label={`Close ${tab.title}`} onClick={() => runAndClose(() => onCloseTab(tab.id))}><X size={14} /></button>
+                    </>
+                  )}
                 </div>
               );
             })}
           </div>
-          <button type="button" className="mobile-wide-action" onClick={() => runAndClose(onNewTab)}>
-            <Plus size={16} />{t("action.new")}
-          </button>
+          {!readOnly && (
+            <button type="button" className="mobile-wide-action" onClick={() => runAndClose(onNewTab)}>
+              <Plus size={16} />{t("action.new")}
+            </button>
+          )}
         </section>
 
         <section className="mobile-drawer-section">
           <span className="mobile-section-title">{t("action.import")} / {t("action.export")}</span>
           <div className="mobile-action-grid">
-            <button type="button" onClick={() => runAndClose(onImportFiles)}><Download size={16} />{t("action.import")}</button>
-            <button type="button" onClick={() => runAndClose(onGithubImport)}><GitBranch size={16} />GitHub</button>
+            {!readOnly && (
+              <>
+                <button type="button" onClick={() => runAndClose(onImportFiles)}><Download size={16} />{t("action.import")}</button>
+                <button type="button" onClick={() => runAndClose(onGithubImport)}><GitBranch size={16} />GitHub</button>
+              </>
+            )}
             <button type="button" onClick={() => runAndClose(onExportMarkdown)}><Save size={16} />MD</button>
             <button type="button" onClick={() => runAndClose(onExportHtml)}><FileCode2 size={16} />HTML</button>
             <button type="button" onClick={() => runAndClose(onExportPdf)}><FileDown size={16} />PDF</button>

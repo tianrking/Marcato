@@ -72,7 +72,7 @@ must remain smooth and predictable after initial access.
 | Symbols/entities picker | Done | `script.js` symbol groups | `src/components/SymbolsInsertModal.tsx` | Searchable grouped picker with multi-select, ordered entity insertion, and per-entity copy. |
 | Alert insert UI | Done | `index.html`, `script.js`, `styles.css` | `src/components/AlertInsertModal.tsx`, `src/lib/editorCommands.ts` | Type picker with previews inserts selected alert, preserving selected text as body. |
 | Smart enter/list continuation | Needs proof | `script.js` | `src/lib/editorCommands.ts` | Verify task/list/quote continuation and indentation edge cases. |
-| Undo/redo history | Needs proof | `script.js` custom history | `src/stores/appStore.ts` | Verify multi-tab history, restore, and limits. |
+| Undo/redo history | Done | `script.js` custom history | `src/lib/editHistory.ts`, `src/stores/appStore.ts`, `tests/e2e/editor-history.spec.mjs` | Browser-verified coalesced typing, command boundaries, per-tab undo/redo, bounded persistence, and visible quota failure. |
 
 ## Tabs, Files, Import, Share
 
@@ -81,9 +81,9 @@ must remain smooth and predictable after initial access.
 | Multi-tab documents | Partial | `script.js`, `index.html` | `src/stores/appStore.ts`, `src/App.tsx` | Basic tabs; missing overflow, action menu, reorder, delete confirm, mobile tab list parity. |
 | Drag/drop import | Needs proof | `script.js` | `src/App.tsx` | Verify multiple files, size limit, invalid files. |
 | GitHub import | Partial | `index.html`, `script.js` | `src/components/GitHubImportModal.tsx` | Tree exists; skeleton/error/mobile/tooling parity incomplete. |
-| Share view-only/edit links | Done | `index.html`, `script.js` | `src/lib/share.ts`, `src/App.tsx` | Original `#share=<payload>&edit=1` hash format restored; browser-verified view-only preview and editable split restore. |
-| Export Markdown | Needs proof | `script.js` | `src/lib/exporters.ts` | Verify filename/title behavior. |
-| Export HTML | Needs proof | `script.js` | `src/lib/exporters.ts` | Verify CSS, diagrams, sanitized HTML, standalone result. |
+| Share view-only/edit links | Done | `index.html`, `script.js` | `src/lib/share.ts`, `src/App.tsx`, `tests/e2e/share.spec.mjs` | Browser-verified read-only controls/shortcuts, session-only editable shares, local workspace preservation, malformed/oversized payload fallback, and safe outline navigation. |
+| Export Markdown | Done | `script.js` | `src/lib/exporters.ts`, `tests/e2e/export-buttons.spec.mjs` | Browser-verified download and filename behavior. |
+| Export HTML | Done | `script.js` | `src/lib/downloads.ts`, `tests/e2e/export-buttons.spec.mjs` | Browser-verified latest-revision snapshot, post-processed math/Mermaid, profile context, controls removal, and standalone download. |
 | Export PNG | Partial | `script.js` | `src/lib/exporters.ts`, `src/lib/diagramActions.ts` | Needs white/transparent background choices and remote image handling proof. |
 | Export PDF | Partial | `script.js`, `styles.css` | `src/lib/pdfPagination.ts`, `src/lib/exporters.ts`, `tests/e2e/pdf-pagination.spec.mjs` | Pagination, progress UI, real download, AbortSignal cleanup, wide image/diagram fitting, repeated head text, and PDF layout screenshot have browser proof; still needs deeper original cascade parity. |
 

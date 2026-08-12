@@ -1,10 +1,11 @@
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { Copy, Download, Image, Info } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Modal } from "./Common";
 import { WechatStylePicker } from "./WechatStylePicker";
 import { downloadBlob } from "../lib/downloads";
 import { getExportName } from "../lib/exportNames";
+import { wechatStyleClassName } from "../lib/wechatStyles";
 import type { WechatStyle } from "../types";
 import {
   buildWechatClipboardPayload,
@@ -17,21 +18,25 @@ interface WechatExportModalProps {
   fallbackTitle: string;
   onClose: () => void;
   onNotify: (message: string) => void;
-  onStyleChange: (style: WechatStyle) => void;
   source: HTMLElement;
   style: WechatStyle;
 }
 
-export function WechatExportModal({ fallbackTitle, onClose, onNotify, onStyleChange, source, style }: WechatExportModalProps) {
+export function WechatExportModal({ fallbackTitle, onClose, onNotify, source, style }: WechatExportModalProps) {
   const { t } = useTranslation();
   const [draft, setDraft] = useState(() => extractWechatDraftMetadata(source, fallbackTitle));
   const [includeTitle, setIncludeTitle] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [exportStyle, setExportStyle] = useState(style);
   const [status, setStatus] = useState("");
   const [stats] = useState(() => buildWechatClipboardPayload(source, { excludeTitle: true }).stats);
   const titleId = useId();
   const summaryId = useId();
   const directImages = stats.embeddedImages + stats.preservedWechatImages;
+
+  useEffect(() => {
+    applySnapshotStyle(source, exportStyle);
+  }, [exportStyle, source]);
 
   const copyField = async (value: string, label: string) => {
     if (!value.trim()) return;
@@ -46,7 +51,7 @@ export function WechatExportModal({ fallbackTitle, onClose, onNotify, onStyleCha
   const copyBody = async () => {
     setBusy(true);
     try {
-      const result = await copyWechatRichText(source, { excludeTitle: !includeTitle, style });
+      const result = await copyWechatRichText(source, { excludeTitle: !includeTitle, style: exportStyle });
       const message = result.method === "plain-text"
         ? t("toast.wechatCopiedPlain")
         : t("toast.wechatCopied", {
@@ -66,7 +71,7 @@ export function WechatExportModal({ fallbackTitle, onClose, onNotify, onStyleCha
   };
 
   const downloadCopyReady = () => {
-    const html = buildWechatCopyReadyDocument(source, draft, { excludeTitle: !includeTitle, style });
+    const html = buildWechatCopyReadyDocument(source, draft, { excludeTitle: !includeTitle, style: exportStyle });
     const filename = `${getExportName(draft.title || fallbackTitle)}.wechat.html`;
     downloadBlob(new Blob([html], { type: "text/html;charset=utf-8" }), filename);
     const message = t("wechat.htmlDownloaded");
@@ -94,7 +99,7 @@ export function WechatExportModal({ fallbackTitle, onClose, onNotify, onStyleCha
             <strong>{t("wechat.styleLabel")}</strong>
             <small>{t("wechat.styleApplyHint")}</small>
           </div>
-          <WechatStylePicker value={style} onChange={onStyleChange} />
+          <WechatStylePicker value={exportStyle} onChange={setExportStyle} />
         </section>
 
         <div className="wechat-export-field">
@@ -153,6 +158,14 @@ export function WechatExportModal({ fallbackTitle, onClose, onNotify, onStyleCha
       </div>
     </Modal>
   );
+}
+
+function applySnapshotStyle(source: HTMLElement, style: WechatStyle) {
+  for (const className of [...source.classList]) {
+    if (className.startsWith("wechat-style-")) source.classList.remove(className);
+  }
+  source.classList.add(wechatStyleClassName(style));
+  source.dataset.wechatStyle = style;
 }
 
 async function copyPlainText(value: string) {

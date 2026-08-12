@@ -1,7 +1,8 @@
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
 import { copyPngBlobToClipboard } from "./clipboardImages";
-import { downloadBlob, ensureExtension, exportHtml, exportMarkdown } from "./downloads";
+import { assertPreviewRevision, downloadBlob, ensureExtension, exportHtml, exportMarkdown, waitForPreviewExportReady } from "./downloads";
+import { stabilizeExportDomColors } from "./exportDom";
 import { getExportName } from "./exportNames";
 import { A4_PDF_CONFIG, estimatePdfPageCount, getPageHeightPx, preparePdfLayout } from "./pdfPagination";
 
@@ -19,20 +20,29 @@ export interface PdfExportOptions {
   onProgress?: (progress: PdfExportProgress) => void;
 }
 
-export async function exportPng(filename: string, element: HTMLElement) {
-  const canvas = await html2canvas(element, { backgroundColor: getComputedStyle(document.body).backgroundColor, scale: 2, useCORS: true });
-  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
-  if (!blob) throw new Error("PNG export failed: canvas did not produce a blob.");
-  downloadBlob(blob, ensureExtension(filename, ".png"));
+export async function exportPng(filename: string, element: HTMLElement, expectedRevision?: string) {
+  await waitForPreviewExportReady(element, 15_000, expectedRevision);
+  assertPreviewRevision(element, expectedRevision);
+  const exportElement = await createImageExportClone(element);
+  try {
+    const canvas = await html2canvas(exportElement, imageCanvasOptions());
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
+    if (!blob) throw new Error("PNG export failed: canvas did not produce a blob.");
+    downloadBlob(blob, ensureExtension(filename, ".png"));
+  } finally {
+    exportElement.remove();
+  }
 }
 
-export async function exportPdf(filename: string, element: HTMLElement, options: PdfExportOptions = {}) {
+export async function exportPdf(filename: string, element: HTMLElement, options: PdfExportOptions = {}, expectedRevision?: string) {
+  await waitForPreviewExportReady(element, 15_000, expectedRevision);
   document.documentElement.dataset.pdfRendering = "true";
   const runtimeStyle = installPdfRuntimeStyle();
   let exportElement: HTMLElement | null = null;
   try {
     reportPdfProgress(options, "preparing", 0.08);
     await nextAnimationFrame();
+    assertPreviewRevision(element, expectedRevision);
     exportElement = await preparePdfLayout(element, A4_PDF_CONFIG, { signal: options.signal });
     throwIfAborted(options.signal);
     reportPdfProgress(options, "rendering", 0.34);
@@ -158,11 +168,107 @@ function pdfRuntimeCss() {
 
 export type CopyImageResult = "copied" | "downloaded" | "unavailable";
 
-export async function copyImage(element: HTMLElement, filename = "preview.png"): Promise<CopyImageResult> {
-  const canvas = await html2canvas(element, { backgroundColor: getComputedStyle(document.body).backgroundColor, scale: 2, useCORS: true });
-  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
-  if (!blob) return "unavailable";
-  if (await copyPngBlobToClipboard(blob)) return "copied";
-  downloadBlob(blob, ensureExtension(filename, ".png"));
-  return "downloaded";
+export async function copyImage(element: HTMLElement, filename = "preview.png", expectedRevision?: string): Promise<CopyImageResult> {
+  await waitForPreviewExportReady(element, 15_000, expectedRevision);
+  assertPreviewRevision(element, expectedRevision);
+  const exportElement = await createImageExportClone(element);
+  try {
+    const canvas = await html2canvas(exportElement, imageCanvasOptions());
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
+    if (!blob) return "unavailable";
+    if (await copyPngBlobToClipboard(blob)) return "copied";
+    downloadBlob(blob, ensureExtension(filename, ".png"));
+    return "downloaded";
+  } finally {
+    exportElement.remove();
+  }
+}
+
+async function createImageExportClone(source: HTMLElement) {
+  const clone = source.cloneNode(true) as HTMLElement;
+  const bounds = source.getBoundingClientRect();
+  clone.className = `${source.className} image-export`;
+  clone.style.width = `${Math.max(1, Math.ceil(bounds.width))}px`;
+  clone.style.maxWidth = "none";
+  clone.style.position = "fixed";
+  clone.style.left = "-10000px";
+  clone.style.top = "0";
+  clone.style.zIndex = "-1";
+  clone.style.pointerEvents = "none";
+  stabilizeExportDomColors(source, clone, { omitClasses: ["is-selected"] });
+  copyCanvasPixels(elementCanvases(source), elementCanvases(clone));
+  await rasterizeSvgs(source, clone);
+  clone.querySelectorAll(".diagram-toolbar,.diagram-status,.mini-button,.leaflet-control-container").forEach((node) => node.remove());
+  document.body.appendChild(clone);
+  await nextAnimationFrame();
+  return clone;
+}
+
+function elementCanvases(element: HTMLElement) {
+  return [...element.querySelectorAll<HTMLCanvasElement>("canvas")];
+}
+
+function copyCanvasPixels(sourceCanvases: HTMLCanvasElement[], cloneCanvases: HTMLCanvasElement[]) {
+  sourceCanvases.forEach((canvas, index) => {
+    const clone = cloneCanvases[index];
+    if (!clone) return;
+    clone.width = canvas.width;
+    clone.height = canvas.height;
+    clone.getContext("2d")?.drawImage(canvas, 0, 0);
+  });
+}
+
+async function rasterizeSvgs(source: HTMLElement, clone: HTMLElement) {
+  const sourceSvgs = [...source.querySelectorAll<SVGSVGElement>("svg")];
+  const cloneSvgs = [...clone.querySelectorAll<SVGSVGElement>("svg")];
+  for (const [index, cloneSvg] of cloneSvgs.entries()) {
+    const svg = sourceSvgs[index];
+    if (!svg) continue;
+    const bounds = svg.getBoundingClientRect();
+    const viewBox = svg.viewBox.baseVal;
+    const width = Math.max(1, Math.ceil(bounds.width || viewBox.width || svg.width.baseVal.value || 1));
+    const height = Math.max(1, Math.ceil(bounds.height || viewBox.height || svg.height.baseVal.value || 1));
+    const scale = Math.min(2, 4096 / width, 4096 / height);
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.ceil(width * scale));
+    canvas.height = Math.max(1, Math.ceil(height * scale));
+    canvas.className = svg.getAttribute("class") || "";
+    canvas.setAttribute("aria-label", svg.getAttribute("aria-label") || "Rendered diagram");
+    canvas.style.cssText = cloneSvg.style.cssText;
+    canvas.style.width = `${width}px`;
+    canvas.style.height = `${height}px`;
+
+    const serializedSvg = svg.cloneNode(true) as SVGSVGElement;
+    serializedSvg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+    serializedSvg.setAttribute("width", String(width));
+    serializedSvg.setAttribute("height", String(height));
+    const url = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(serializedSvg)], { type: "image/svg+xml;charset=utf-8" }));
+    try {
+      const image = await loadImage(url);
+      const context = canvas.getContext("2d");
+      if (!context) throw new Error("PNG export failed: canvas rendering is unavailable.");
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+      cloneSvg.replaceWith(canvas);
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  }
+}
+
+function loadImage(url: string) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("PNG export failed: an SVG could not be rasterized."));
+    image.src = url;
+  });
+}
+
+function imageCanvasOptions() {
+  return {
+    backgroundColor: getComputedStyle(document.body).backgroundColor,
+    scale: 2,
+    useCORS: true,
+    logging: false,
+  };
 }

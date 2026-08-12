@@ -55,6 +55,7 @@ const GITHUB_ALERT_LABELS: Record<string, string> = {
 interface MarkdownContext {
   activeProfile: ProfessionalProfile;
   footnoteDefinitions: Map<string, string>;
+  footnoteIds: Map<string, string>;
   footnoteOrder: string[];
   footnoteRefCounts: Map<string, number>;
   footnoteFirstRefId: Map<string, string>;
@@ -66,6 +67,7 @@ interface MarkdownContext {
 const context: MarkdownContext = {
   activeProfile: "standard",
   footnoteDefinitions: new Map(),
+  footnoteIds: new Map(),
   footnoteOrder: [],
   footnoteRefCounts: new Map(),
   footnoteFirstRefId: new Map(),
@@ -711,6 +713,7 @@ const highlightExtension = {
 
 function resetExtendedMarkdownState() {
   context.footnoteDefinitions.clear();
+  context.footnoteIds.clear();
   context.footnoteOrder.length = 0;
   context.footnoteRefCounts.clear();
   context.footnoteFirstRefId.clear();
@@ -939,14 +942,27 @@ function titleCase(value: string) {
 }
 
 function normalizeFootnoteId(id: string) {
+  const existing = context.footnoteIds.get(id);
+  if (existing) return existing;
   const normalized = id
     .trim()
     .toLowerCase()
     .replace(/[^a-z0-9_-]+/g, "-")
     .replace(/^-+|-+$/g, "");
-  if (normalized) return normalized;
-  context.anonymousFootnoteCounter += 1;
-  return `footnote-${context.anonymousFootnoteCounter}`;
+  let candidate = normalized;
+  if (!candidate) {
+    context.anonymousFootnoteCounter += 1;
+    candidate = `footnote-${context.anonymousFootnoteCounter}`;
+  }
+  const usedIds = new Set(context.footnoteIds.values());
+  const base = candidate;
+  let duplicateIndex = 2;
+  while (usedIds.has(candidate)) {
+    candidate = `${base}-${duplicateIndex}`;
+    duplicateIndex += 1;
+  }
+  context.footnoteIds.set(id, candidate);
+  return candidate;
 }
 
 function splitMarkdownBlocks(markdown: string) {

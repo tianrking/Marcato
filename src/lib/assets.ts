@@ -26,7 +26,34 @@ export function loadAssets() {
 }
 
 export function saveAssets(assets: MarkdownAsset[]) {
-  safeWrite(STORAGE_KEYS.assets, assets.slice(0, MAX_ASSETS));
+  return safeWrite(STORAGE_KEYS.assets, assets.slice(0, MAX_ASSETS));
+}
+
+export function collectAssetReferenceIds(markdown: string | Iterable<string>) {
+  const documents = typeof markdown === "string" ? [markdown] : markdown;
+  const ids = new Set<string>();
+  for (const document of documents) {
+    for (const match of document.matchAll(ASSET_REFERENCE_PATTERN)) ids.add(match[1]);
+  }
+  return ids;
+}
+
+export function selectAssetsForStorage(assets: MarkdownAsset[], preferredAssetIds: Iterable<string> = [], limit = MAX_ASSETS) {
+  const byId = new Map<string, MarkdownAsset>();
+  for (const asset of assets) {
+    if (!byId.has(asset.id)) byId.set(asset.id, asset);
+  }
+
+  const selected: MarkdownAsset[] = [];
+  const selectedIds = new Set<string>();
+  const append = (asset: MarkdownAsset | undefined) => {
+    if (!asset || selectedIds.has(asset.id) || selected.length >= limit) return;
+    selected.push(asset);
+    selectedIds.add(asset.id);
+  };
+  for (const id of preferredAssetIds) append(byId.get(id));
+  for (const asset of assets) append(asset);
+  return selected;
 }
 
 export async function createLocalAsset(file: File): Promise<MarkdownAsset> {

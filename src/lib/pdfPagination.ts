@@ -1,3 +1,5 @@
+import { stabilizeExportDomColors } from "./exportDom";
+
 export interface PdfPageConfig {
   contentWidth: number;
   contentHeight: number;
@@ -60,6 +62,7 @@ export function createPdfExportClone(source: HTMLElement, config = A4_PDF_CONFIG
   clone.style.zIndex = "-1";
   clone.style.pointerEvents = "none";
 
+  stabilizeExportDomColors(source, clone, { omitClasses: ["is-selected"] });
   clone.querySelectorAll(".diagram-toolbar,.diagram-status,.mini-button,.leaflet-control").forEach((node) => node.remove());
   copyCanvasPixels(source, clone);
   normalizeExportDom(clone);

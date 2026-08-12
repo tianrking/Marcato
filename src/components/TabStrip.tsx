@@ -10,6 +10,7 @@ interface TabStripProps {
   onRenameTab: (id: string, title: string) => void;
   onReorderTab: (draggedId: string, targetId: string) => void;
   onSelectTab: (id: string) => void;
+  readOnly?: boolean;
 }
 
 export function TabStrip({
@@ -20,6 +21,7 @@ export function TabStrip({
   onRenameTab,
   onReorderTab,
   onSelectTab,
+  readOnly = false,
 }: TabStripProps) {
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const editInputRef = useRef<HTMLInputElement | null>(null);
@@ -94,21 +96,28 @@ export function TabStrip({
       <button className="tab-scroll-button" type="button" aria-label="Scroll tabs left" onClick={() => scrollBy(-1)}>
         <ChevronLeft size={16} />
       </button>
-      <div ref={scrollerRef} className="tab-strip" role="tablist" aria-label="Open documents" onKeyDown={onKeyDown}>
+      <div ref={scrollerRef} className="tab-strip" role="tablist" aria-label="Open documents" onKeyDown={readOnly ? undefined : onKeyDown}>
         {tabs.map((tab) => {
           const active = tab.id === activeTabId;
           return (
             <div
               key={tab.id}
               className={`${active ? "tab-frame active" : "tab-frame"}${editingTabId === tab.id ? " editing" : ""}`}
-              draggable={editingTabId !== tab.id}
-              onDragStart={() => setDraggedTabId(tab.id)}
-              onDragOver={(event) => event.preventDefault()}
+              draggable={!readOnly && editingTabId !== tab.id}
+              onDragStart={() => {
+                if (!readOnly) setDraggedTabId(tab.id);
+              }}
+              onDragOver={(event) => {
+                if (!readOnly) event.preventDefault();
+              }}
               onDrop={() => {
+                if (readOnly) return;
                 if (draggedTabId) onReorderTab(draggedTabId, tab.id);
                 setDraggedTabId(null);
               }}
-              onDragEnd={() => setDraggedTabId(null)}
+              onDragEnd={() => {
+                if (!readOnly) setDraggedTabId(null);
+              }}
             >
               {editingTabId === tab.id ? (
                 <div className="tab tab-edit-shell">
@@ -141,35 +150,39 @@ export function TabStrip({
                   aria-selected={active}
                   tabIndex={active ? 0 : -1}
                   onClick={() => onSelectTab(tab.id)}
-                  onDoubleClick={() => startEditing(tab)}
+                  onDoubleClick={() => !readOnly && startEditing(tab)}
                 >
                   <span>{tab.title}</span>
                   <small>{tab.content.length.toLocaleString()}</small>
                 </button>
               )}
-              <button
-                className="tab-action"
-                type="button"
-                aria-label={`Rename ${tab.title}`}
-                title={`Rename ${tab.title}`}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  startEditing(tab);
-                }}
-              >
-                <MoreHorizontal size={15} />
-              </button>
-              <button
-                className="tab-close"
-                type="button"
-                aria-label={`Close ${tab.title}`}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onCloseTab(tab.id);
-                }}
-              >
-                <X size={14} />
-              </button>
+              {!readOnly && (
+                <>
+                  <button
+                    className="tab-action"
+                    type="button"
+                    aria-label={`Rename ${tab.title}`}
+                    title={`Rename ${tab.title}`}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      startEditing(tab);
+                    }}
+                  >
+                    <MoreHorizontal size={15} />
+                  </button>
+                  <button
+                    className="tab-close"
+                    type="button"
+                    aria-label={`Close ${tab.title}`}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onCloseTab(tab.id);
+                    }}
+                  >
+                    <X size={14} />
+                  </button>
+                </>
+              )}
             </div>
           );
         })}
@@ -177,9 +190,11 @@ export function TabStrip({
       <button className="tab-scroll-button" type="button" aria-label="Scroll tabs right" onClick={() => scrollBy(1)}>
         <ChevronRight size={16} />
       </button>
-      <button className="tab-new-button" type="button" aria-label="New tab" onClick={onNewTab}>
-        <Plus size={16} />
-      </button>
+      {!readOnly && (
+        <button className="tab-new-button" type="button" aria-label="New tab" onClick={onNewTab}>
+          <Plus size={16} />
+        </button>
+      )}
     </nav>
   );
 }

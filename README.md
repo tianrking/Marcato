@@ -99,7 +99,7 @@ See [WeChat export rules and platform boundaries](docs/WECHAT_EXPORT.md).
 | Math | KaTeX inline and block math post-processing. |
 | Diagrams | Mermaid, ABC notation, GeoJSON, TopoJSON, STL, PlantUML, D2, Graphviz/DOT, Vega-Lite, WaveDrom, Markmap. |
 | Diagram actions | Toolbar actions for copying source or PNG, downloading SVG/PNG where supported, zoom modal paths, sanitization and clipboard fallbacks. |
-| Safety | DOMPurify for main Markdown HTML, safe external-link handling, SVG sanitization paths, clipboard/download fallbacks. |
+| Safety | DOMPurify for main Markdown and Markmap HTML, safe external-link handling, SVG URL sanitization, bounded share decompression, clipboard/download fallbacks. |
 
 ## Editing Tools
 
@@ -118,7 +118,7 @@ See [WeChat export rules and platform boundaries](docs/WECHAT_EXPORT.md).
 | Export | Markdown, HTML, PNG, clipboard PNG, and paginated PDF. |
 | WeChat paste | Inline-style rich text with visible URLs, image insertion notes, diagram source, and HTML/plain-text clipboard fallbacks. |
 | PDF | Progress UI, cancellation, page-break handling, table and rich-preview coverage in tests. |
-| Share | `#share=` URLs compressed with pako; view-only and editable modes; long-link warning; current deployed origin is used. |
+| Share | `#share=` URLs compressed with pako; enforced view-only and session-only editable modes; malformed/oversized-link fallback; long-link warning; current deployed origin is used. |
 | PWA | Static app shell, Workbox service worker, no-cache service worker headers for reliable updates. |
 
 ## Architecture
@@ -198,7 +198,10 @@ npm test
 
 Reusable browser suites live in `tests/e2e`:
 
+- `npm run test:assets`: quota-safe image persistence, compact-reference integrity, and capacity limits.
+- `npm run test:history`: coalesced per-tab undo/redo, persistence limits, and visible storage-failure handling.
 - `npm run test:smoke`: editor, preview, modals, find/replace, share URLs, mobile shell, and mobile view modes.
+- `npm run test:share`: view-only enforcement, session isolation, malformed-link recovery, and malicious shared-diagram safety.
 - `npm run test:wechat`: visible URLs, image annotations, Mermaid/LaTeX source retention, clipboard MIME formats, and source-copy actions.
 - `npm run test:pdf`: long tables, page breaks, diagrams, math, export progress, and cancellation.
 - `npm run test:perf`: large documents and proof that rich preview processors are lazy-loaded.

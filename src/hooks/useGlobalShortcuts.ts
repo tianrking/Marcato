@@ -2,6 +2,7 @@ import { useEffect, useRef, type RefObject } from "react";
 
 interface GlobalShortcutOptions {
   activeTabId: string;
+  disabled?: boolean;
   editorRef: RefObject<HTMLTextAreaElement | null>;
   onCloseTab: (id: string) => void;
   onNewTab: () => void;
@@ -14,6 +15,7 @@ interface GlobalShortcutOptions {
 
 export function useGlobalShortcuts({
   activeTabId,
+  disabled,
   editorRef,
   onCloseTab,
   onNewTab,
@@ -25,6 +27,7 @@ export function useGlobalShortcuts({
 }: GlobalShortcutOptions) {
   const latestOptionsRef = useRef<GlobalShortcutOptions>({
     activeTabId,
+    disabled,
     editorRef,
     onCloseTab,
     onNewTab,
@@ -37,6 +40,7 @@ export function useGlobalShortcuts({
 
   latestOptionsRef.current = {
     activeTabId,
+    disabled,
     editorRef,
     onCloseTab,
     onNewTab,
@@ -50,6 +54,7 @@ export function useGlobalShortcuts({
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const options = latestOptionsRef.current;
+      if (options.disabled) return;
       const isMac = navigator.platform.toLowerCase().includes("mac");
       const mod = isMac ? event.metaKey : event.ctrlKey;
       if (!mod && !(event.altKey && event.shiftKey)) return;

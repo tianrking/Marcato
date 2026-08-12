@@ -10,7 +10,7 @@ import { setupDiagramActions } from "./diagramActions";
 import { downloadBlob } from "./downloads";
 import { getCommonGitHubEmoji } from "./githubEmojis";
 import { setupPreviewLinks } from "./previewLinks";
-import { sanitizeRemoteDiagramSvg } from "./sanitizer";
+import { sanitizeMarkmapTree, sanitizeRemoteDiagramSvg } from "./sanitizer";
 import type { TopLevelSpec } from "vega-lite";
 
 let mermaidTheme: "default" | "dark" | null = null;
@@ -462,7 +462,7 @@ async function renderGraphviz(root: HTMLElement, theme: "light" | "dark", signal
     const viewer = node.closest<HTMLElement>(".diagram-viewer");
     const code = decodeURIComponent(node.dataset.originalCode || "");
     try {
-      const svg = viz.renderSVGElement(code, {
+      const rendered = viz.renderSVGElement(code, {
         engine: "dot",
         graphAttributes: {
           bgcolor: "transparent",
@@ -481,10 +481,12 @@ async function renderGraphviz(root: HTMLElement, theme: "light" | "dark", signal
           fontcolor: theme === "dark" ? "#e6edf3" : "#172033",
         },
       });
+      if (isAborted(signal, root) || !node.isConnected) return;
+      node.innerHTML = sanitizeRemoteDiagramSvg(new XMLSerializer().serializeToString(rendered));
+      const svg = node.querySelector<SVGSVGElement>("svg");
+      if (!svg) throw new Error("Local Graphviz renderer did not return a valid SVG.");
       svg.setAttribute("role", "img");
       svg.setAttribute("aria-label", "Graphviz diagram");
-      if (isAborted(signal, root) || !node.isConnected) return;
-      node.replaceChildren(svg);
       node.dataset.rendered = "1";
       markReady(viewer);
     } catch (error) {
@@ -559,7 +561,8 @@ async function renderMarkmap(root: HTMLElement, theme: "light" | "dark", signal?
     const viewer = node.closest<HTMLElement>(".diagram-viewer");
     const code = decodeURIComponent(node.dataset.originalCode || "");
     try {
-      const { root: markmapRoot } = transformer.transform(code);
+      const { root: transformedRoot } = transformer.transform(code);
+      const markmapRoot = sanitizeMarkmapTree(transformedRoot);
       if (isAborted(signal, root) || !node.isConnected) return;
       node.innerHTML = "";
       const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");

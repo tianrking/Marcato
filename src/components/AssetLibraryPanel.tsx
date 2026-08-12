@@ -7,7 +7,7 @@ interface AssetLibraryPanelProps {
   assets: MarkdownAsset[];
   opened: boolean;
   onAddFiles: (files: FileList | File[]) => void;
-  onAddRemote: (name: string, source: string) => void;
+  onAddRemote: (name: string, source: string) => boolean;
   onClose: () => void;
   onCopySource: (asset: MarkdownAsset) => void;
   onInsert: (asset: MarkdownAsset) => void;
@@ -27,7 +27,7 @@ export function AssetLibraryPanel({ assets, opened, onAddFiles, onAddRemote, onC
   if (!opened) return null;
 
   const addRemote = () => {
-    onAddRemote(remoteName, remoteSource);
+    if (!onAddRemote(remoteName, remoteSource)) return;
     setRemoteName("");
     setRemoteSource("");
   };

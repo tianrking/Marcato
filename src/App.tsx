@@ -75,6 +75,7 @@ import { MAX_ASSETS, MAX_IMPORT_BYTES, MAX_TABS } from "./lib/constants";
 import {
   assetMarkdown,
   assetReference,
+  collectAssetReferenceIds,
   createLocalAsset,
   createLocalAssetCandidate,
   createRemoteAsset,
@@ -82,20 +83,22 @@ import {
   hydrateAssetReferences,
   loadAssets,
   saveAssets,
+  selectAssetsForStorage,
 } from "./lib/assets";
 import { applyCommand, handleSmartEnter, type MarkdownCommand } from "./lib/editorCommands";
 import { buildExternalAskPrompt, buildExternalAskUrl, type ExternalAskTarget } from "./lib/externalAsk";
-import { exportHtml, exportMarkdown } from "./lib/downloads";
+import { assertPreviewRevision, exportHtml, exportMarkdown, waitForPreviewExportReady } from "./lib/downloads";
 import { getExportName } from "./lib/exportNames";
 import { analyzeDocumentHealth } from "./lib/documentHealth";
 import { i18n } from "./lib/i18n";
 import { analyzeProfessionalProfile } from "./lib/professionalProfiles";
-import { previewDocumentToHtml, type PreviewBlock } from "./lib/previewDocument";
-import { makeTab } from "./lib/storage";
+import { scrollPreviewToAnchor } from "./lib/previewLinks";
+import { type PreviewBlock } from "./lib/previewDocument";
+import { makeTab, WORKSPACE_STORAGE_FAILURE_EVENT } from "./lib/storage";
 import { copyWechatRichText } from "./lib/wechatExport";
 import { useAppStore } from "./stores/appStore";
 import type { PdfExportPhase } from "./lib/exporters";
-import type { MarkdownAsset, MarkdownTab } from "./types";
+import type { MarkdownAsset, MarkdownTab, ProfessionalProfile } from "./types";
 
 interface PdfExportState {
   phase: PdfExportPhase | "cancelling";
@@ -108,6 +111,17 @@ interface ConfirmAction {
   message: string;
   onConfirm: () => void;
   title: string;
+}
+
+interface PreviewRevision {
+  content: string;
+  professionalProfile: ProfessionalProfile;
+  tabId: string;
+}
+
+interface WechatExportSnapshot {
+  fallbackTitle: string;
+  source: HTMLElement;
 }
 
 type HeavyExporters = typeof import("./lib/exporters");
@@ -135,6 +149,7 @@ function App() {
   const globalState = useAppStore((state) => state.globalState);
   const tabs = useAppStore((state) => state.tabs);
   const activeTabId = useAppStore((state) => state.activeTabId);
+  const shareMode = useAppStore((state) => state.shareMode);
   const initializeWorkspace = useAppStore((state) => state.initializeWorkspace);
   const updateGlobal = useAppStore((state) => state.updateGlobal);
   const setActiveTabId = useAppStore((state) => state.setActiveTabId);
@@ -147,6 +162,8 @@ function App() {
   const reorderStoreTab = useAppStore((state) => state.reorderTab);
   const undo = useAppStore((state) => state.undo);
   const redo = useAppStore((state) => state.redo);
+  const readOnly = shareMode === "view";
+  const viewMode = readOnly ? "preview" : globalState.viewMode;
   const [selectedPreviewBlockId, setSelectedPreviewBlockId] = useState("");
   const [toast, setToast] = useState("");
   const [documentLibraryOpen, setDocumentLibraryOpen] = useState(false);
@@ -159,7 +176,7 @@ function App() {
   const [pdfExport, setPdfExport] = useState<PdfExportState | null>(null);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const [healthOpen, setHealthOpen] = useState(false);
-  const [wechatExportSource, setWechatExportSource] = useState<HTMLElement | null>(null);
+  const [wechatExportSnapshot, setWechatExportSnapshot] = useState<WechatExportSnapshot | null>(null);
   const [wechatCopying, setWechatCopying] = useState(false);
 
   const editorRef = useRef<HTMLTextAreaElement | null>(null);
@@ -169,6 +186,7 @@ function App() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const bundleInputRef = useRef<HTMLInputElement | null>(null);
   const pdfAbortRef = useRef<AbortController | null>(null);
+  const wechatExportSnapshotRef = useRef<HTMLElement | null>(null);
   const syncingRef = useRef(false);
   const toastTimerRef = useRef<number | null>(null);
 
@@ -182,7 +200,33 @@ function App() {
     () => activeTab && hydratedText !== text ? { ...activeTab, content: hydratedText } : activeTab,
     [activeTab, hydratedText, text],
   );
-  const { document: previewDocument, toc, state: renderState, error: renderError } = useMarkdownRender(renderTab, globalState.professionalProfile);
+  const {
+    document: previewDocument,
+    toc,
+    state: renderState,
+    error: renderError,
+    ready: renderReady,
+    revisionToken,
+  } = useMarkdownRender(renderTab, globalState.professionalProfile);
+  const previewRevision: PreviewRevision = {
+    content: hydratedText,
+    professionalProfile: globalState.professionalProfile,
+    tabId: renderTab?.id || "",
+  };
+  const renderReadinessRef = useRef({
+    error: renderError,
+    ready: renderReady,
+    revision: previewRevision,
+    revisionToken,
+    state: renderState,
+  });
+  renderReadinessRef.current = {
+    error: renderError,
+    ready: renderReady,
+    revision: previewRevision,
+    revisionToken,
+    state: renderState,
+  };
   const commitContent = useCallback((content: string) => updateActiveContent(content, true), [updateActiveContent]);
   const findReplace = useFindReplace(text, editorRef, commitContent);
   const insertModals = useInsertModals({ activeTab, commitContent, editorRef, text });
@@ -190,7 +234,6 @@ function App() {
   const stats = useMemo(() => getStats(text), [text]);
   const health = useMemo(() => analyzeDocumentHealth(text), [text]);
   const professionalReport = useMemo(() => analyzeProfessionalProfile(text, globalState.professionalProfile), [text, globalState.professionalProfile]);
-  const renderedHtml = useMemo(() => previewDocumentToHtml(previewDocument), [previewDocument]);
   const liveMessage = toast ||
     (pdfExport ? `${t(PDF_EXPORT_LABEL_KEYS[pdfExport.phase], { defaultValue: pdfExport.phase })} ${Math.round(pdfExport.progress * 100)}%` : "") ||
     renderError ||
@@ -207,8 +250,26 @@ function App() {
   }, [globalState]);
 
   useEffect(() => {
+    const notifyPersistenceFailure = () => {
+      showToast("Changes are kept in this tab, but browser storage is unavailable or full. Export your Markdown to avoid data loss after reload.");
+    };
+    window.addEventListener(WORKSPACE_STORAGE_FAILURE_EVENT, notifyPersistenceFailure);
+    return () => window.removeEventListener(WORKSPACE_STORAGE_FAILURE_EVENT, notifyPersistenceFailure);
+  }, []);
+
+  useEffect(() => {
     void initializeWorkspace();
   }, [initializeWorkspace]);
+
+  useEffect(() => {
+    const reloadForShareNavigation = (event: HashChangeEvent) => {
+      const oldHash = new URL(event.oldURL).hash;
+      const newHash = new URL(event.newURL).hash;
+      if (oldHash.startsWith("#share=") || newHash.startsWith("#share=")) window.location.reload();
+    };
+    window.addEventListener("hashchange", reloadForShareNavigation);
+    return () => window.removeEventListener("hashchange", reloadForShareNavigation);
+  }, []);
 
   useEffect(() => {
     bundleInputRef.current?.setAttribute("webkitdirectory", "");
@@ -219,7 +280,15 @@ function App() {
     return () => {
       if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
       pdfAbortRef.current?.abort();
+      wechatExportSnapshotRef.current?.remove();
+      wechatExportSnapshotRef.current = null;
     };
+  }, []);
+
+  const closeWechatExport = useCallback(() => {
+    wechatExportSnapshotRef.current?.remove();
+    wechatExportSnapshotRef.current = null;
+    setWechatExportSnapshot(null);
   }, []);
 
   const runCommand = (command: MarkdownCommand) => {
@@ -264,10 +333,11 @@ function App() {
 
   useGlobalShortcuts({
     activeTabId,
+    disabled: Boolean(wechatExportSnapshot),
     editorRef,
-    onCloseTab: closeTab,
-    onNewTab: () => newTab(),
-    onOpenFind: () => findReplace.setOpen(true),
+    onCloseTab: readOnly ? () => {} : closeTab,
+    onNewTab: readOnly ? () => {} : () => newTab(),
+    onOpenFind: readOnly ? () => {} : () => findReplace.setOpen(true),
     onRedo: redo,
     onSave: () => {
       exportMarkdown(getExportName(activeTab?.title || "document"), hydratedText);
@@ -300,7 +370,6 @@ function App() {
   };
 
   const handleFiles = async (files: FileList | File[]) => {
-    const imported: MarkdownTab[] = [];
     const imageFiles: File[] = [];
     const markdownFiles: File[] = [];
     for (const file of [...files]) {
@@ -325,32 +394,62 @@ function App() {
       }
     }
 
-    let embeddedCount = 0;
+    const readableMarkdown: Array<{ content: string; file: File }> = [];
+    const bundledAssetIds = new Set<string>();
     for (const file of markdownFiles) {
       const content = await file.text();
       if (hasBinaryBytes(content)) {
         showToast(`${file.name} looks binary and was skipped.`);
         continue;
       }
-      const bundled = embedLocalImagesInMarkdown(content, imageCandidates, file.webkitRelativePath || file.name);
+      const analyzed = embedLocalImagesInMarkdown(content, imageCandidates, file.webkitRelativePath || file.name);
+      for (const id of analyzed.usedAssetIds) bundledAssetIds.add(id);
+      readableMarkdown.push({ content, file });
+    }
+
+    const reusableAssets = imageCandidates.map((candidate) => candidate.asset);
+    const storedAssets = reusableAssets.length
+      ? commitAssets([...reusableAssets, ...assets], bundledAssetIds)
+      : assets;
+    const storedIds = new Set((storedAssets || []).map((asset) => asset.id));
+    const retainedCandidates = storedAssets
+      ? imageCandidates.filter((candidate) => storedIds.has(candidate.asset.id))
+      : [];
+    const imported: MarkdownTab[] = [];
+    let embeddedCount = 0;
+    for (const { content, file } of readableMarkdown) {
+      const bundled = embedLocalImagesInMarkdown(content, retainedCandidates, file.webkitRelativePath || file.name);
       embeddedCount += bundled.embeddedCount;
       imported.push(makeTab(file.name, bundled.markdown));
     }
 
-    const reusableAssets = imageCandidates.map((candidate) => candidate.asset);
-    if (reusableAssets.length) commitAssets([...reusableAssets, ...assets]);
+    const addedAssetCount = retainedCandidates.length;
+    const skippedAssetCount = reusableAssets.length - addedAssetCount;
     if (imported.length) {
       addTabs(imported, imported[0].id);
-      if (embeddedCount > 0) showToast(t("toast.bundleImported", { documents: imported.length, images: embeddedCount }));
+      if (!storedAssets && reusableAssets.length) {
+        showToast("Documents imported, but image assets could not be saved. Browser storage may be full; local image paths were kept.");
+      } else if (skippedAssetCount > 0) {
+        showToast(`${imported.length} document${imported.length > 1 ? "s" : ""} imported with ${embeddedCount} embedded image reference${embeddedCount === 1 ? "" : "s"}; ${skippedAssetCount} image asset${skippedAssetCount === 1 ? " was" : "s were"} skipped at the ${MAX_ASSETS}-asset limit.`);
+      } else if (embeddedCount > 0) {
+        showToast(t("toast.bundleImported", { documents: imported.length, images: embeddedCount }));
+      }
     } else if (reusableAssets.length) {
-      showToast(`${reusableAssets.length} image asset${reusableAssets.length > 1 ? "s" : ""} added.`);
+      if (!storedAssets) {
+        showToast("Could not save image assets. Browser storage may be full; nothing was added.");
+      } else {
+        showToast(`${addedAssetCount} image asset${addedAssetCount === 1 ? "" : "s"} added${skippedAssetCount ? `; ${skippedAssetCount} skipped at the ${MAX_ASSETS}-asset limit` : ""}.`);
+      }
     }
   };
 
-  const commitAssets = (nextAssets: MarkdownAsset[]) => {
-    const limited = nextAssets.slice(0, MAX_ASSETS);
+  const commitAssets = (nextAssets: MarkdownAsset[], preferredAssetIds: Iterable<string> = []) => {
+    const referencedAssetIds = collectAssetReferenceIds(tabs.map((tab) => tab.content));
+    const limited = selectAssetsForStorage(nextAssets, [...referencedAssetIds, ...preferredAssetIds]);
+    if (shareMode === "view") return null;
+    if (!shareMode && !saveAssets(limited)) return null;
     setAssets(limited);
-    saveAssets(limited);
+    return limited;
   };
 
   const addLocalAssets = async (files: FileList | File[], insert = false, range?: { start: number; end: number }) => {
@@ -363,25 +462,54 @@ function App() {
       }
     }
     if (!created.length) return;
-    commitAssets([...created, ...assets]);
-    if (insert) insertAssetMarkdown(created, range);
-    showToast(insert
-      ? t("toast.imagesInserted", { count: created.length })
-      : `${created.length} image asset${created.length > 1 ? "s" : ""} added.`);
+    const storedAssets = commitAssets([...created, ...assets], created.map((asset) => asset.id));
+    if (!storedAssets) {
+      showToast("Could not save image assets. Browser storage may be full; nothing was inserted.");
+      return;
+    }
+    const storedIds = new Set(storedAssets.map((asset) => asset.id));
+    const retained = created.filter((asset) => storedIds.has(asset.id));
+    const skippedCount = created.length - retained.length;
+    if (insert) insertAssetMarkdown(retained, range);
+    if (!retained.length) {
+      showToast(`Asset limit is ${MAX_ASSETS}. No images were added or inserted.`);
+    } else if (skippedCount > 0) {
+      showToast(`${retained.length} image${retained.length === 1 ? "" : "s"} ${insert ? "inserted" : "added"}; ${skippedCount} skipped at the ${MAX_ASSETS}-asset limit.`);
+    } else {
+      showToast(insert
+        ? t("toast.imagesInserted", { count: retained.length })
+        : `${retained.length} image asset${retained.length > 1 ? "s" : ""} added.`);
+    }
   };
 
   const addRemoteAsset = (name: string, source: string) => {
     try {
       const asset = createRemoteAsset(name, source);
-      commitAssets([asset, ...assets]);
+      const storedAssets = commitAssets([asset, ...assets], [asset.id]);
+      if (!storedAssets) {
+        showToast("Could not save the remote image. Browser storage may be full.");
+        return false;
+      }
+      if (!storedAssets.some((stored) => stored.id === asset.id)) {
+        showToast(`Asset limit is ${MAX_ASSETS}. The remote image was not registered.`);
+        return false;
+      }
       showToast("Remote image registered.");
+      return true;
     } catch (error) {
       showToast(error instanceof Error ? error.message : "Could not register image URL.");
+      return false;
     }
   };
 
   const removeAsset = (id: string) => {
-    commitAssets(assets.filter((asset) => asset.id !== id));
+    if (collectAssetReferenceIds(tabs.map((tab) => tab.content)).has(id)) {
+      showToast("This image is still referenced by a document. Remove its Markdown references before deleting the asset.");
+      return;
+    }
+    if (!commitAssets(assets.filter((asset) => asset.id !== id))) {
+      showToast("Could not update image assets. Browser storage may be full; nothing was removed.");
+    }
   };
 
   const insertAssetMarkdown = (selectedAssets: MarkdownAsset[], range?: { start: number; end: number }) => {
@@ -492,14 +620,27 @@ function App() {
   };
 
   const exportHtmlFile = async () => {
-    exportHtml(getExportName(activeTab?.title || "document"), renderedHtml, activeTab?.title || t("status.document"));
+    try {
+      const expectedRevisionToken = await waitForLatestPreviewRender(renderReadinessRef, previewRevision);
+      if (!previewRef.current) return;
+      await exportHtml(
+        getExportName(activeTab?.title || "document"),
+        previewRef.current,
+        activeTab?.title || t("status.document"),
+        expectedRevisionToken,
+      );
+    } catch {
+      showToast(t("toast.exportFailed", { defaultValue: "Export failed. Please reload and try again." }));
+    }
   };
 
   const exportPreviewPng = async () => {
     if (!previewRef.current) return;
     try {
+      const expectedRevisionToken = await waitForLatestPreviewRender(renderReadinessRef, previewRevision);
+      if (!previewRef.current) return;
       const { exportPng } = await loadHeavyExporters();
-      await exportPng(getExportName(activeTab?.title || "document"), previewRef.current);
+      await exportPng(getExportName(activeTab?.title || "document"), previewRef.current, expectedRevisionToken);
     } catch {
       showToast(t("toast.exportFailed", { defaultValue: "Export failed. Please reload and try again." }));
     }
@@ -508,8 +649,14 @@ function App() {
   const doCopyPreviewImage = async () => {
     if (!previewRef.current) return;
     try {
+      const expectedRevisionToken = await waitForLatestPreviewRender(renderReadinessRef, previewRevision);
+      if (!previewRef.current) return;
       const { copyImage } = await loadHeavyExporters();
-      const result = await copyImage(previewRef.current, getExportName(activeTab?.title || "document"));
+      const result = await copyImage(
+        previewRef.current,
+        getExportName(activeTab?.title || "document"),
+        expectedRevisionToken,
+      );
       showToast(
         result === "copied"
           ? t("toast.previewImageCopied")
@@ -522,23 +669,35 @@ function App() {
     }
   };
 
-  const doCopyWechat = () => {
-    if (!previewRef.current) return;
-    if (globalState.professionalProfile === "wechat") {
-      setWechatExportSource(previewRef.current);
-      return;
+  const doCopyWechat = async () => {
+    const expectedRevision: PreviewRevision = { ...previewRevision, professionalProfile: "wechat" };
+    try {
+      if (globalState.professionalProfile !== "wechat") updateGlobal({ professionalProfile: "wechat" });
+      const expectedRevisionToken = await waitForLatestPreviewRender(renderReadinessRef, expectedRevision);
+      if (!previewRef.current) return;
+      await waitForPreviewExportReady(previewRef.current, 15_000, expectedRevisionToken);
+      const snapshot = createConnectedWechatSnapshot(previewRef.current, expectedRevisionToken);
+      wechatExportSnapshotRef.current?.remove();
+      wechatExportSnapshotRef.current = snapshot;
+      setWechatExportSnapshot({
+        fallbackTitle: activeTab?.title || t("status.untitled"),
+        source: snapshot,
+      });
+    } catch {
+      showToast(t("toast.wechatCopyFailed"));
     }
-    updateGlobal({ professionalProfile: "wechat" });
-    window.requestAnimationFrame(() => {
-      if (previewRef.current) setWechatExportSource(previewRef.current);
-    });
   };
 
   const doQuickCopyWechat = async () => {
     if (!previewRef.current || wechatCopying) return;
     setWechatCopying(true);
+    let snapshot: HTMLElement | null = null;
     try {
-      const result = await copyWechatRichText(previewRef.current, { excludeTitle: true, style: globalState.wechatStyle });
+      const expectedRevisionToken = await waitForLatestPreviewRender(renderReadinessRef, previewRevision);
+      if (!previewRef.current) return;
+      await waitForPreviewExportReady(previewRef.current, 15_000, expectedRevisionToken);
+      snapshot = createConnectedWechatSnapshot(previewRef.current, expectedRevisionToken);
+      const result = await copyWechatRichText(snapshot, { excludeTitle: true, style: globalState.wechatStyle });
       const message = result.method === "plain-text"
         ? t("toast.wechatCopiedPlain")
         : t("toast.wechatCopied", {
@@ -550,6 +709,7 @@ function App() {
     } catch {
       showToast(t("toast.wechatCopyFailed"));
     } finally {
+      snapshot?.remove();
       setWechatCopying(false);
     }
   };
@@ -560,11 +720,13 @@ function App() {
     pdfAbortRef.current = controller;
     setPdfExport({ phase: "preparing", progress: 0.04 });
     try {
+      const expectedRevisionToken = await waitForLatestPreviewRender(renderReadinessRef, previewRevision);
+      if (!previewRef.current) return;
       const { exportPdf } = await loadHeavyExporters();
       await exportPdf(getExportName(activeTab?.title || "document"), previewRef.current, {
         signal: controller.signal,
         onProgress: ({ phase, progress }) => setPdfExport({ phase, progress }),
-      });
+      }, expectedRevisionToken);
       showToast(t("toast.pdfSaved", { defaultValue: "PDF exported." }));
     } catch (error) {
       if (isAbortError(error)) showToast(t("toast.pdfCancelled", { defaultValue: "PDF export cancelled." }));
@@ -669,11 +831,12 @@ function App() {
 
   return (
     <div
-      className={`app-shell view-${globalState.viewMode}`}
+      className={`app-shell view-${viewMode}`}
+      data-share-mode={shareMode || undefined}
       onDragOver={(event) => {
         if (!hasFileTransfer(event.dataTransfer)) return;
         event.preventDefault();
-        setDragging(true);
+        if (!readOnly) setDragging(true);
       }}
       onDragLeave={(event) => {
         const nextTarget = event.relatedTarget;
@@ -684,6 +847,7 @@ function App() {
         if (!event.dataTransfer.files.length) return;
         event.preventDefault();
         setDragging(false);
+        if (readOnly) return;
         void handleFiles(event.dataTransfer.files);
       }}
     >
@@ -693,7 +857,8 @@ function App() {
         easterEggs={globalState.easterEggs}
         stats={stats}
         theme={globalState.theme}
-        viewMode={globalState.viewMode}
+        viewMode={viewMode}
+        readOnly={readOnly}
         onAccentChange={(accent) => updateGlobal({ accent })}
         onEasterEggsChange={(easterEggs) => updateGlobal({ easterEggs })}
         onOpenDocumentLibrary={() => setDocumentLibraryOpen(true)}
@@ -716,9 +881,10 @@ function App() {
         onExportPdf={() => void doExportPdf()}
         onExportPng={() => previewRef.current && void exportPreviewPng()}
         onCopyMarkdown={doCopyMarkdown}
-        onCopyWechat={doCopyWechat}
+        onCopyWechat={() => void doCopyWechat()}
         onCopyPreviewImage={doCopyPreviewImage}
         onShare={() => share.open("view")}
+        readOnly={readOnly}
       />
 
       <TabStrip
@@ -729,48 +895,52 @@ function App() {
         onRenameTab={renameStoreTab}
         onReorderTab={reorderStoreTab}
         onSelectTab={setActiveTabId}
+        readOnly={readOnly}
       />
 
-      <DocumentLibraryPanel
-        activeTabId={activeTabId}
-        opened={documentLibraryOpen}
-        tabs={tabs}
-        onClose={() => setDocumentLibraryOpen(false)}
-        onCloseTab={closeTab}
-        onDuplicateTab={duplicateTab}
-        onGithubImport={githubImport.open}
-        onImportFiles={() => fileInputRef.current?.click()}
-        onNewTab={() => newTab("", undefined)}
-        onRenameTab={renameStoreTab}
-        onSelectTab={setActiveTabId}
-      />
-
-      <AssetLibraryPanel
-        assets={assets}
-        opened={assetLibraryOpen}
-        onAddFiles={(files) => void addLocalAssets(files, false)}
-        onAddRemote={addRemoteAsset}
-        onClose={() => setAssetLibraryOpen(false)}
-        onCopySource={(asset) => void copyAssetSource(asset)}
-        onInsert={(asset) => {
-          insertAssetMarkdown([asset]);
-          setAssetLibraryOpen(false);
-        }}
-        onRemove={removeAsset}
-      />
-
-      {wechatExportSource && (
-        <WechatExportModal
-          fallbackTitle={activeTab?.title || t("status.untitled")}
-          source={wechatExportSource}
-          style={globalState.wechatStyle}
-          onClose={() => setWechatExportSource(null)}
-          onNotify={showToast}
-          onStyleChange={(wechatStyle) => updateGlobal({ wechatStyle })}
+      {!readOnly && (
+        <DocumentLibraryPanel
+          activeTabId={activeTabId}
+          opened={documentLibraryOpen}
+          tabs={tabs}
+          onClose={() => setDocumentLibraryOpen(false)}
+          onCloseTab={closeTab}
+          onDuplicateTab={duplicateTab}
+          onGithubImport={githubImport.open}
+          onImportFiles={() => fileInputRef.current?.click()}
+          onNewTab={() => newTab("", undefined)}
+          onRenameTab={renameStoreTab}
+          onSelectTab={setActiveTabId}
         />
       )}
 
-      <div className="format-toolbar">
+      {!readOnly && (
+        <AssetLibraryPanel
+          assets={assets}
+          opened={assetLibraryOpen}
+          onAddFiles={(files) => void addLocalAssets(files, false)}
+          onAddRemote={addRemoteAsset}
+          onClose={() => setAssetLibraryOpen(false)}
+          onCopySource={(asset) => void copyAssetSource(asset)}
+          onInsert={(asset) => {
+            insertAssetMarkdown([asset]);
+            setAssetLibraryOpen(false);
+          }}
+          onRemove={removeAsset}
+        />
+      )}
+
+      {wechatExportSnapshot && (
+        <WechatExportModal
+          fallbackTitle={wechatExportSnapshot.fallbackTitle}
+          source={wechatExportSnapshot.source}
+          style={globalState.wechatStyle}
+          onClose={closeWechatExport}
+          onNotify={showToast}
+        />
+      )}
+
+      {!readOnly && <div className="format-toolbar">
         <IconButton title="Undo" onClick={undo}><Undo2 size={16} /></IconButton>
         <IconButton title="Redo" onClick={redo}><Redo2 size={16} /></IconButton>
         <IconButton title="Bold" onClick={() => runCommand("bold")}><Bold size={16} /></IconButton>
@@ -811,10 +981,10 @@ function App() {
         <IconButton title="Center align" onClick={() => insertAlignment("center")}><AlignCenter size={16} /></IconButton>
         <IconButton title="Right align" onClick={() => insertAlignment("right")}><AlignRight size={16} /></IconButton>
         <IconButton title="Toggle fullscreen" onClick={() => void toggleFullscreen()}><Maximize2 size={16} /></IconButton>
-      </div>
+      </div>}
 
       <main className="workspace" style={{ "--split": `${globalState.splitPercent}%` } as React.CSSProperties}>
-        <section className="editor-pane" ref={editorPaneRef}>
+        {!readOnly && <section className="editor-pane" ref={editorPaneRef}>
           <div className="pane-title">
             <FilePlus2 size={16} />{activeTab?.title || t("status.untitled")}
             {globalState.professionalProfile === "wechat" && (
@@ -836,7 +1006,11 @@ function App() {
               onKeyDown={onEditorKeyDown}
               onPaste={onEditorPaste}
               onContextMenu={onEditorContextMenu}
-              onChange={(event) => updateActiveContent(event.target.value)}
+              onChange={(event) => updateActiveContent(
+                event.target.value,
+                false,
+                (event.nativeEvent as InputEvent).inputType,
+              )}
               onBlur={(event) => commitContent(event.target.value)}
               aria-label={t("view.editor")}
             />
@@ -848,8 +1022,8 @@ function App() {
               </div>
             )}
           </div>
-        </section>
-        <div className="resizer" role="separator" aria-orientation="vertical" tabIndex={0} onPointerDown={beginResize} />
+        </section>}
+        {!readOnly && <div className="resizer" role="separator" aria-orientation="vertical" tabIndex={0} onPointerDown={beginResize} />}
         <section className="preview-pane" ref={previewPaneRef} onScroll={onScrollPreview} onContextMenu={onPreviewContextMenu}>
           <div className="pane-title">
             <Eye size={16} />{t("view.preview")}
@@ -862,7 +1036,7 @@ function App() {
               disabled={renderState === "rendering" || Boolean(renderError)}
               style={globalState.wechatStyle}
               onCopy={() => void doQuickCopyWechat()}
-              onOpenKit={doCopyWechat}
+              onOpenKit={() => void doCopyWechat()}
               onStyleChange={(wechatStyle) => updateGlobal({ wechatStyle })}
             />
           )}
@@ -875,6 +1049,7 @@ function App() {
             findOptions={findReplace.options}
             offlineFirst={globalState.offlineFirst}
             professionalProfile={globalState.professionalProfile}
+            revisionToken={revisionToken}
             wechatStyle={globalState.wechatStyle}
             selectedBlockId={selectedPreviewBlockId}
             theme={globalState.theme}
@@ -887,7 +1062,17 @@ function App() {
               <>
                 <strong>{t("view.outline")}</strong>
                 {toc.map((entry) => (
-                  <a key={entry.id} href={`#${entry.id}`} style={{ paddingLeft: `${(entry.level - 1) * 10}px` }}>{entry.text}</a>
+                  <a
+                    key={entry.id}
+                    href={`#${entry.id}`}
+                    style={{ paddingLeft: `${(entry.level - 1) * 10}px` }}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      if (previewRef.current) scrollPreviewToAnchor(previewRef.current, `#${entry.id}`);
+                    }}
+                  >
+                    {entry.text}
+                  </a>
                 ))}
               </>
             )}
@@ -929,7 +1114,7 @@ function App() {
         )}
       </main>
 
-      {findReplace.open && (
+      {!readOnly && findReplace.open && (
         <FindReplacePanel
           activeMatch={findReplace.activeMatch}
           docked={globalState.findDocked}
@@ -946,7 +1131,7 @@ function App() {
         />
       )}
 
-      {githubImport.opened && <GitHubImportModal {...githubImport.modalProps} />}
+      {!readOnly && githubImport.opened && <GitHubImportModal {...githubImport.modalProps} />}
 
       <MobileMenu
         activeTabId={activeTabId}
@@ -955,6 +1140,7 @@ function App() {
         opened={mobileMenuOpen}
         stats={stats}
         tabs={tabs}
+        readOnly={readOnly}
         onClose={() => setMobileMenuOpen(false)}
         onCloseTab={closeTab}
         onCopyMarkdown={() => void doCopyMarkdown()}
@@ -975,7 +1161,7 @@ function App() {
         onGlobalChange={updateGlobal}
       />
 
-      <InsertModalHost {...insertModals.hostProps} />
+      {!readOnly && <InsertModalHost {...insertModals.hostProps} />}
 
       <ShareModal mode={share.mode} onClose={share.close} onCopy={share.copy} onModeChange={share.setModeUrl} tooLong={share.tooLong} url={share.url} />
 
@@ -990,7 +1176,7 @@ function App() {
         />
       )}
 
-      {findReplace.replacePreview && (
+      {!readOnly && findReplace.replacePreview && (
         <ReplacePreviewModal
           count={findReplace.matches.length}
           items={findReplace.replacePreview}
@@ -999,7 +1185,7 @@ function App() {
         />
       )}
 
-      {confirmAction && (
+      {!readOnly && confirmAction && (
         <ConfirmModal
           confirmLabel={confirmAction.confirmLabel}
           danger={confirmAction.danger}
@@ -1010,7 +1196,7 @@ function App() {
         />
       )}
 
-      {dragging && <div className="drag-overlay">{t("status.dropMarkdown")}</div>}
+      {!readOnly && dragging && <div className="drag-overlay">{t("status.dropMarkdown")}</div>}
       {pdfExport && (
         <div className="export-overlay" role="status" aria-live="polite">
           <div>
@@ -1121,6 +1307,55 @@ function hasFileTransfer(dataTransfer: DataTransfer) {
 
 function isAbortError(error: unknown) {
   return error instanceof DOMException && error.name === "AbortError";
+}
+
+async function waitForLatestPreviewRender(
+  readinessRef: React.RefObject<{
+    error: string;
+    ready: boolean;
+    revision: PreviewRevision;
+    revisionToken: string;
+    state: "idle" | "rendering" | "error";
+  }>,
+  expectedRevision: PreviewRevision,
+  timeoutMs = 15_000,
+) {
+  const startedAt = Date.now();
+  while (
+    !readinessRef.current?.ready ||
+    !readinessRef.current.revisionToken ||
+    !samePreviewRevision(readinessRef.current.revision, expectedRevision)
+  ) {
+    const current = readinessRef.current;
+    if (current?.state === "error") throw new Error(current.error || "Preview rendering failed.");
+    if (Date.now() - startedAt >= timeoutMs) throw new Error("Preview rendering did not finish before HTML export.");
+    await new Promise<void>((resolve) => window.setTimeout(resolve, 50));
+  }
+  return readinessRef.current.revisionToken;
+}
+
+function samePreviewRevision(left: PreviewRevision, right: PreviewRevision) {
+  return left.tabId === right.tabId &&
+    left.content === right.content &&
+    left.professionalProfile === right.professionalProfile;
+}
+
+function createConnectedWechatSnapshot(source: HTMLElement, expectedRevision: string) {
+  assertPreviewRevision(source, expectedRevision);
+  const snapshot = source.cloneNode(true) as HTMLElement;
+  assertPreviewRevision(source, expectedRevision);
+  snapshot.querySelectorAll("[id]").forEach((element) => element.removeAttribute("id"));
+  snapshot.setAttribute("aria-hidden", "true");
+  snapshot.inert = true;
+  Object.assign(snapshot.style, {
+    left: "-100000px",
+    pointerEvents: "none",
+    position: "fixed",
+    top: "0",
+    zIndex: "-1",
+  });
+  document.body.appendChild(snapshot);
+  return snapshot;
 }
 
 export default App;

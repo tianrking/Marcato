@@ -5,6 +5,9 @@ Reusable browser test cases live under `tests/e2e`.
 Commands:
 
 - `npm.cmd run test:smoke`: core editor, preview, modals, find, share URL, and mobile shell checks.
+- `npm.cmd run test:assets`: 40-asset capacity enforcement and storage-quota failure behavior.
+- `npm.cmd run test:history`: editor undo/redo batching, shortcut parity, and reload persistence checks.
+- `npm.cmd run test:share`: malformed-link fallback, view-only controls, editable shares, and session-only workspace persistence checks.
 - `npm.cmd run test:wechat`: four persisted WeChat styles, editor image-drop insertion, preview one-click rich copy, Markdown-folder image embedding, direct rich-text images, safe image annotations, standalone copy-ready HTML, diagram/math source retention, clipboard MIME, and diagram source-copy checks.
 - `npm.cmd run test:pdf`: PDF pagination structure checks for long tables, repeated headers, headings, math, and diagrams.
 - `npm.cmd run test:perf`: large-document segmented preview baseline.

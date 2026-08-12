@@ -15,6 +15,8 @@ export const MAX_IMPORT_BYTES = 10 * 1024 * 1024;
 export const MAX_ASSETS = 40;
 export const MAX_EMBEDDED_ASSET_BYTES = 1.8 * 1024 * 1024;
 export const SHARE_URL_SOFT_LIMIT = 32_000;
+export const MAX_SHARE_COMPRESSED_BYTES = 256 * 1024;
+export const MAX_SHARE_DECOMPRESSED_BYTES = MAX_IMPORT_BYTES;
 
 export const DEFAULT_GLOBAL_STATE: GlobalState = {
   theme: "light",

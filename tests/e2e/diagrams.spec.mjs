@@ -9,12 +9,13 @@ import {
 } from "./support.mjs";
 
 const maliciousSvg = (label) => `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="360" height="160" viewBox="0 0 360 160" onload="window.__remoteSvgPwned='${label}'">
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="360" height="160" viewBox="0 0 360 160" onload="window.__remoteSvgPwned='${label}'">
   <script>window.__remoteSvgPwned='${label}'</script>
   <rect width="360" height="160" rx="12" fill="#f6f8fa" stroke="#2563eb" />
   <a href="javascript:alert('${label}')">
     <text x="28" y="88" font-family="Arial" font-size="28" onclick="window.__remoteSvgPwned='${label}'">${label} sanitized</text>
   </a>
+  <a xlink:href="java&#x09;script:alert('${label} namespaced')"><text x="28" y="128">Unsafe namespaced link</text></a>
 </svg>`;
 
 const fixture = `# Remote Diagram Fixture
@@ -38,6 +39,10 @@ const localDiagramFixture = `# Local Diagram Fixture
 ## Diagrams
 - Local Markmap
 - Remote SVG safety
+## <strong>Safe emphasis</strong>
+- <img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==" onload="window.__markmapPwned='image'"> Image node
+- <a href="javascript:window.__markmapPwned='link'">Unsafe link</a>
+- <script>window.__markmapPwned='script'</script>Script node
 \`\`\`
 
 \`\`\`wavedrom
@@ -58,6 +63,14 @@ solid marcato
     endloop
   endfacet
 endsolid marcato
+\`\`\`
+
+\`\`\`dot
+digraph G {
+  safe [label="Graphviz sanitized", URL="https://example.com/graphviz"];
+  unsafe [label="Unsafe URL removed", URL="javascript:window.__graphvizPwned='node'"];
+  safe -> unsafe [URL="javascript:window.__graphvizPwned='edge'"];
+}
 \`\`\`
 `;
 
@@ -103,6 +116,7 @@ await withApp(async ({ consoleMessages, page, server }) => {
   await page.locator('.diagram-viewer[data-diagram-engine="markmap"] svg.markmap-svg').waitFor({ state: "visible", timeout: 20_000 });
   await page.locator('.diagram-viewer[data-diagram-engine="wavedrom"] svg.wavedrom-svg').waitFor({ state: "visible", timeout: 20_000 });
   await page.locator('.diagram-viewer[data-diagram-engine="stl"] canvas.stl-canvas').waitFor({ state: "visible", timeout: 20_000 });
+  await page.locator('.diagram-viewer[data-diagram-engine="graphviz"] svg').waitFor({ state: "visible", timeout: 20_000 });
   const stlViewer = page.locator('.diagram-viewer[data-diagram-engine="stl"]');
   await stlViewer.getByRole("button", { name: "Wireframe" }).click();
   await stlViewer.getByRole("button", { name: "Open" }).click();
@@ -115,6 +129,14 @@ await withApp(async ({ consoleMessages, page, server }) => {
       fallback: viewer?.classList.contains("is-fallback") || false,
       ready: !viewer?.classList.contains("is-loading") && !viewer?.classList.contains("is-error"),
       rendered: viewer?.querySelector(".diagram-surface")?.getAttribute("data-rendered"),
+      dangerousHrefs: Array.from(svg?.querySelectorAll("[href]") || [])
+        .map((element) => element.getAttribute("href") || "")
+        .filter((href) => href.replace(/\s+/g, "").toLowerCase().startsWith("javascript:")),
+      eventAttrs: Array.from(svg?.querySelectorAll("*") || [])
+        .flatMap((element) => Array.from(element.attributes).filter((attribute) => /^on/i.test(attribute.name)).map((attribute) => attribute.name)),
+      hasSafeEmphasis: Boolean(svg?.querySelector("strong")),
+      pwned: window.__markmapPwned || null,
+      scriptCount: svg?.querySelectorAll("script").length || 0,
       text: svg?.textContent?.replace(/\s+/g, " ").trim() || "",
     };
   });
@@ -129,15 +151,42 @@ await withApp(async ({ consoleMessages, page, server }) => {
       text: svg?.textContent?.replace(/\s+/g, " ").trim() || "",
     };
   });
+  const graphvizChecks = await page.evaluate(() => {
+    const viewer = document.querySelector('.diagram-viewer[data-diagram-engine="graphviz"]');
+    const svg = viewer?.querySelector("svg");
+    const hrefs = Array.from(svg?.querySelectorAll("*") || []).flatMap((element) =>
+      Array.from(element.attributes)
+        .filter((attribute) => attribute.localName.toLowerCase() === "href")
+        .map((attribute) => attribute.value),
+    );
+    return {
+      ariaLabel: svg?.getAttribute("aria-label") || "",
+      dangerousHrefs: hrefs.filter((href) => href.replace(/\s+/g, "").toLowerCase().startsWith("javascript:")),
+      pwned: window.__graphvizPwned || null,
+      rendered: viewer?.querySelector(".diagram-surface")?.getAttribute("data-rendered"),
+      safeHref: hrefs.find((href) => href === "https://example.com/graphviz") || "",
+      text: svg?.textContent?.replace(/\s+/g, " ").trim() || "",
+    };
+  });
   expect(markmapChecks.ready, `Local Markmap should be ready. Checks: ${JSON.stringify(markmapChecks)}`);
   expect(!markmapChecks.fallback, `Local Markmap should not use remote fallback. Checks: ${JSON.stringify(markmapChecks)}`);
   expect(markmapChecks.rendered === "1", `Local Markmap surface should be marked rendered. Checks: ${JSON.stringify(markmapChecks)}`);
   expect(markmapChecks.text.includes("Product Plan") && markmapChecks.text.includes("Local Markmap"), `Local Markmap text missing. Checks: ${JSON.stringify(markmapChecks)}`);
+  expect(markmapChecks.hasSafeEmphasis, `Markmap sanitizer removed legitimate emphasis markup. Checks: ${JSON.stringify(markmapChecks)}`);
+  expect(markmapChecks.pwned === null, `Markmap HTML executed script or an event handler: ${JSON.stringify(markmapChecks)}`);
+  expect(markmapChecks.scriptCount === 0 && markmapChecks.eventAttrs.length === 0, `Markmap executable markup survived sanitization: ${JSON.stringify(markmapChecks)}`);
+  expect(markmapChecks.dangerousHrefs.length === 0, `Markmap javascript URL survived sanitization: ${JSON.stringify(markmapChecks)}`);
   expect(wavedromChecks.ready, `Local WaveDrom should be ready. Checks: ${JSON.stringify(wavedromChecks)}`);
   expect(!wavedromChecks.fallback, `Local WaveDrom should not use remote fallback. Checks: ${JSON.stringify(wavedromChecks)}`);
   expect(wavedromChecks.rendered === "1", `Local WaveDrom surface should be marked rendered. Checks: ${JSON.stringify(wavedromChecks)}`);
   expect(wavedromChecks.hasWaveDromClass, `Local WaveDrom SVG class missing. Checks: ${JSON.stringify(wavedromChecks)}`);
   expect(wavedromChecks.text.includes("clk") && wavedromChecks.text.includes("data") && wavedromChecks.text.includes("ready"), `Local WaveDrom text missing. Checks: ${JSON.stringify(wavedromChecks)}`);
+  expect(graphvizChecks.rendered === "1", `Local Graphviz surface should be marked rendered. Checks: ${JSON.stringify(graphvizChecks)}`);
+  expect(graphvizChecks.ariaLabel === "Graphviz diagram", `Local Graphviz accessibility label missing. Checks: ${JSON.stringify(graphvizChecks)}`);
+  expect(graphvizChecks.text.includes("Graphviz sanitized"), `Local Graphviz text missing. Checks: ${JSON.stringify(graphvizChecks)}`);
+  expect(graphvizChecks.safeHref === "https://example.com/graphviz", `Graphviz sanitizer removed a legitimate HTTPS URL. Checks: ${JSON.stringify(graphvizChecks)}`);
+  expect(graphvizChecks.dangerousHrefs.length === 0, `Graphviz javascript URL survived sanitization. Checks: ${JSON.stringify(graphvizChecks)}`);
+  expect(graphvizChecks.pwned === null, `Graphviz javascript URL executed: ${graphvizChecks.pwned}`);
 
   await page.getByLabel("Offline first").uncheck();
   await setMarkdown(page, fixture);
@@ -154,7 +203,7 @@ await withApp(async ({ consoleMessages, page, server }) => {
       pwned: window.__remoteSvgPwned || null,
       scriptCount: document.querySelectorAll(".diagram-surface script").length,
       eventAttrs: surfaces.flatMap((surface) => Array.from(surface.querySelectorAll("*")).flatMap((node) => Array.from(node.attributes).filter((attr) => /^on/i.test(attr.name)).map((attr) => attr.name))),
-      javascriptHrefs: surfaces.flatMap((surface) => Array.from(surface.querySelectorAll("[href]")).map((node) => node.getAttribute("href")).filter((href) => href?.trim().toLowerCase().startsWith("javascript:"))),
+      javascriptHrefs: surfaces.flatMap((surface) => Array.from(surface.querySelectorAll("*")).flatMap((node) => Array.from(node.attributes).filter((attribute) => attribute.localName.toLowerCase() === "href").map((attribute) => attribute.value)).filter((href) => href.replace(/\s+/g, "").toLowerCase().startsWith("javascript:"))),
       renderedText: surfaces.map((surface) => surface.textContent?.replace(/\s+/g, " ").trim()),
     };
   });
@@ -177,6 +226,7 @@ await withApp(async ({ consoleMessages, page, server }) => {
     baseUrl: server.baseUrl,
     durationMs: Date.now() - startedAt,
     d2Requests,
+    graphvizChecks,
     markmapChecks,
     plantumlRequests,
     wavedromChecks,

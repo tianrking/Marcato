@@ -17,6 +17,7 @@ interface PreviewPaneProps {
   findOptions: FindOptions;
   selectedBlockId?: string;
   theme: "light" | "dark";
+  revisionToken: string;
   onBlockSelect?: (block: PreviewBlock) => void;
 }
 
@@ -40,9 +41,18 @@ const PreviewBlockView = memo(function PreviewBlockView({
         if ((event.target as HTMLElement).closest("a,button,input,textarea,select")) return;
         onSelect?.(block);
       }}
-      dangerouslySetInnerHTML={{ __html: block.html }}
-    />
+    >
+      <PreviewHtml html={block.html} />
+    </div>
   );
+});
+
+const PreviewHtml = memo(function PreviewHtml({ html }: { html: string }) {
+  return <div className="preview-html" dangerouslySetInnerHTML={{ __html: html }} />;
+});
+
+const PreviewFullView = memo(function PreviewFullView({ html }: { html: string }) {
+  return <div className="preview-full" dangerouslySetInnerHTML={{ __html: html }} />;
 });
 
 export const PreviewPane = forwardRef<HTMLElement, PreviewPaneProps>(function PreviewPane({
@@ -56,15 +66,21 @@ export const PreviewPane = forwardRef<HTMLElement, PreviewPaneProps>(function Pr
   wechatStyle,
   selectedBlockId,
   theme,
+  revisionToken,
   onBlockSelect,
 }, ref) {
   const articleRef = useRef<HTMLElement | null>(null);
+  const processingRevisionRef = useRef<object | null>(null);
 
   useImperativeHandle(ref, () => articleRef.current as HTMLElement, []);
 
   useEffect(() => {
     const root = articleRef.current;
     if (!root) return undefined;
+    const processingToken = {};
+    processingRevisionRef.current = processingToken;
+    root.dataset.previewRevision = revisionToken;
+    root.dataset.exportReady = "0";
     const controller = new AbortController();
     let richProcessorLoaded = false;
     const syncFindHighlights = () => {
@@ -74,26 +90,34 @@ export const PreviewPane = forwardRef<HTMLElement, PreviewPaneProps>(function Pr
     setupPreviewLinks(root);
     if (!needsRichPreviewProcessing(root)) {
       syncFindHighlights();
+      root.dataset.exportReady = "1";
       return () => {
         controller.abort();
+        delete root.dataset.exportReady;
       };
     }
-    void import("../lib/diagramRenderers").then(({ disposePreviewResources, postProcessPreview }) => {
-      if (controller.signal.aborted) return;
-      richProcessorLoaded = true;
-      disposePreviewResources(root);
-      void postProcessPreview(root, theme, offlineFirst, controller.signal).then(() => {
+    void import("../lib/diagramRenderers")
+      .then(({ disposePreviewResources, postProcessPreview }) => {
         if (controller.signal.aborted) return;
+        if (processingRevisionRef.current !== processingToken) return;
+        richProcessorLoaded = true;
+        disposePreviewResources(root);
+        return postProcessPreview(root, theme, offlineFirst, controller.signal);
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (controller.signal.aborted || processingRevisionRef.current !== processingToken) return;
         syncFindHighlights();
+        root.dataset.exportReady = "1";
       });
-    });
     return () => {
       controller.abort();
+      delete root.dataset.exportReady;
       if (richProcessorLoaded) {
         void import("../lib/diagramRenderers").then(({ disposePreviewResources }) => disposePreviewResources(root));
       }
     };
-  }, [document, theme, offlineFirst]);
+  }, [document, theme, offlineFirst, revisionToken]);
 
   useEffect(() => {
     const root = articleRef.current;
@@ -120,7 +144,7 @@ export const PreviewPane = forwardRef<HTMLElement, PreviewPaneProps>(function Pr
           />
         ))
       ) : (
-        <div className="preview-full" dangerouslySetInnerHTML={{ __html: document.html }} />
+        <PreviewFullView html={document.html} />
       )}
     </article>
   );

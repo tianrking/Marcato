@@ -22,6 +22,7 @@ interface WorkspaceToolbarProps {
   onCopyWechat: () => void;
   onCopyPreviewImage: () => void;
   onShare: () => void;
+  readOnly?: boolean;
 }
 
 export function WorkspaceToolbar({
@@ -41,6 +42,7 @@ export function WorkspaceToolbar({
   onCopyWechat,
   onCopyPreviewImage,
   onShare,
+  readOnly = false,
 }: WorkspaceToolbarProps) {
   const { t } = useTranslation();
   const labels = {
@@ -63,34 +65,36 @@ export function WorkspaceToolbar({
 
   return (
     <div className="workspace-toolbar">
-      <div className="toolbar-group">
-        <button className="workspace-action" title={labels.new} aria-label={labels.new} onClick={onNewTab}><Plus size={15} /><span className="toolbar-button-label">{labels.new}</span></button>
-        <button className="workspace-action" title={labels.import} aria-label={labels.import} onClick={() => fileInputRef.current?.click()}><Download size={15} /><span className="toolbar-button-label">{labels.import}</span></button>
-        <button className="workspace-action" title={labels.importBundle} aria-label={labels.importBundle} onClick={() => bundleInputRef.current?.click()}><FolderOpen size={15} /><span className="toolbar-button-label">{labels.importBundle}</span></button>
-        <button className="workspace-action" title={labels.github} aria-label={labels.github} onClick={onGithubImport}><GitBranch size={15} /><span className="toolbar-button-label">{labels.github}</span></button>
-        <input
-          ref={fileInputRef}
-          hidden
-          type="file"
-          multiple
-          accept=".md,.markdown,.txt,image/png,image/jpeg,image/gif,image/webp,image/avif"
-          onChange={(event) => {
-            if (event.target.files) onFilesSelected([...event.target.files]);
-            event.target.value = "";
-          }}
-        />
-        <input
-          ref={bundleInputRef}
-          hidden
-          type="file"
-          multiple
-          aria-label={labels.importBundle}
-          onChange={(event) => {
-            if (event.target.files) onBundleSelected([...event.target.files]);
-            event.target.value = "";
-          }}
-        />
-      </div>
+      {!readOnly && (
+        <div className="toolbar-group">
+          <button className="workspace-action" title={labels.new} aria-label={labels.new} onClick={onNewTab}><Plus size={15} /><span className="toolbar-button-label">{labels.new}</span></button>
+          <button className="workspace-action" title={labels.import} aria-label={labels.import} onClick={() => fileInputRef.current?.click()}><Download size={15} /><span className="toolbar-button-label">{labels.import}</span></button>
+          <button className="workspace-action" title={labels.importBundle} aria-label={labels.importBundle} onClick={() => bundleInputRef.current?.click()}><FolderOpen size={15} /><span className="toolbar-button-label">{labels.importBundle}</span></button>
+          <button className="workspace-action" title={labels.github} aria-label={labels.github} onClick={onGithubImport}><GitBranch size={15} /><span className="toolbar-button-label">{labels.github}</span></button>
+          <input
+            ref={fileInputRef}
+            hidden
+            type="file"
+            multiple
+            accept=".md,.markdown,.txt,image/png,image/jpeg,image/gif,image/webp,image/avif"
+            onChange={(event) => {
+              if (event.target.files) onFilesSelected([...event.target.files]);
+              event.target.value = "";
+            }}
+          />
+          <input
+            ref={bundleInputRef}
+            hidden
+            type="file"
+            multiple
+            aria-label={labels.importBundle}
+            onChange={(event) => {
+              if (event.target.files) onBundleSelected([...event.target.files]);
+              event.target.value = "";
+            }}
+          />
+        </div>
+      )}
       <div className="toolbar-group">
         <button className="workspace-action" title={labels.md} aria-label={labels.md} onClick={onExportMarkdown}><Save size={15} /><span className="toolbar-button-label">{labels.md}</span></button>
         <button className="workspace-action" title={labels.html} aria-label={labels.html} onClick={onExportHtml}><FileCode2 size={15} /><span className="toolbar-button-label">{labels.html}</span></button>

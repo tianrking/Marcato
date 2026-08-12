@@ -1,8 +1,20 @@
 import { DEFAULT_GLOBAL_STATE, STORAGE_KEYS } from "./constants";
+import { reconcileHistory } from "./editHistory";
 import { normalizeWechatStyle } from "./wechatStyles";
 import type { GlobalState, MarkdownTab } from "../types";
 
-const hasLocalStorage = () => typeof window !== "undefined" && "localStorage" in window;
+export const WORKSPACE_STORAGE_FAILURE_EVENT = "marcato:workspace-storage-failure";
+
+let workspaceStorageFailureActive = false;
+let workspaceStorageFailureTimer: number | null = null;
+
+const hasLocalStorage = () => {
+  try {
+    return typeof window !== "undefined" && Boolean(window.localStorage);
+  } catch {
+    return false;
+  }
+};
 
 export function safeRead<T>(key: string, fallback: T): T {
   if (!hasLocalStorage()) return fallback;
@@ -15,18 +27,59 @@ export function safeRead<T>(key: string, fallback: T): T {
 }
 
 export function safeWrite<T>(key: string, value: T) {
-  if (!hasLocalStorage()) return;
+  if (!hasLocalStorage()) return false;
   try {
     window.localStorage.setItem(key, JSON.stringify(value));
+    return true;
   } catch {
     // Storage quota should never break editing.
+    return false;
+  }
+}
+
+function safeReadString(key: string) {
+  if (!hasLocalStorage()) return null;
+  try {
+    return window.localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function safeWriteString(key: string, value: string) {
+  if (!hasLocalStorage()) return false;
+  try {
+    window.localStorage.setItem(key, value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function notifyWorkspaceStorageFailure() {
+  if (workspaceStorageFailureActive) return;
+  workspaceStorageFailureActive = true;
+  if (typeof window !== "undefined") {
+    workspaceStorageFailureTimer = window.setTimeout(() => {
+      workspaceStorageFailureTimer = null;
+      if (!workspaceStorageFailureActive) return;
+      window.dispatchEvent(new Event(WORKSPACE_STORAGE_FAILURE_EVENT));
+    }, 0);
+  }
+}
+
+export function markWorkspaceStorageAvailable() {
+  workspaceStorageFailureActive = false;
+  if (workspaceStorageFailureTimer !== null && typeof window !== "undefined") {
+    window.clearTimeout(workspaceStorageFailureTimer);
+    workspaceStorageFailureTimer = null;
   }
 }
 
 export function loadGlobalState(): GlobalState {
   const state = safeRead<Partial<GlobalState>>(STORAGE_KEYS.global, {});
-  const language = normalizeLanguage(window.localStorage.getItem(STORAGE_KEYS.language) || state.language || detectLanguage());
-  const findDocked = window.localStorage.getItem(STORAGE_KEYS.findDocked);
+  const language = normalizeLanguage(safeReadString(STORAGE_KEYS.language) || state.language || detectLanguage());
+  const findDocked = safeReadString(STORAGE_KEYS.findDocked);
   return {
     ...DEFAULT_GLOBAL_STATE,
     ...state,
@@ -40,9 +93,10 @@ export function loadGlobalState(): GlobalState {
 }
 
 export function saveGlobalState(state: GlobalState) {
-  safeWrite(STORAGE_KEYS.global, state);
-  window.localStorage.setItem(STORAGE_KEYS.language, state.language);
-  window.localStorage.setItem(STORAGE_KEYS.findDocked, state.findDocked ? "1" : "0");
+  const globalSaved = safeWrite(STORAGE_KEYS.global, state);
+  const languageSaved = safeWriteString(STORAGE_KEYS.language, state.language);
+  const findDockedSaved = safeWriteString(STORAGE_KEYS.findDocked, state.findDocked ? "1" : "0");
+  return globalSaved && languageSaved && findDockedSaved;
 }
 
 export function loadTabs(): MarkdownTab[] {
@@ -50,33 +104,33 @@ export function loadTabs(): MarkdownTab[] {
   return tabs
     .filter((tab) => tab && typeof tab.content === "string")
     .slice(0, 20)
-    .map((tab) => ({
+    .map((tab) => reconcileHistory({
       ...tab,
-      history: tab.history?.length ? tab.history.slice(-80) : [tab.content],
-      historyIndex: Number.isFinite(tab.historyIndex) ? tab.historyIndex : 0,
+      history: Array.isArray(tab.history) ? tab.history : [],
+      historyIndex: tab.historyIndex,
     }));
 }
 
 export function saveTabs(tabs: MarkdownTab[]) {
-  safeWrite(STORAGE_KEYS.tabs, tabs.slice(0, 20));
+  return safeWrite(STORAGE_KEYS.tabs, tabs.slice(0, 20));
 }
 
 export function loadActiveTabId() {
-  return hasLocalStorage() ? window.localStorage.getItem(STORAGE_KEYS.activeTab) : null;
+  return safeReadString(STORAGE_KEYS.activeTab);
 }
 
 export function saveActiveTabId(id: string) {
-  if (hasLocalStorage()) window.localStorage.setItem(STORAGE_KEYS.activeTab, id);
+  return safeWriteString(STORAGE_KEYS.activeTab, id);
 }
 
 export function loadUntitledCounter() {
-  const raw = hasLocalStorage() ? window.localStorage.getItem(STORAGE_KEYS.untitledCounter) : null;
+  const raw = safeReadString(STORAGE_KEYS.untitledCounter);
   const parsed = Number(raw);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
 }
 
 export function saveUntitledCounter(value: number) {
-  if (hasLocalStorage()) window.localStorage.setItem(STORAGE_KEYS.untitledCounter, String(value));
+  return safeWriteString(STORAGE_KEYS.untitledCounter, String(value));
 }
 
 export function makeTab(title: string, content: string): MarkdownTab {

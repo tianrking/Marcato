@@ -14,6 +14,7 @@ interface AppHeaderProps {
   easterEggs: boolean;
   theme: ThemeMode;
   viewMode: ViewMode;
+  readOnly?: boolean;
   onOpenDocumentLibrary: () => void;
   onAccentChange: (accent: AccentPalette) => void;
   onEasterEggsChange: (enabled: boolean) => void;
@@ -30,7 +31,7 @@ const ACCENT_OPTIONS: Array<{ id: AccentPalette; label: string }> = [
   { id: "amber", label: "Amber" },
 ];
 
-export function AppHeader({ accent, easterEggs, stats, theme, viewMode, onAccentChange, onEasterEggsChange, onOpenDocumentLibrary, onOpenMobileMenu, onThemeChange, onViewModeChange }: AppHeaderProps) {
+export function AppHeader({ accent, easterEggs, stats, theme, viewMode, readOnly = false, onAccentChange, onEasterEggsChange, onOpenDocumentLibrary, onOpenMobileMenu, onThemeChange, onViewModeChange }: AppHeaderProps) {
   const { t } = useTranslation();
 
   return (
@@ -43,21 +44,25 @@ export function AppHeader({ accent, easterEggs, stats, theme, viewMode, onAccent
         </div>
       </div>
       <div className="header-actions">
-        <button className="icon-button library-trigger" title="Document library" aria-label="Open document library" onClick={onOpenDocumentLibrary}>
-          <Files size={17} />
-        </button>
+        {!readOnly && (
+          <button className="icon-button library-trigger" title="Document library" aria-label="Open document library" onClick={onOpenDocumentLibrary}>
+            <Files size={17} />
+          </button>
+        )}
         <button className="icon-button mobile-menu-trigger" title="Open mobile menu" aria-label="Open mobile menu" onClick={onOpenMobileMenu}>
           <Menu size={17} />
         </button>
-        <Segmented
-          value={viewMode}
-          options={[
-            ["editor", <PanelLeft key="editor" size={16} />, t("view.editor")],
-            ["split", <SplitSquareHorizontal key="split" size={16} />, t("view.split")],
-            ["preview", <PanelRight key="preview" size={16} />, t("view.preview")],
-          ]}
-          onChange={(value) => onViewModeChange(value as ViewMode)}
-        />
+        {!readOnly && (
+          <Segmented
+            value={viewMode}
+            options={[
+              ["editor", <PanelLeft key="editor" size={16} />, t("view.editor")],
+              ["split", <SplitSquareHorizontal key="split" size={16} />, t("view.split")],
+              ["preview", <PanelRight key="preview" size={16} />, t("view.preview")],
+            ]}
+            onChange={(value) => onViewModeChange(value as ViewMode)}
+          />
+        )}
         <div className="accent-picker" aria-label="Accent color">
           <Palette size={15} aria-hidden="true" />
           {ACCENT_OPTIONS.map((option) => (
