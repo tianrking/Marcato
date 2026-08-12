@@ -3,12 +3,14 @@ import type { PreviewBlock, PreviewDocument } from "../lib/previewDocument";
 import { applyPreviewFindHighlights, clearPreviewFindHighlights, scrollPreviewHighlightIntoView } from "../lib/previewFind";
 import { setupPreviewLinks } from "../lib/previewLinks";
 import { profileClassName } from "../lib/professionalProfiles";
-import type { FindOptions, ProfessionalProfile } from "../types";
+import { wechatStyleClassName } from "../lib/wechatStyles";
+import type { FindOptions, ProfessionalProfile, WechatStyle } from "../types";
 
 interface PreviewPaneProps {
   document: PreviewDocument;
   offlineFirst: boolean;
   professionalProfile: ProfessionalProfile;
+  wechatStyle: WechatStyle;
   findActiveIndex: number;
   findEditorMatchCount: number;
   findOpen: boolean;
@@ -51,6 +53,7 @@ export const PreviewPane = forwardRef<HTMLElement, PreviewPaneProps>(function Pr
   findOptions,
   offlineFirst,
   professionalProfile,
+  wechatStyle,
   selectedBlockId,
   theme,
   onBlockSelect,
@@ -103,8 +106,9 @@ export const PreviewPane = forwardRef<HTMLElement, PreviewPaneProps>(function Pr
   return (
     <article
       ref={articleRef}
-      className={`markdown-body preview-article ${profileClassName(professionalProfile)}`}
+      className={`markdown-body preview-article ${profileClassName(professionalProfile)}${professionalProfile === "wechat" ? ` ${wechatStyleClassName(wechatStyle)}` : ""}`}
       data-profile={professionalProfile}
+      data-wechat-style={professionalProfile === "wechat" ? wechatStyle : undefined}
     >
       {document.mode === "segmented" ? (
         document.blocks.map((block) => (

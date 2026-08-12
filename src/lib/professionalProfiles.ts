@@ -36,8 +36,8 @@ export const PROFESSIONAL_PROFILES: Record<ProfessionalProfile, ProfessionalProf
     id: "wechat",
     label: "WeChat Official Account",
     shortLabel: "WeChat",
-    description: "Paste-safe rich text with visible URLs, image insertion notes, and editable diagram source.",
-    previewHint: "Deterministic paste draft",
+    description: "Four editorial styles with direct embedded-image copy, visible URLs, and safe fallbacks for unresolved media.",
+    previewHint: "Styled, deterministic paste draft",
   },
   github: {
     id: "github",
@@ -107,7 +107,7 @@ const VITEPRESS_TOC_PATTERN = /^\[\[toc\]\]/gim;
 const MKDOCS_CODE_ANNOTATION_PATTERN = /#\s*\(\d+\)/g;
 const FOOTNOTE_PATTERN = /\[\^[^\]\n]+\]/g;
 const TABLE_PATTERN = /^\|.+\|\s*\n\|[-:|\s]+\|/gm;
-const LOCAL_IMAGE_PATTERN = /!\[[^\]]*]\((?!https?:|data:|\/|#)([^)\s]+)(?:\s+"[^"]*")?\)/gim;
+const LOCAL_IMAGE_PATTERN = /!\[[^\]]*]\((?!https?:|data:|marcato-asset:|\/|#)([^)\s]+)(?:\s+"[^"]*")?\)/gim;
 const REMOTE_IMAGE_PATTERN = /!\[[^\]]*]\(https?:\/\/[^)]+\)/gim;
 const EMBEDDED_IMAGE_PATTERN = /!\[[^\]]*]\((?:data:|blob:)[^)]+\)/gim;
 const MATH_PATTERN = /(^|\n)\$\$[\s\S]*?\$\$|\$(?!\s|\$)[^\n$]+\$/g;
@@ -145,7 +145,7 @@ export function analyzeProfessionalProfile(markdown: string, profile: Profession
       addPatternIssue(markdown, RAW_HTML_PATTERN, issues, "wechat-html", "WeChat may strip unsupported HTML or attributes. Prefer plain Markdown plus inline-safe styling.", "warn");
       addPatternIssue(markdown, REMOTE_IMAGE_PATTERN, issues, "wechat-remote-image", "WeChat copy turns third-party images into insertion notes with visible source URLs. Upload each image in the WeChat editor.", "info");
       addPatternIssue(markdown, LOCAL_IMAGE_PATTERN, issues, "wechat-local-image", "WeChat copy turns local image paths into insertion notes. Upload the original file at each marked position.", "warn");
-      addPatternIssue(markdown, EMBEDDED_IMAGE_PATTERN, issues, "wechat-embedded-image", "WeChat copy omits data/blob payloads and keeps a safe insertion note instead. Re-upload the original image.", "warn");
+      addPatternIssue(markdown, EMBEDDED_IMAGE_PATTERN, issues, "wechat-embedded-image", "Embedded PNG, JPEG, GIF, and WebP images travel with rich-text copy. Save and reopen the WeChat draft to verify that every image persisted.", "info");
       addRichFenceIssues(fences, issues, "wechat-diagram", "WeChat copy inserts a PNG position note and keeps the original diagram source. Use the diagram PNG action, then insert it manually.", "warn");
       encourageFrontmatterField(frontmatterFields, ["cover", "coverImage", "thumb", "thumbnail"], issues, "wechat-cover", "Add a cover or coverImage field to track the WeChat article cover asset.");
       encourageFrontmatterField(frontmatterFields, ["description", "summary", "digest"], issues, "wechat-summary", "Add description, summary, or digest frontmatter for the WeChat article excerpt.");

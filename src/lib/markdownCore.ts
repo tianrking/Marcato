@@ -173,7 +173,8 @@ export function parseFrontmatter(markdown: string): { body: string; frontmatter?
 
 function renderFullMarkdown(markdown: string, frontmatter: Record<string, unknown> | undefined, includeFrontmatter: boolean) {
   const marked = getMarked();
-  const rendered = enhanceGitHubAlerts(marked.parse(markdown, { async: false }) as string);
+  const source = isProfile("wechat") ? normalizeWechatEmphasisSpacing(markdown) : markdown;
+  const rendered = enhanceGitHubAlerts(marked.parse(source, { async: false }) as string);
   if (!includeFrontmatter || !frontmatter || Object.keys(frontmatter).length === 0) return rendered;
   const rows = Object.entries(frontmatter)
     .map(([key, value]) => {
@@ -182,6 +183,30 @@ function renderFullMarkdown(markdown: string, frontmatter: Record<string, unknow
     })
     .join("");
   return `<table class="frontmatter-table"><tbody>${rows}</tbody></table>\n${rendered}`;
+}
+
+function normalizeWechatEmphasisSpacing(markdown: string) {
+  const lines = markdown.replace(/\r\n/g, "\n").split("\n");
+  let fenceCharacter = "";
+  let fenceLength = 0;
+  return lines.map((line) => {
+    const fence = /^ {0,3}(`{3,}|~{3,})/.exec(line)?.[1] || "";
+    if (fence) {
+      if (!fenceCharacter) {
+        fenceCharacter = fence[0];
+        fenceLength = fence.length;
+      } else if (fence[0] === fenceCharacter && fence.length >= fenceLength) {
+        fenceCharacter = "";
+        fenceLength = 0;
+      }
+      return line;
+    }
+    if (fenceCharacter) return line;
+    return line.split(/(`+[^`]*`+)/g).map((segment, index) => {
+      if (index % 2 === 1) return segment;
+      return segment.replace(/(^|[^\\])(\*\*|__)([^*_\n]+?\S)\2(?=[\p{L}\p{N}])/gu, "$1$2$3$2 ");
+    }).join("");
+  }).join("\n");
 }
 
 function enhanceGitHubAlerts(html: string) {

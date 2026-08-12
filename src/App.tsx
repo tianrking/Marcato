@@ -63,6 +63,8 @@ import { ReplacePreviewModal } from "./components/ReplacePreviewModal";
 import { ShareModal } from "./components/ShareModal";
 import { TabStrip } from "./components/TabStrip";
 import { WorkspaceToolbar } from "./components/WorkspaceToolbar";
+import { WechatExportModal } from "./components/WechatExportModal";
+import { WechatModeBar } from "./components/WechatModeBar";
 import { useFindReplace } from "./hooks/useFindReplace";
 import { useGitHubImport } from "./hooks/useGitHubImport";
 import { useGlobalShortcuts } from "./hooks/useGlobalShortcuts";
@@ -70,7 +72,17 @@ import { useInsertModals } from "./hooks/useInsertModals";
 import { useMarkdownRender } from "./hooks/useMarkdownRender";
 import { useShare } from "./hooks/useShare";
 import { MAX_ASSETS, MAX_IMPORT_BYTES, MAX_TABS } from "./lib/constants";
-import { assetMarkdown, createLocalAsset, createRemoteAsset, loadAssets, saveAssets } from "./lib/assets";
+import {
+  assetMarkdown,
+  assetReference,
+  createLocalAsset,
+  createLocalAssetCandidate,
+  createRemoteAsset,
+  embedLocalImagesInMarkdown,
+  hydrateAssetReferences,
+  loadAssets,
+  saveAssets,
+} from "./lib/assets";
 import { applyCommand, handleSmartEnter, type MarkdownCommand } from "./lib/editorCommands";
 import { buildExternalAskPrompt, buildExternalAskUrl, type ExternalAskTarget } from "./lib/externalAsk";
 import { exportHtml, exportMarkdown } from "./lib/downloads";
@@ -142,16 +154,20 @@ function App() {
   const [assets, setAssets] = useState<MarkdownAsset[]>(() => loadAssets());
   const [externalAsk, setExternalAsk] = useState<{ selection: string; x: number; y: number } | null>(null);
   const [dragging, setDragging] = useState(false);
+  const [editorImageDragging, setEditorImageDragging] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [pdfExport, setPdfExport] = useState<PdfExportState | null>(null);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
   const [healthOpen, setHealthOpen] = useState(false);
+  const [wechatExportSource, setWechatExportSource] = useState<HTMLElement | null>(null);
+  const [wechatCopying, setWechatCopying] = useState(false);
 
   const editorRef = useRef<HTMLTextAreaElement | null>(null);
   const previewRef = useRef<HTMLElement | null>(null);
   const editorPaneRef = useRef<HTMLDivElement | null>(null);
   const previewPaneRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const bundleInputRef = useRef<HTMLInputElement | null>(null);
   const pdfAbortRef = useRef<AbortController | null>(null);
   const syncingRef = useRef(false);
   const toastTimerRef = useRef<number | null>(null);
@@ -160,12 +176,17 @@ function App() {
     () => tabs.find((tab) => tab.id === activeTabId) || tabs[0],
     [activeTabId, tabs],
   );
-  const { document: previewDocument, toc, state: renderState, error: renderError } = useMarkdownRender(activeTab, globalState.professionalProfile);
   const text = activeTab?.content || "";
+  const hydratedText = useMemo(() => hydrateAssetReferences(text, assets), [assets, text]);
+  const renderTab = useMemo(
+    () => activeTab && hydratedText !== text ? { ...activeTab, content: hydratedText } : activeTab,
+    [activeTab, hydratedText, text],
+  );
+  const { document: previewDocument, toc, state: renderState, error: renderError } = useMarkdownRender(renderTab, globalState.professionalProfile);
   const commitContent = useCallback((content: string) => updateActiveContent(content, true), [updateActiveContent]);
   const findReplace = useFindReplace(text, editorRef, commitContent);
   const insertModals = useInsertModals({ activeTab, commitContent, editorRef, text });
-  const share = useShare(text, showToast);
+  const share = useShare(hydratedText, showToast);
   const stats = useMemo(() => getStats(text), [text]);
   const health = useMemo(() => analyzeDocumentHealth(text), [text]);
   const professionalReport = useMemo(() => analyzeProfessionalProfile(text, globalState.professionalProfile), [text, globalState.professionalProfile]);
@@ -188,6 +209,11 @@ function App() {
   useEffect(() => {
     void initializeWorkspace();
   }, [initializeWorkspace]);
+
+  useEffect(() => {
+    bundleInputRef.current?.setAttribute("webkitdirectory", "");
+    bundleInputRef.current?.setAttribute("directory", "");
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -244,7 +270,7 @@ function App() {
     onOpenFind: () => findReplace.setOpen(true),
     onRedo: redo,
     onSave: () => {
-      exportMarkdown(getExportName(activeTab?.title || "document"), text);
+      exportMarkdown(getExportName(activeTab?.title || "document"), hydratedText);
     },
     onToggleSyncScroll: () => updateGlobal({ syncScroll: !globalState.syncScroll }),
     onUndo: undo,
@@ -276,8 +302,9 @@ function App() {
   const handleFiles = async (files: FileList | File[]) => {
     const imported: MarkdownTab[] = [];
     const imageFiles: File[] = [];
+    const markdownFiles: File[] = [];
     for (const file of [...files]) {
-      if (file.type.startsWith("image/")) {
+      if (isImageFile(file)) {
         imageFiles.push(file);
         continue;
       }
@@ -286,16 +313,38 @@ function App() {
         showToast(`${file.name} is over 10 MB.`);
         continue;
       }
+      markdownFiles.push(file);
+    }
+
+    const imageCandidates = [];
+    for (const file of imageFiles) {
+      try {
+        imageCandidates.push(await createLocalAssetCandidate(file));
+      } catch (error) {
+        showToast(error instanceof Error ? error.message : "Could not add image asset.");
+      }
+    }
+
+    let embeddedCount = 0;
+    for (const file of markdownFiles) {
       const content = await file.text();
       if (hasBinaryBytes(content)) {
         showToast(`${file.name} looks binary and was skipped.`);
         continue;
       }
-      imported.push(makeTab(file.name, content));
+      const bundled = embedLocalImagesInMarkdown(content, imageCandidates, file.webkitRelativePath || file.name);
+      embeddedCount += bundled.embeddedCount;
+      imported.push(makeTab(file.name, bundled.markdown));
     }
-    if (imageFiles.length) await addLocalAssets(imageFiles, false);
-    if (!imported.length) return;
-    addTabs(imported, imported[0].id);
+
+    const reusableAssets = imageCandidates.map((candidate) => candidate.asset);
+    if (reusableAssets.length) commitAssets([...reusableAssets, ...assets]);
+    if (imported.length) {
+      addTabs(imported, imported[0].id);
+      if (embeddedCount > 0) showToast(t("toast.bundleImported", { documents: imported.length, images: embeddedCount }));
+    } else if (reusableAssets.length) {
+      showToast(`${reusableAssets.length} image asset${reusableAssets.length > 1 ? "s" : ""} added.`);
+    }
   };
 
   const commitAssets = (nextAssets: MarkdownAsset[]) => {
@@ -316,7 +365,9 @@ function App() {
     if (!created.length) return;
     commitAssets([...created, ...assets]);
     if (insert) insertAssetMarkdown(created, range);
-    showToast(`${created.length} image asset${created.length > 1 ? "s" : ""} added.`);
+    showToast(insert
+      ? t("toast.imagesInserted", { count: created.length })
+      : `${created.length} image asset${created.length > 1 ? "s" : ""} added.`);
   };
 
   const addRemoteAsset = (name: string, source: string) => {
@@ -338,7 +389,7 @@ function App() {
     const editor = editorRef.current;
     const start = range?.start ?? editor?.selectionStart ?? activeTab.content.length;
     const end = range?.end ?? editor?.selectionEnd ?? start;
-    const insertion = selectedAssets.map(assetMarkdown).join("\n");
+    const insertion = buildAssetBlockInsertion(activeTab.content, start, end, selectedAssets);
     const next = activeTab.content.slice(0, start) + insertion + activeTab.content.slice(end);
     commitContent(next);
     requestAnimationFrame(() => {
@@ -350,16 +401,44 @@ function App() {
   };
 
   const copyAssetSource = async (asset: MarkdownAsset) => {
-    await navigator.clipboard.writeText(asset.source);
-    showToast("Asset URL copied.");
+    await navigator.clipboard.writeText(assetReference(asset));
+    showToast("Asset reference copied.");
   };
 
   const onEditorPaste = (event: ClipboardEvent<HTMLTextAreaElement>) => {
-    const imageFiles = Array.from(event.clipboardData.files).filter((file) => file.type.startsWith("image/"));
+    const imageFiles = Array.from(event.clipboardData.files).filter(isImageFile);
     if (!imageFiles.length) return;
     event.preventDefault();
     const editor = event.currentTarget;
     void addLocalAssets(imageFiles, true, { start: editor.selectionStart, end: editor.selectionEnd });
+  };
+
+  const onEditorDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+    if (!hasImageTransfer(event.dataTransfer)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    event.dataTransfer.dropEffect = "copy";
+    setDragging(false);
+    setEditorImageDragging(true);
+  };
+
+  const onEditorDragLeave = (event: React.DragEvent<HTMLDivElement>) => {
+    const nextTarget = event.relatedTarget;
+    if (nextTarget instanceof Node && event.currentTarget.contains(nextTarget)) return;
+    setEditorImageDragging(false);
+  };
+
+  const onEditorDrop = (event: React.DragEvent<HTMLDivElement>) => {
+    const imageFiles = Array.from(event.dataTransfer.files).filter(isImageFile);
+    if (!imageFiles.length) return;
+    event.preventDefault();
+    event.stopPropagation();
+    setDragging(false);
+    setEditorImageDragging(false);
+    const editor = editorRef.current;
+    const start = editor?.selectionStart ?? text.length;
+    const end = editor?.selectionEnd ?? start;
+    void addLocalAssets(imageFiles, true, { start, end });
   };
 
   const openExternalAskMenu = (event: MouseEvent<HTMLElement>, selection: string) => {
@@ -404,12 +483,12 @@ function App() {
   };
 
   const doCopyMarkdown = async () => {
-    await navigator.clipboard.writeText(text);
+    await navigator.clipboard.writeText(hydratedText);
     showToast(t("toast.markdownCopied"));
   };
 
   const exportMarkdownFile = async () => {
-    exportMarkdown(getExportName(activeTab?.title || "document"), text);
+    exportMarkdown(getExportName(activeTab?.title || "document"), hydratedText);
   };
 
   const exportHtmlFile = async () => {
@@ -443,22 +522,35 @@ function App() {
     }
   };
 
-  const doCopyWechat = async () => {
+  const doCopyWechat = () => {
     if (!previewRef.current) return;
+    if (globalState.professionalProfile === "wechat") {
+      setWechatExportSource(previewRef.current);
+      return;
+    }
+    updateGlobal({ professionalProfile: "wechat" });
+    window.requestAnimationFrame(() => {
+      if (previewRef.current) setWechatExportSource(previewRef.current);
+    });
+  };
+
+  const doQuickCopyWechat = async () => {
+    if (!previewRef.current || wechatCopying) return;
+    setWechatCopying(true);
     try {
-      const result = await copyWechatRichText(previewRef.current);
-      showToast(t(
-        result.method === "plain-text" ? "toast.wechatCopiedPlain" : "toast.wechatCopied",
-        {
-          defaultValue: result.method === "plain-text"
-            ? "Rich clipboard access was unavailable, so a readable plain-text WeChat draft was copied."
-            : "WeChat paste copied with visible URLs, image placeholders, and editable diagram source.",
-          diagrams: result.stats.diagrams,
-          images: result.stats.imagePlaceholders,
-        },
-      ));
+      const result = await copyWechatRichText(previewRef.current, { excludeTitle: true, style: globalState.wechatStyle });
+      const message = result.method === "plain-text"
+        ? t("toast.wechatCopiedPlain")
+        : t("toast.wechatCopied", {
+            direct: result.stats.embeddedImages + result.stats.preservedWechatImages,
+            images: result.stats.imagePlaceholders,
+            diagrams: result.stats.diagrams,
+          });
+      showToast(message);
     } catch {
-      showToast(t("toast.wechatCopyFailed", { defaultValue: "Could not copy the WeChat draft. Check clipboard permission and try again." }));
+      showToast(t("toast.wechatCopyFailed"));
+    } finally {
+      setWechatCopying(false);
     }
   };
 
@@ -579,11 +671,17 @@ function App() {
     <div
       className={`app-shell view-${globalState.viewMode}`}
       onDragOver={(event) => {
+        if (!hasFileTransfer(event.dataTransfer)) return;
         event.preventDefault();
         setDragging(true);
       }}
-      onDragLeave={() => setDragging(false)}
+      onDragLeave={(event) => {
+        const nextTarget = event.relatedTarget;
+        if (nextTarget instanceof Node && event.currentTarget.contains(nextTarget)) return;
+        setDragging(false);
+      }}
       onDrop={(event) => {
+        if (!event.dataTransfer.files.length) return;
         event.preventDefault();
         setDragging(false);
         void handleFiles(event.dataTransfer.files);
@@ -606,11 +704,13 @@ function App() {
 
       <WorkspaceToolbar
         fileInputRef={fileInputRef}
+        bundleInputRef={bundleInputRef}
         globalState={globalState}
         onGlobalChange={updateGlobal}
         onNewTab={() => newTab("", undefined)}
         onGithubImport={githubImport.open}
         onFilesSelected={(files) => void handleFiles(files)}
+        onBundleSelected={(files) => void handleFiles(files)}
         onExportMarkdown={() => void exportMarkdownFile()}
         onExportHtml={() => void exportHtmlFile()}
         onExportPdf={() => void doExportPdf()}
@@ -659,6 +759,17 @@ function App() {
         onRemove={removeAsset}
       />
 
+      {wechatExportSource && (
+        <WechatExportModal
+          fallbackTitle={activeTab?.title || t("status.untitled")}
+          source={wechatExportSource}
+          style={globalState.wechatStyle}
+          onClose={() => setWechatExportSource(null)}
+          onNotify={showToast}
+          onStyleChange={(wechatStyle) => updateGlobal({ wechatStyle })}
+        />
+      )}
+
       <div className="format-toolbar">
         <IconButton title="Undo" onClick={undo}><Undo2 size={16} /></IconButton>
         <IconButton title="Redo" onClick={redo}><Redo2 size={16} /></IconButton>
@@ -704,8 +815,18 @@ function App() {
 
       <main className="workspace" style={{ "--split": `${globalState.splitPercent}%` } as React.CSSProperties}>
         <section className="editor-pane" ref={editorPaneRef}>
-          <div className="pane-title"><FilePlus2 size={16} />{activeTab?.title || t("status.untitled")}</div>
-          <div className="editor-wrap">
+          <div className="pane-title">
+            <FilePlus2 size={16} />{activeTab?.title || t("status.untitled")}
+            {globalState.professionalProfile === "wechat" && (
+              <span className="editor-image-hint"><Image size={13} />{t("wechat.dragImagesShort")}</span>
+            )}
+          </div>
+          <div
+            className={`editor-wrap${editorImageDragging ? " is-image-dragging" : ""}`}
+            onDragOver={onEditorDragOver}
+            onDragLeave={onEditorDragLeave}
+            onDrop={onEditorDrop}
+          >
             <pre className="line-numbers" aria-hidden="true">{lineNumbers(text)}</pre>
             <textarea
               ref={editorRef}
@@ -719,6 +840,13 @@ function App() {
               onBlur={(event) => commitContent(event.target.value)}
               aria-label={t("view.editor")}
             />
+            {editorImageDragging && (
+              <div className="editor-drop-hint" role="status">
+                <Image size={24} />
+                <strong>{t("wechat.dropImages")}</strong>
+                <span>{t("wechat.dropImagesHint")}</span>
+              </div>
+            )}
           </div>
         </section>
         <div className="resizer" role="separator" aria-orientation="vertical" tabIndex={0} onPointerDown={beginResize} />
@@ -728,6 +856,16 @@ function App() {
             {renderState === "rendering" && <span className="render-pill">{t("status.rendering")}</span>}
             {renderError && <span className="render-pill error">{renderError}</span>}
           </div>
+          {globalState.professionalProfile === "wechat" && (
+            <WechatModeBar
+              copying={wechatCopying}
+              disabled={renderState === "rendering" || Boolean(renderError)}
+              style={globalState.wechatStyle}
+              onCopy={() => void doQuickCopyWechat()}
+              onOpenKit={doCopyWechat}
+              onStyleChange={(wechatStyle) => updateGlobal({ wechatStyle })}
+            />
+          )}
           <PreviewPane
             ref={previewRef}
             document={previewDocument}
@@ -737,6 +875,7 @@ function App() {
             findOptions={findReplace.options}
             offlineFirst={globalState.offlineFirst}
             professionalProfile={globalState.professionalProfile}
+            wechatStyle={globalState.wechatStyle}
             selectedBlockId={selectedPreviewBlockId}
             theme={globalState.theme}
             onBlockSelect={selectPreviewBlock}
@@ -956,6 +1095,28 @@ function lineBreakLength(line: string) {
 
 function hasBinaryBytes(text: string) {
   return text.includes("\u0000");
+}
+
+function buildAssetBlockInsertion(text: string, start: number, end: number, assets: MarkdownAsset[]) {
+  const before = text.slice(0, start);
+  const after = text.slice(end);
+  const leading = !before || before.endsWith("\n\n") ? "" : before.endsWith("\n") ? "\n" : "\n\n";
+  const trailing = after.startsWith("\n\n") ? "" : after.startsWith("\n") ? "\n" : "\n\n";
+  return `${leading}${assets.map(assetMarkdown).join("\n\n")}${trailing}`;
+}
+
+function isImageFile(file: File) {
+  return file.type.startsWith("image/") || /\.(?:avif|gif|jpe?g|png|webp)$/i.test(file.name);
+}
+
+function hasImageTransfer(dataTransfer: DataTransfer) {
+  const files = Array.from(dataTransfer.files);
+  if (files.length > 0) return files.some(isImageFile);
+  return Array.from(dataTransfer.items).some((item) => item.kind === "file" && (item.type.startsWith("image/") || !item.type));
+}
+
+function hasFileTransfer(dataTransfer: DataTransfer) {
+  return dataTransfer.files.length > 0 || Array.from(dataTransfer.items).some((item) => item.kind === "file");
 }
 
 function isAbortError(error: unknown) {
