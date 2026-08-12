@@ -31,10 +31,48 @@ jobs:
         run: npm run lint
 
       - name: Build
+        id: verified_build
         run: npm run build
 
-      - name: Browser tests
-        run: npm test
+      - name: Unit contracts
+        if: ${{ !cancelled() && steps.verified_build.outcome == 'success' }}
+        run: npm run test:unit
+
+      - name: Asset storage tests
+        if: ${{ !cancelled() && steps.verified_build.outcome == 'success' }}
+        run: npm run test:assets
+
+      - name: Editor history and storage tests
+        if: ${{ !cancelled() && steps.verified_build.outcome == 'success' }}
+        run: npm run test:history
+
+      - name: UI smoke tests
+        if: ${{ !cancelled() && steps.verified_build.outcome == 'success' }}
+        run: npm run test:smoke
+
+      - name: Share isolation tests
+        if: ${{ !cancelled() && steps.verified_build.outcome == 'success' }}
+        run: npm run test:share
+
+      - name: Export button tests
+        if: ${{ !cancelled() && steps.verified_build.outcome == 'success' }}
+        run: npm run test:exports
+
+      - name: WeChat export tests
+        if: ${{ !cancelled() && steps.verified_build.outcome == 'success' }}
+        run: npm run test:wechat
+
+      - name: PDF pagination tests
+        if: ${{ !cancelled() && steps.verified_build.outcome == 'success' }}
+        run: npm run test:pdf
+
+      - name: Performance tests
+        if: ${{ !cancelled() && steps.verified_build.outcome == 'success' }}
+        run: npm run test:perf
+
+      - name: Diagram security tests
+        if: ${{ !cancelled() && steps.verified_build.outcome == 'success' }}
+        run: npm run test:diagrams
 
       - name: Upload test artifacts
         if: failure()

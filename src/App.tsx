@@ -295,6 +295,11 @@ function App() {
     const editor = editorRef.current;
     if (!editor || !activeTab) return;
     const result = applyCommand(activeTab.content, command, editor.selectionStart, editor.selectionEnd);
+    // A toolbar click moves focus away from the textarea before onClick runs.
+    // Restore it synchronously so an immediate undo/redo shortcut is not lost
+    // while React is committing the controlled value. The next frame still
+    // reapplies the command's final selection after the DOM value has updated.
+    editor.focus();
     commitContent(result.value);
     requestAnimationFrame(() => {
       editor.focus();

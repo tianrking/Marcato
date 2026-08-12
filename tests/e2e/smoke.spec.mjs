@@ -30,8 +30,14 @@ flowchart LR
 `;
 
 const startedAt = Date.now();
+const pixelPng = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=", "base64");
 
 await withApp(async ({ consoleMessages, context, page, server }) => {
+  await context.route("https://example.com/cover.png", (route) => route.fulfill({
+    body: pixelPng,
+    contentType: "image/png",
+    status: 200,
+  }));
   await setMarkdown(page, fixture);
   await waitForPreviewText(page, "Smoke Fixture");
   await page.locator(".katex").first().waitFor({ state: "visible", timeout: 10_000 });

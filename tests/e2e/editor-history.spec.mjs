@@ -27,7 +27,12 @@ await withApp(async ({ consoleMessages, page }) => {
   await page.keyboard.press("ControlOrMeta+Shift+z");
   expect(await editor.inputValue() === "hello", "Cmd/Ctrl+Shift+Z should redo the first typing batch.");
 
-  await page.getByRole("button", { name: "Bold" }).click();
+  const commandRefocusedEditor = await page.getByRole("button", { name: "Bold" }).evaluate((button) => {
+    button.focus();
+    button.click();
+    return document.activeElement?.matches(".editor-pane textarea") === true;
+  });
+  expect(commandRefocusedEditor, "A toolbar command should restore editor focus before the next animation frame.");
   const boldValue = await editor.inputValue();
   expect(boldValue === "hello**bold text**", `A toolbar command should apply after typing. Got: ${JSON.stringify(boldValue)}`);
   await page.keyboard.press("ControlOrMeta+z");
