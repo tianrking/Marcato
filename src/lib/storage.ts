@@ -1,4 +1,5 @@
 import { DEFAULT_GLOBAL_STATE, STORAGE_KEYS } from "./constants";
+import { normalizeWechatStyle } from "./wechatStyles";
 import type { GlobalState, MarkdownTab } from "../types";
 
 const hasLocalStorage = () => typeof window !== "undefined" && "localStorage" in window;
@@ -32,6 +33,7 @@ export function loadGlobalState(): GlobalState {
     accent: normalizeAccent(state.accent),
     easterEggs: typeof state.easterEggs === "boolean" ? state.easterEggs : DEFAULT_GLOBAL_STATE.easterEggs,
     professionalProfile: normalizeProfessionalProfile(state.professionalProfile),
+    wechatStyle: normalizeWechatStyle(state.wechatStyle),
     language,
     findDocked: findDocked ? findDocked === "1" : Boolean(state.findDocked),
   };

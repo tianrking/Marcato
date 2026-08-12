@@ -21,6 +21,7 @@ export const DEFAULT_GLOBAL_STATE: GlobalState = {
   accent: "blue",
   easterEggs: false,
   professionalProfile: "standard",
+  wechatStyle: "editorial",
   viewMode: "split",
   syncScroll: true,
   splitPercent: 50,

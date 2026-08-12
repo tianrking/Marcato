@@ -1,5 +1,5 @@
 import type { RefObject } from "react";
-import { Copy, Download, FileCode2, FileDown, FileImage, GitBranch, Languages, MessageCircle, Plus, Save, Share2 } from "lucide-react";
+import { Copy, Download, FileCode2, FileDown, FileImage, FolderOpen, GitBranch, Languages, MessageCircle, Plus, Save, Share2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { LANGUAGE_LABELS } from "../lib/i18n";
 import { PROFESSIONAL_PROFILES } from "../lib/professionalProfiles";
@@ -7,11 +7,13 @@ import type { GlobalState } from "../types";
 
 interface WorkspaceToolbarProps {
   fileInputRef: RefObject<HTMLInputElement | null>;
+  bundleInputRef: RefObject<HTMLInputElement | null>;
   globalState: GlobalState;
   onGlobalChange: (patch: Partial<GlobalState>) => void;
   onNewTab: () => void;
   onGithubImport: () => void;
-  onFilesSelected: (files: FileList) => void;
+  onFilesSelected: (files: FileList | File[]) => void;
+  onBundleSelected: (files: FileList | File[]) => void;
   onExportMarkdown: () => void;
   onExportHtml: () => void;
   onExportPdf: () => void;
@@ -24,11 +26,13 @@ interface WorkspaceToolbarProps {
 
 export function WorkspaceToolbar({
   fileInputRef,
+  bundleInputRef,
   globalState,
   onGlobalChange,
   onNewTab,
   onGithubImport,
   onFilesSelected,
+  onBundleSelected,
   onExportMarkdown,
   onExportHtml,
   onExportPdf,
@@ -46,6 +50,7 @@ export function WorkspaceToolbar({
     github: "GitHub",
     html: "HTML",
     import: t("action.import"),
+    importBundle: t("action.importBundle"),
     direction: globalState.direction.toUpperCase(),
     md: "MD",
     new: t("action.new"),
@@ -61,14 +66,29 @@ export function WorkspaceToolbar({
       <div className="toolbar-group">
         <button className="workspace-action" title={labels.new} aria-label={labels.new} onClick={onNewTab}><Plus size={15} /><span className="toolbar-button-label">{labels.new}</span></button>
         <button className="workspace-action" title={labels.import} aria-label={labels.import} onClick={() => fileInputRef.current?.click()}><Download size={15} /><span className="toolbar-button-label">{labels.import}</span></button>
+        <button className="workspace-action" title={labels.importBundle} aria-label={labels.importBundle} onClick={() => bundleInputRef.current?.click()}><FolderOpen size={15} /><span className="toolbar-button-label">{labels.importBundle}</span></button>
         <button className="workspace-action" title={labels.github} aria-label={labels.github} onClick={onGithubImport}><GitBranch size={15} /><span className="toolbar-button-label">{labels.github}</span></button>
         <input
           ref={fileInputRef}
           hidden
           type="file"
           multiple
-          accept=".md,.markdown,.txt"
-          onChange={(event) => event.target.files && onFilesSelected(event.target.files)}
+          accept=".md,.markdown,.txt,image/png,image/jpeg,image/gif,image/webp,image/avif"
+          onChange={(event) => {
+            if (event.target.files) onFilesSelected([...event.target.files]);
+            event.target.value = "";
+          }}
+        />
+        <input
+          ref={bundleInputRef}
+          hidden
+          type="file"
+          multiple
+          aria-label={labels.importBundle}
+          onChange={(event) => {
+            if (event.target.files) onBundleSelected([...event.target.files]);
+            event.target.value = "";
+          }}
         />
       </div>
       <div className="toolbar-group">

@@ -5,7 +5,7 @@ Reusable browser test cases live under `tests/e2e`.
 Commands:
 
 - `npm.cmd run test:smoke`: core editor, preview, modals, find, share URL, and mobile shell checks.
-- `npm.cmd run test:wechat`: paste-safe URLs, image annotations, diagram/math source retention, clipboard MIME, and diagram source-copy checks.
+- `npm.cmd run test:wechat`: four persisted WeChat styles, editor image-drop insertion, preview one-click rich copy, Markdown-folder image embedding, direct rich-text images, safe image annotations, standalone copy-ready HTML, diagram/math source retention, clipboard MIME, and diagram source-copy checks.
 - `npm.cmd run test:pdf`: PDF pagination structure checks for long tables, repeated headers, headings, math, and diagrams.
 - `npm.cmd run test:perf`: large-document segmented preview baseline.
 - `npm.cmd run test:diagrams`: local Markmap/WaveDrom plus remote diagram normalization, retry, and SVG sanitization checks.

@@ -76,6 +76,8 @@ try {
   expect(wechatRender.html.includes("wechat-slider"), "WeChat horizontal slider syntax should render.");
   expect(wechatRender.html.includes('width="320"') && wechatRender.html.includes('height="120"'), "WeChat image size suffix should become image dimensions.");
   expect(!wechatRender.html.includes("platform-admonition"), "WeChat profile should not render docs-platform admonitions.");
+  const wechatChineseStrong = markdown.renderMarkdownToHtml('> **先说结论：**正文继续', false, "wechat");
+  expect(wechatChineseStrong.html.includes("<strong>先说结论：</strong> 正文继续"), "WeChat profile should repair strong emphasis immediately followed by CJK text.");
 
   const standardRender = markdown.renderMarkdownToHtml('<MpProfile mpId="x" nickname="Nope" />\n\n:::tip\nNo platform mix.\n:::', false, "standard");
   expect(!standardRender.html.includes("mp-common-profile"), "Standard profile should not render WeChat official account cards.");

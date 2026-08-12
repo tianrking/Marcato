@@ -2,6 +2,7 @@ export type ViewMode = "split" | "editor" | "preview";
 export type ThemeMode = "light" | "dark";
 export type AccentPalette = "blue" | "teal" | "violet" | "rose" | "amber";
 export type ProfessionalProfile = "standard" | "wechat" | "github" | "docusaurus" | "vitepress" | "mkdocs" | "hugo" | "jekyll" | "astro";
+export type WechatStyle = "editorial" | "minimal" | "tech" | "fresh";
 
 export interface MarkdownTab {
   id: string;
@@ -19,6 +20,7 @@ export interface GlobalState {
   accent: AccentPalette;
   easterEggs: boolean;
   professionalProfile: ProfessionalProfile;
+  wechatStyle: WechatStyle;
   viewMode: ViewMode;
   syncScroll: boolean;
   splitPercent: number;

@@ -1,5 +1,9 @@
+import type { WechatStyle } from "../types";
+import { normalizeWechatStyle } from "./wechatStyles";
+
 const WECHAT_OFFICIAL_LINK_PATTERN = /^https?:\/\/mp\.weixin\.qq\.com(?:\/|$)/i;
 const WECHAT_IMAGE_HOST_PATTERN = /^https?:\/\/(?:[^/]+\.)?(?:mmbiz\.qpic\.cn|mmbiz\.qlogo\.cn)(?:\/|$)/i;
+const PORTABLE_DATA_IMAGE_PATTERN = /^data:image\/(?:png|jpe?g|gif|webp);base64,/i;
 
 const INLINE_STYLE_PROPERTIES = [
   "background",
@@ -23,6 +27,7 @@ const INLINE_STYLE_PROPERTIES = [
   "border-top-color",
   "border-top-style",
   "border-top-width",
+  "box-shadow",
   "box-sizing",
   "clear",
   "color",
@@ -61,6 +66,9 @@ const INLINE_STYLE_PROPERTIES = [
   "table-layout",
   "text-align",
   "text-decoration",
+  "text-decoration-color",
+  "text-decoration-line",
+  "text-decoration-style",
   "text-indent",
   "text-overflow",
   "text-transform",
@@ -74,6 +82,7 @@ const INLINE_STYLE_PROPERTIES = [
 
 export interface WechatExportStats {
   diagrams: number;
+  embeddedImages: number;
   imagePlaceholders: number;
   links: number;
   math: number;
@@ -92,12 +101,28 @@ export interface WechatCopyResult {
   stats: WechatExportStats;
 }
 
+export interface WechatExportOptions {
+  excludeTitle?: boolean;
+  style?: WechatStyle;
+}
+
+export interface WechatDraftMetadata {
+  summary: string;
+  title: string;
+}
+
 interface PreparedWechatClipboard extends WechatClipboardPayload {
   fragmentHtml: string;
 }
 
-export async function copyWechatRichText(element: HTMLElement): Promise<WechatCopyResult> {
-  const payload = prepareWechatClipboard(element);
+export async function copyWechatRichText(element: HTMLElement, options: WechatExportOptions = {}): Promise<WechatCopyResult> {
+  const payload = prepareWechatClipboard(element, options);
+
+  // Selection copy is the most reliable path for data-URL images because the browser
+  // serializes the rendered fragment as native rich content instead of plain HTML bytes.
+  if (payload.stats.embeddedImages > 0 && copyHtmlWithSelection(payload.fragmentHtml)) {
+    return { method: "selection", stats: payload.stats };
+  }
 
   if (navigator.clipboard?.write && typeof ClipboardItem !== "undefined") {
     try {
@@ -125,8 +150,8 @@ export async function copyWechatRichText(element: HTMLElement): Promise<WechatCo
   throw new Error("This browser could not write the WeChat article to the clipboard.");
 }
 
-export function buildWechatClipboardPayload(element: HTMLElement): WechatClipboardPayload {
-  const payload = prepareWechatClipboard(element);
+export function buildWechatClipboardPayload(element: HTMLElement, options: WechatExportOptions = {}): WechatClipboardPayload {
+  const payload = prepareWechatClipboard(element, options);
   return {
     html: payload.html,
     plainText: payload.plainText,
@@ -134,12 +159,69 @@ export function buildWechatClipboardPayload(element: HTMLElement): WechatClipboa
   };
 }
 
-export function buildWechatClipboardHtml(element: HTMLElement) {
-  return prepareWechatClipboard(element).html;
+export function buildWechatClipboardHtml(element: HTMLElement, options: WechatExportOptions = {}) {
+  return prepareWechatClipboard(element, options).html;
 }
 
-function prepareWechatClipboard(element: HTMLElement): PreparedWechatClipboard {
+export function extractWechatDraftMetadata(element: HTMLElement, fallbackTitle = "document"): WechatDraftMetadata {
+  const heading = compactText(element.querySelector("h1")?.textContent || "");
+  const title = heading || fallbackTitle.replace(/\.(?:md|markdown|txt)$/i, "").trim() || "Untitled";
+  const paragraph = Array.from(element.querySelectorAll("p")).find((node) => {
+    if (node.closest("blockquote,figcaption,figure,li,pre,table,.diagram-viewer,.wechat-slider")) return false;
+    return compactText(node.textContent || "").length >= 20;
+  });
+  return {
+    summary: truncateText(compactText(paragraph?.textContent || ""), 120),
+    title,
+  };
+}
+
+export function buildWechatCopyReadyDocument(
+  element: HTMLElement,
+  metadata: WechatDraftMetadata,
+  options: WechatExportOptions = { excludeTitle: true },
+) {
+  const payload = prepareWechatClipboard(element, options);
+  const title = escapeHtml(metadata.title || "WeChat article");
+  const summary = escapeHtml(metadata.summary || "");
+  const style = normalizeWechatStyle(options.style || element.dataset.wechatStyle);
+  const directImages = payload.stats.embeddedImages + payload.stats.preservedWechatImages;
+  return `<!doctype html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>${title} | WeChat copy</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;background:#eef0f2;color:#1f1f1f;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}.copy-panel{max-width:760px;margin:28px auto 18px;padding:22px;background:#fff;border-radius:12px;box-shadow:0 5px 22px rgba(0,0,0,.08)}.copy-panel h1{margin:0 0 16px;font-size:19px}.copy-field{margin:14px 0}.copy-label{margin-bottom:6px;color:#777;font-size:12px}.copy-value{padding:12px 14px;border:1px solid #ddd;border-radius:7px;background:#fafafa;line-height:1.65}.copy-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}.copy-button{min-height:40px;padding:0 16px;border:0;border-radius:7px;background:#171717;color:#fff;font:600 14px/1 sans-serif;cursor:pointer}.copy-button.primary{background:#8a6840}.copy-hint{margin-top:12px;color:#666;font-size:13px;line-height:1.65}.copy-status{min-height:20px;margin-top:8px;color:#147a43;font-size:13px}.article-paper{max-width:760px;margin:0 auto 40px;padding:44px 42px;background:#fff;box-shadow:0 5px 22px rgba(0,0,0,.08)}@media(max-width:780px){.copy-panel{margin:12px}.article-paper{margin:0 12px 24px;padding:30px 22px}}
+  </style>
+</head>
+<body>
+  <section class="copy-panel">
+    <h1>微信公众号复制稿</h1>
+    <div class="copy-field"><div class="copy-label">标题</div><div class="copy-value" id="wechat-copy-title">${title}</div></div>
+    <div class="copy-field"><div class="copy-label">摘要</div><div class="copy-value" id="wechat-copy-summary" data-copy-value="${summary}">${summary || "未提取到摘要，可返回 Marcato 编辑。"}</div></div>
+    <div class="copy-actions">
+      <button class="copy-button" type="button" onclick="copyPlain('wechat-copy-title','标题')">复制标题</button>
+      <button class="copy-button" type="button" onclick="copyPlain('wechat-copy-summary','摘要')">复制摘要</button>
+      <button class="copy-button primary" type="button" onclick="copyArticle()">复制排版正文（含 ${directImages} 图）</button>
+    </div>
+    <div class="copy-hint">正文包含 ${payload.stats.embeddedImages} 张内嵌图片、${payload.stats.preservedWechatImages} 张微信托管图片；${payload.stats.imagePlaceholders} 张外部或未解析图片保留了插入提示。粘贴后请保存草稿并重新打开检查。</div>
+    <div class="copy-status" id="wechat-copy-status" aria-live="polite"></div>
+  </section>
+  <main class="article-paper"><section id="wechat-copy-article" data-wechat-style="${style}" style="max-width:677px;margin:0 auto;word-break:break-word;">${payload.fragmentHtml}</section></main>
+  <script>
+    function showStatus(message){document.getElementById('wechat-copy-status').textContent=message}
+    async function copyPlain(id,label){const node=document.getElementById(id);const value=node.dataset.copyValue??node.textContent??'';if(!value){showStatus(label+'为空，请返回 Marcato 补充。');return}try{await navigator.clipboard.writeText(value);showStatus(label+'已复制。')}catch(error){const range=document.createRange();range.selectNodeContents(node);const selection=getSelection();selection.removeAllRanges();selection.addRange(range);document.execCommand('copy');selection.removeAllRanges();showStatus(label+'已复制。')}}
+    function copyArticle(){const node=document.getElementById('wechat-copy-article');const range=document.createRange();range.selectNodeContents(node);const selection=getSelection();selection.removeAllRanges();selection.addRange(range);const copied=document.execCommand('copy');selection.removeAllRanges();showStatus(copied?'排版正文已复制，可以粘贴到公众号编辑器。':'浏览器未允许自动复制，请在白色正文区域手动全选复制。')}
+  </script>
+</body>
+</html>`;
+}
+
+function prepareWechatClipboard(element: HTMLElement, options: WechatExportOptions = {}): PreparedWechatClipboard {
   const clone = cloneWithInlineStyles(element);
+  if (options.excludeTitle) clone.querySelector("h1")?.remove();
   const stats = normalizeWechatDom(clone);
   const fragmentHtml = clone.innerHTML;
   return {
@@ -189,6 +271,7 @@ function inlineComputedStyles(source: Element, clone: Element) {
 function normalizeWechatDom(root: HTMLElement): WechatExportStats {
   const stats: WechatExportStats = {
     diagrams: 0,
+    embeddedImages: 0,
     imagePlaceholders: 0,
     links: 0,
     math: 0,
@@ -264,12 +347,14 @@ function replaceImagesWithAnnotations(root: HTMLElement, stats: WechatExportStat
       target.querySelectorAll<HTMLImageElement>("img").forEach((image) => {
         const caption = image.parentElement?.querySelector("p")?.textContent?.trim() || "";
         const linkedTarget = visibleImageLinkTarget(image);
-        if (isWechatHostedImage(image.getAttribute("src") || "")) {
-          normalizeWechatHostedImage(image);
+        const src = image.getAttribute("src") || "";
+        if (isWechatHostedImage(src) || isPortableDataImage(src)) {
+          normalizePortableImage(image);
           fragment.appendChild(image);
           if (caption) fragment.appendChild(createImageCaption(caption));
           if (linkedTarget) fragment.appendChild(createFallbackParagraph(`图片链接：${linkedTarget}`, true));
-          stats.preservedWechatImages += 1;
+          if (isPortableDataImage(src)) stats.embeddedImages += 1;
+          else stats.preservedWechatImages += 1;
           if (linkedTarget) stats.links += 1;
           return;
         }
@@ -284,9 +369,10 @@ function replaceImagesWithAnnotations(root: HTMLElement, stats: WechatExportStat
     const image = target as HTMLImageElement;
     if (image.closest(".mp_profile_iframe_wrp")) return;
     const src = image.getAttribute("src") || "";
-    if (isWechatHostedImage(src)) {
-      normalizeWechatHostedImage(image);
-      stats.preservedWechatImages += 1;
+    if (isWechatHostedImage(src) || isPortableDataImage(src)) {
+      normalizePortableImage(image);
+      if (isPortableDataImage(src)) stats.embeddedImages += 1;
+      else stats.preservedWechatImages += 1;
       return;
     }
 
@@ -523,20 +609,25 @@ function createFallbackParagraph(text: string, breakAnywhere = false) {
   return paragraph;
 }
 
-function normalizeWechatHostedImage(image: HTMLImageElement) {
+function normalizePortableImage(image: HTMLImageElement) {
   const width = image.getAttribute("width");
   const height = image.getAttribute("height");
   image.removeAttribute("width");
   image.removeAttribute("height");
   image.style.display = "block";
-  image.style.margin = "12px auto";
+  image.style.margin = "24px auto 8px";
   image.style.maxWidth = "100%";
-  image.style.width = width && /^\d+$/.test(width) ? `${width}px` : width || "auto";
+  image.style.width = width && /^\d+$/.test(width) ? `${width}px` : width || "100%";
   image.style.height = height && /^\d+$/.test(height) ? `${height}px` : height || "auto";
+  image.style.borderRadius = "8px";
 }
 
 function isWechatHostedImage(src: string) {
   return WECHAT_IMAGE_HOST_PATTERN.test(src.trim());
+}
+
+function isPortableDataImage(src: string) {
+  return PORTABLE_DATA_IMAGE_PATTERN.test(src.trim());
 }
 
 function visibleLinkTarget(href: string) {
@@ -605,7 +696,8 @@ function serializeWechatPlainText(root: HTMLElement) {
     const src = (image.getAttribute("src") || "").trim();
     const alt = (image.getAttribute("alt") || image.getAttribute("title") || imageNameFromSource(src) || "已托管图片").trim();
     const lines = [`【微信图片：${alt}】`];
-    if (src) lines.push(`图片地址：${src}`);
+    if (isPortableDataImage(src)) lines.push("图片已随富文本内嵌；若粘贴后缺失，请从原稿重新上传。");
+    else if (src) lines.push(`图片地址：${src}`);
     image.replaceWith(document.createTextNode(`\n${lines.join("\n")}\n`));
   });
   clone.querySelectorAll("br").forEach((node) => node.replaceWith(document.createTextNode("\n")));
@@ -675,4 +767,22 @@ function createEmptyNode() {
 
 function wrapWechatClipboardHtml(body: string) {
   return `<!doctype html><html><head><meta charset="utf-8"></head><body>${body}</body></html>`;
+}
+
+function compactText(value: string) {
+  return value.replace(/\s+/g, " ").trim();
+}
+
+function truncateText(value: string, limit: number) {
+  const characters = Array.from(value);
+  return characters.length > limit ? `${characters.slice(0, limit - 1).join("")}…` : value;
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
